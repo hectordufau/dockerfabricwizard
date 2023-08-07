@@ -27,8 +27,8 @@ Before you begin, make sure you have the following prerequisites:
 1. Clone this repository to your local machine:
 
    ```
-   git clone https://github.com/your-username/DockerFabric-Wizard.git
-   cd DockerFabric-Wizard
+   git clone https://github.com/hectordufau/dockerfabricwizard.git
+   cd dockerfabricwizard
    ```
 
 2. Install the required dependencies using pip:
