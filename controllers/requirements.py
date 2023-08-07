@@ -9,7 +9,14 @@ console = Console()
 
 class Requirements:
     def __init__(self) -> None:
+        pass
+
+    def checkAll(self):
         console.print("[bold green]Checking Requirements[/]")
+        self.checkCurl()
+        self.checkJq()
+        self.checkDocker()
+        self.checkHLFBinaries()
 
     def checkCurl(self):
         console.print("[bold white]# Checking cURL[/]")
@@ -18,6 +25,15 @@ class Requirements:
         )
         if rc != 0:
             console.print("[bold red]> cURL isn't installed. Please install it.[/]")
+            exit(0)
+
+    def checkJq(self):
+        console.print("[bold white]# Checking jq[/]")
+        rc = subprocess.call(
+            ["which", "jq"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
+        if rc != 0:
+            console.print("[bold red]> jq isn't installed. Please install it.[/]")
             exit(0)
 
     def checkDocker(self):
@@ -32,15 +48,18 @@ class Requirements:
             exit(0)
 
     def checkHLFBinaries(self):
-        console.print("[bold white]# Checking if HLF binaries are installed[/]")
+        console.print("[bold white]# Checking HLF binaries[/]")
 
         pathbin = "bin"
         isFolderBinExist = os.path.exists(pathbin)
 
-        pathbuilder = "builder"
+        pathbuilder = "builders"
         isFolderBuilderExist = os.path.exists(pathbuilder)
 
-        if (not isFolderBinExist) and (not isFolderBuilderExist):
+        pathconfig = "config"
+        isFolderConfigExist = os.path.exists(pathconfig)
+
+        if (isFolderBinExist == False) or (isFolderBuilderExist == False) or (isFolderConfigExist == False):
             console.print(
                 "[bold yellow]> Please wait for HLF binaries downloading and installing.[/]"
             )
@@ -50,5 +69,5 @@ class Requirements:
             )
             os.system("./install-fabric.sh binary")
 
-        console.print("[bold green]All requirements gathered...starting questions.[/]")
+        console.print("[bold green]All requirements gathered.[/]")
         console.print("")
