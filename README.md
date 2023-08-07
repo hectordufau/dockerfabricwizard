@@ -26,13 +26,14 @@ Before you begin, make sure you have the following prerequisites:
 
 1. Clone this repository to your local machine:
 
-   ```bash
+   ```
    git clone https://github.com/your-username/DockerFabric-Wizard.git
-   cd DockerFabric-Wizard```
+   cd DockerFabric-Wizard
+   ```
 
 2. Install the required dependencies using pip:
 
-```pip install -r requirements.txt```
+    ```pip install -r requirements.txt```
 
 ## Usage
 
@@ -40,7 +41,7 @@ Before you begin, make sure you have the following prerequisites:
 
 2. Run the script by executing the following command:
 
-```python dfw.py```
+    ```python dfw.py```
 
 3. Follow the prompts to provide the necessary network structure details.
 
