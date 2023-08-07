@@ -40,7 +40,7 @@ Before you begin, make sure you have the following prerequisites:
 
 2. Run the script by executing the following command:
 
-```python dockerfabric_wizard.py```
+```python dfw.py```
 
 3. Follow the prompts to provide the necessary network structure details.
 
