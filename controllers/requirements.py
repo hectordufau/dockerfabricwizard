@@ -17,6 +17,7 @@ class Requirements:
         self.checkJq()
         self.checkDocker()
         self.checkHLFBinaries()
+        self.checkDomainFolder()
 
     def checkCurl(self):
         console.print("[bold white]# Checking cURL[/]")
@@ -59,7 +60,11 @@ class Requirements:
         pathconfig = "config"
         isFolderConfigExist = os.path.exists(pathconfig)
 
-        if (isFolderBinExist == False) or (isFolderBuilderExist == False) or (isFolderConfigExist == False):
+        if (
+            (isFolderBinExist == False)
+            or (isFolderBuilderExist == False)
+            or (isFolderConfigExist == False)
+        ):
             console.print(
                 "[bold yellow]> Please wait for HLF binaries downloading and installing.[/]"
             )
@@ -71,3 +76,10 @@ class Requirements:
 
         console.print("[bold green]All requirements gathered.[/]")
         console.print("")
+
+    def checkDomainFolder(self):
+        pathdomains = "domains"
+        isFolderDomainsExist = os.path.exists(pathdomains)
+
+        if not isFolderDomainsExist:
+            os.mkdir(pathdomains)

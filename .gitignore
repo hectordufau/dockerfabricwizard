@@ -161,4 +161,5 @@ cython_debug/
 bin/
 build/
 config/
+domains/
 install-fabric.sh

@@ -1,13 +1,13 @@
 from typing import List
 
+from pydantic import BaseModel
+
 from models.ca import Ca
-from models.orderer import Orderer
 from models.peer import Peer
 
 
-class Organization:
-    name: str
-    orderer: Orderer
-    ca: Ca
-    peers: List[Peer]
-    qtdepeers: int
+class Organization(BaseModel):
+    name: str = None
+    ca: Ca = None
+    peers: List[Peer] = []
+    qtypeers: int = 0
