@@ -1,3 +1,5 @@
+from typing import List
+
 import validators
 from rich.console import Console
 
@@ -48,6 +50,8 @@ class ConsoleOutput:
         console.print("")
 
     def questions(self):
+        portlist: List[int] = []
+
         console.print("[bold orange1]QUESTIONS[/]")
         console.print("")
 
@@ -88,6 +92,8 @@ class ConsoleOutput:
 
         console.print("")
         iorgs = 1
+        portpeer = 7051
+
         while iorgs <= self.domain.qtyorgs:
             org = Organization()
             orgname = console.input("[bold]Organization #" + str(iorgs) + " name:[/] ")
@@ -124,25 +130,38 @@ class ConsoleOutput:
             org.qtypeers = valuepeers
 
             ipeers = 1
-            portpeer = 7051
+
             while ipeers <= org.qtypeers:
                 peer = Peer()
                 peer.name = "peer" + str(ipeers) + "." + org.name
                 peerport = console.input(
                     "[bold]Peer "
                     + peer.name
-                    + " Port Number [ex. "
+                    + " Port Number (ex. "
                     + str(portpeer)
-                    + "]:[/] "
+                    + "):[/] "
                 )
                 valueport = 0
                 while not peerport.isdigit():
-                    qtyorgs = console.input(
+                    peerport = console.input(
                         "[bold red]Peer "
                         + peer.name
                         + " Port Number value not valid. Please retype again:[/] "
                     )
                 valueport = int(peerport)
+
+                validport = True
+                while validport:
+                    if valueport in portlist:
+                        validport = True
+                        peerport = console.input(
+                            "[bold red]Peer "
+                            + peer.name
+                            + " Port Number value in use. Please retype again:[/] "
+                        )
+                        valueport = int(peerport)
+                    else:
+                        validport = False
 
                 while not validators.between(valueport, min=portpeer, max=65535):
                     peerport = console.input(
@@ -160,9 +179,12 @@ class ConsoleOutput:
 
                 org.peers.append(peer)
 
+                portlist.append(valueport)
+
                 ipeers += 1
                 portpeer += 1000
 
             self.domain.organizations.append(org)
 
             iorgs += 1
+            portpeer += 100

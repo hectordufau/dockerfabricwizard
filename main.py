@@ -12,4 +12,4 @@ requirements.checkAll()
 consoleOutput.questions()
 
 build = Build(network)
-build.buildNetwork()
+build.buildAll()
