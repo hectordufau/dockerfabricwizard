@@ -3,7 +3,8 @@
 Welcome to DockerFabric Wizard, a tool designed to simplify the automated installation of Hyperledger Fabric using Docker containers. This tool is aimed at professionals and students interested in blockchain technology.
 
 > __Warning__
-This project is under development. Not ready for use yet.
+This project is under development, so it is not ready for use yet. It is also not an official Hyperledger Fabric tool.
+
 
 ## Table of Contents
 
