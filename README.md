@@ -13,7 +13,7 @@ This project is under development, so it is not ready for use yet. It is also no
 - [Installation](#installation)
 - [Usage](#usage)
 - [Contributing](#contributing)
-- [Development Status](#delopment)
+- [Development Status](#development-status)
 - [License](#license)
 
 ## Overview
