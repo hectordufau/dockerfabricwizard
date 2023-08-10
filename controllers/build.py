@@ -3,13 +3,14 @@ import os
 from pathlib import Path
 
 import ruamel.yaml
+from rich.console import Console
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 
 from models.domain import Domain
 
 yaml = ruamel.yaml.YAML()
-# yaml.preserve_quotes = True
 yaml.indent(sequence=3, offset=2)
+console = Console()
 
 
 class Build:
@@ -17,12 +18,19 @@ class Build:
         self.domain: Domain = domain
 
     def buildAll(self):
+        console.print("[bold orange1]BUILD[/]")
+        console.print("")
+        console.print("[bold]Building resources[/]")
         self.buildFolders()
         self.buildConfig()
         self.buildCa()
         self.buildCrypto()
+        console.print("")
 
     def buildFolders(self):
+        rmfolders = str(Path("domains/" + self.domain.name + "/fabric-ca"))
+        os.system("rm -fR " + rmfolders)
+
         pathcompose = Path("domains/" + self.domain.name + "/compose")
         pathcompose.mkdir(parents=True, exist_ok=True)
 
@@ -48,7 +56,6 @@ class Build:
         pass
 
     def buildCa(self):
-        ## ${CONTAINER_CLI_COMPOSE} -f compose/$COMPOSE_FILE_CA -f compose/$CONTAINER_CLI/${CONTAINER_CLI}-$COMPOSE_FILE_CA up -d 2>&1
         pathfabricca = "domains/" + self.domain.name + "/compose/"
 
         cafile = {
@@ -59,6 +66,7 @@ class Build:
 
         caorderer = {
             "image": "hyperledger/fabric-ca:latest",
+            "user": str(os.geteuid()) + ":" + str(os.getgid()),
             "labels": {"service": "hyperledger-fabric"},
             "environment": [
                 "FABRIC_CA_HOME=" + self.domain.ca.FABRIC_CA_HOME,
@@ -71,7 +79,7 @@ class Build:
             ],
             "ports": ["0", "1"],
             "command": "sh -c 'fabric-ca-server start -b admin:adminpw -d'",
-            "volumes": [self.domain.ca.volumes + ":/etc/hyperledger/fabric-ca-server"],
+            "volumes": [self.domain.ca.volumes],
             "container_name": self.domain.ca.name,
             "networks": [self.domain.networkname],
         }
@@ -88,6 +96,7 @@ class Build:
         for org in self.domain.organizations:
             caorg = {
                 "image": "hyperledger/fabric-ca:latest",
+                "user": str(os.geteuid()) + ":" + str(os.getgid()),
                 "labels": {"service": "hyperledger-fabric"},
                 "environment": [
                     "FABRIC_CA_HOME=" + org.ca.FABRIC_CA_HOME,
@@ -100,7 +109,7 @@ class Build:
                 ],
                 "ports": ["0", "1"],
                 "command": "sh -c 'fabric-ca-server start -b admin:adminpw -d'",
-                "volumes": [org.ca.volumes + ":/etc/hyperledger/fabric-ca-server"],
+                "volumes": [org.ca.volumes],
                 "container_name": org.ca.name,
                 "networks": [self.domain.networkname],
             }

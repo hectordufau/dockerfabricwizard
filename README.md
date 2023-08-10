@@ -90,11 +90,10 @@ Would you like to contribute with a donation?
 
 - [ ] Questions
 - [ ] Config files folder structure
-- [ ] Building network CAs (fabric-ca)
 
 ### Done ✓
 
-- [ ] Nothing for now
+- [x] Building network CAs (fabric-ca)
 
 ## License
 

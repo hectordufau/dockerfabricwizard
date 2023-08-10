@@ -1,6 +1,6 @@
 import os
-from pathlib import Path
 import sys
+from pathlib import Path
 from typing import List
 
 import validators
@@ -73,9 +73,16 @@ class ConsoleOutput:
         cadomain = Ca()
         cadomain.name = "ca_orderer"
         cadomain.FABRIC_CA_SERVER_CA_NAME = cadomain.name
-        cadomain.volumes = "".join([
-            str(Path().absolute()), "/domains/", self.domain.name, "/fabric-ca/", cadomain.name, ":etc/hyperledger/fabric-ca-server"
-        ])
+        cadomain.volumes = "".join(
+            [
+                str(Path().absolute()),
+                "/domains/",
+                self.domain.name,
+                "/fabric-ca/",
+                cadomain.name,
+                ":/etc/hyperledger/fabric-ca-server",
+            ]
+        )
         self.domain.ca = cadomain
         portlist.append(self.domain.ca.serverport)
         portlist.append(self.domain.ca.operationslistenport)
@@ -122,9 +129,16 @@ class ConsoleOutput:
                 caorgoplstport
             )
             caorg.FABRIC_CA_SERVER_PORT = caorgserverport
-            caorg.volumes = "".join([
-            str(Path().absolute()), "/domains/", self.domain.name, "/fabric-ca/", caorg.name, ":etc/hyperledger/fabric-ca-server"
-        ])
+            caorg.volumes = "".join(
+                [
+                    str(Path().absolute()),
+                    "/domains/",
+                    self.domain.name,
+                    "/fabric-ca/",
+                    caorg.name,
+                    ":/etc/hyperledger/fabric-ca-server",
+                ]
+            )
             caorg.serverport = caorgserverport
             caorg.operationslistenport = caorgoplstport
             portlist.append(caorgserverport)
@@ -208,3 +222,5 @@ class ConsoleOutput:
 
             iorgs += 1
             portpeer += 100
+
+        console.print("")
