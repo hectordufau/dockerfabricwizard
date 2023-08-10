@@ -70,6 +70,7 @@ Would you like to contribute with a donation?
 
 ### Todo
 
+- [ ] Main menu
 - [ ] Identities
 - [ ] Enrolling CA admin
 - [ ] Orderer and Peers registering
