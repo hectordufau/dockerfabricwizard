@@ -5,8 +5,6 @@ Welcome to DockerFabric Wizard, a tool designed to simplify the automated instal
 > __Warning__
 This project is under development. Not ready for use yet.
 
-[!["Buy Me A Coffee"](https://cdn.buymeacoffee.com/buttons/v2/arial-yellow.png)](https://www.buymeacoffee.com/hectordufau)
-
 ## Table of Contents
 
 - [Overview](#overview)
@@ -61,6 +59,9 @@ Before you begin, make sure you have the following prerequisites:
 ## Contributing
 
 Contributions are welcome! If you have any improvements, bug fixes, or new features to propose, feel free to open an issue or submit a pull request. Please make sure to follow the existing coding style and conventions.
+
+[!["Buy Me A Coffee"](https://cdn.buymeacoffee.com/buttons/v2/arial-yellow.png)](https://www.buymeacoffee.com/hectordufau)
+<a href="https://www.buymeacoffee.com/hectordufau" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/default-orange.png" alt="Buy Me A Coffee" height="41" width="174"></a>
 
 ## License
 
