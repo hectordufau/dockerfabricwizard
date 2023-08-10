@@ -70,16 +70,31 @@ Would you like to contribute with a donation?
 
 ### Todo
 
-- [ ] Work on the website ~3d #feat @john 2020-03-20  
-- [ ] Fix the homepage ~1d #bug @jane  
+- [ ] Identities
+- [ ] Enrolling CA admin
+- [ ] Orderer and Peers registering
+- [ ] Certificates and MSP
+- [ ] Volumes
+- [ ] Genesis block
+- [ ] Channel
+- [ ] Orderer and Peers channel joining
+- [ ] Network up selector
+- [ ] Network down
+- [ ] Chaincode as a Service installer
+   - [ ] Go chaincode
+   - [ ] Typescript chaincode
+   - [ ] Java chaincode
+- [ ] Firefly integration (in planning)
 
 ### In Progress
 
-- [ ]
+- [ ] Questions
+- [ ] Config files folder structure
+- [ ] Building network CAs (fabric-ca)
 
-### Done
+### Done ✓
 
-- [ ]
+- [ ] Nothing for now
 
 ## License
 
