@@ -1,6 +1,6 @@
-# DockerFabric Wizard
+# Docker Fabric Wizard
 
-Welcome to DockerFabric Wizard, a tool designed to simplify the automated installation of Hyperledger Fabric using Docker containers. This tool is aimed at professionals and students interested in blockchain technology.
+Welcome to Docker Fabric Wizard, a tool designed to simplify the automated installation of Hyperledger Fabric using Docker containers. This tool is aimed at professionals and students interested in blockchain technology.
 
 > __Warning__
 This project is under development, so it is not ready for use yet. It is also not an official Hyperledger Fabric tool.
@@ -17,7 +17,7 @@ This project is under development, so it is not ready for use yet. It is also no
 
 ## Overview
 
-DockerFabric Wizard streamlines the process of setting up a Hyperledger Fabric network by utilizing Docker containers. It offers an automated installation process based on user-provided network structure details. The tool generates and configures the necessary Docker containers, allowing you to quickly deploy a Hyperledger Fabric network for development, testing, or educational purposes.
+Docker Fabric Wizard streamlines the process of setting up a Hyperledger Fabric network by utilizing Docker containers. It offers an automated installation process based on user-provided network structure details. The tool generates and configures the necessary Docker containers, allowing you to quickly deploy a Hyperledger Fabric network for development, testing, or educational purposes.
 
 ## Prerequisites
 
@@ -53,7 +53,7 @@ Before you begin, make sure you have the following prerequisites:
 
 3. Follow the prompts to provide the necessary network structure details.
 
-4. The DockerFabric Wizard will generate and configure Docker containers based on your inputs.
+4. The Docker Fabric Wizard will generate and configure Docker containers based on your inputs.
 
 5. Once the installation is complete, you will have a Hyperledger Fabric network up and running within Docker containers.
 
