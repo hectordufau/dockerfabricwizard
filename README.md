@@ -61,6 +61,7 @@ Before you begin, make sure you have the following prerequisites:
 Contributions are welcome! If you have any improvements, bug fixes, or new features to propose, feel free to open an issue or submit a pull request. Please make sure to follow the existing coding style and conventions.
 
 Would you like to contribute with a donation?
+
 <a href="https://www.buymeacoffee.com/hectordufau" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/arial-yellow.png" alt="Buy Me A Coffee" height="45"></a>
 
 ## License
