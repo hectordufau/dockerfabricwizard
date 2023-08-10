@@ -67,4 +67,4 @@ Would you like to contribute with a donation?
 
 ## License
 
-This project is licensed under the [MIT License](https://chat.openai.com/LICENSE).
+This project is licensed under the [MIT License](LICENSE).
