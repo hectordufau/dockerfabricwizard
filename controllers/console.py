@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+import sys
 from typing import List
 
 import validators
@@ -70,7 +73,12 @@ class ConsoleOutput:
         cadomain = Ca()
         cadomain.name = "ca_orderer"
         cadomain.FABRIC_CA_SERVER_CA_NAME = cadomain.name
+        cadomain.volumes = "".join([
+            str(Path().absolute()), "/domains/", self.domain.name, "/fabric-ca/", cadomain.name, ":etc/hyperledger/fabric-ca-server"
+        ])
         self.domain.ca = cadomain
+        portlist.append(self.domain.ca.serverport)
+        portlist.append(self.domain.ca.operationslistenport)
 
         qtyorgs = console.input("[bold]Number of Organizations:[/] ")
         value = 0
@@ -93,6 +101,8 @@ class ConsoleOutput:
         console.print("")
         iorgs = 1
         portpeer = 7051
+        caorgserverport = self.domain.ca.serverport + 100
+        caorgoplstport = self.domain.ca.operationslistenport + 100
 
         while iorgs <= self.domain.qtyorgs:
             org = Organization()
@@ -108,7 +118,17 @@ class ConsoleOutput:
             caorg = Ca()
             caorg.name = "ca." + org.name
             caorg.FABRIC_CA_SERVER_CA_NAME = caorg.name
-
+            caorg.FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS = "0.0.0.0:" + str(
+                caorgoplstport
+            )
+            caorg.FABRIC_CA_SERVER_PORT = caorgserverport
+            caorg.volumes = "".join([
+            str(Path().absolute()), "/domains/", self.domain.name, "/fabric-ca/", caorg.name, ":etc/hyperledger/fabric-ca-server"
+        ])
+            caorg.serverport = caorgserverport
+            caorg.operationslistenport = caorgoplstport
+            portlist.append(caorgserverport)
+            portlist.append(caorgoplstport)
             org.ca = caorg
 
             qtypeers = console.input("[bold]Number of Peers:[/] ")
