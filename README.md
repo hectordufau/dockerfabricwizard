@@ -5,6 +5,8 @@ Welcome to DockerFabric Wizard, a tool designed to simplify the automated instal
 > __Warning__
 This project is under development. Not ready for use yet.
 
+[!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/hectordufau){:target="_blank"}
+
 ## Table of Contents
 
 - [Overview](#overview)
