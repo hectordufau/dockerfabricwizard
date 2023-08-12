@@ -24,7 +24,9 @@ Docker Fabric Wizard streamlines the process of setting up a [Hyperledger Fabric
 
 Before you begin, make sure you have the following prerequisites:
 
-- The latest version of Python installed on your system.
+- Linux OS
+- Docker
+- Python (version 3.10 minimal).
 - Basic understanding of [Docker](https://docs.docker.com/) and [Hyperledger Fabric](https://hyperledger-fabric.readthedocs.io/en/latest/getting_started.html) concepts.
 
 ## Installation
