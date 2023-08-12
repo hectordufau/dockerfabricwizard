@@ -62,6 +62,7 @@ class Build:
             "version": "3.7",
             "networks": {self.domain.networkname: {"name": self.domain.networkname}},
             "services": {},
+            #"volumes": {"volume-" + self.domain.ca.name:{}}
         }
 
         caorderer = {
@@ -122,6 +123,7 @@ class Build:
             )
 
             cafile["services"][org.ca.name] = caorg
+            #cafile["volumes"]["volume-" + org.ca.name] = {}
 
         with open(pathfabricca + "compose-ca.yaml", "w") as yaml_file:
             yaml.dump(cafile, yaml_file)

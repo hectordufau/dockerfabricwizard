@@ -1,11 +1,11 @@
 import os
-import sys
 from pathlib import Path
 from typing import List
 
 import validators
 from rich.console import Console
 
+from controllers.requirements import Requirements
 from models.ca import Ca
 from models.domain import Domain
 from models.orderer import Orderer
@@ -51,6 +51,9 @@ class ConsoleOutput:
             "First, you need answer some questions to build your HLF Network. Let's start..."
         )
         console.print("")
+        requirements = Requirements()
+        requirements.checkAll()
+        self.mainMenu()
 
     def questions(self):
         portlist: List[int] = []
@@ -221,6 +224,143 @@ class ConsoleOutput:
             self.domain.organizations.append(org)
 
             iorgs += 1
-            portpeer += 100
+            portpeer += 1000
 
         console.print("")
+
+    def mainMenu(self):
+        console.print("[bold orange1]MENU[/]")
+        console.print("")
+        console.print("[bold white]N - New network[/]")
+        console.print("[bold white]S - Select an existing network[/]")
+        console.print("[bold white]D - Docker status[/]")
+        console.print("[bold white]C - Clean all Docker resources[/]")
+        console.print("[bold white]Q - Quit[/]")
+        console.print("")
+        option = console.input("[bold]Select an option (N,S,D,C or Q):[/] ")
+        console.print("")
+
+        selectoption = True
+        while selectoption:
+            match option.lower():
+                case "n":
+                    selectoption = False
+                    self.questions()
+                case "s":
+                    selectoption = False
+                    self.selectNetwork()
+                case "d":
+                    selectoption = False
+                    self.checkDockerStatus()
+                case "c":
+                    selectoption = False
+                    self.cleanDockerAll()
+                case "q":
+                    selectoption = False
+                    exit(0)
+                case _:
+                    option = console.input("[bold]Select an option (N,S,D,C or Q):[/] ")
+
+    def checkDockerStatus(self):
+        console.print("[bold]Containers[/]")
+        console.print("")
+        os.system("docker ps")
+        console.print("")
+        console.print("[bold]Volumes[/]")
+        console.print("")
+        os.system("docker volume ls")
+        console.print("")
+        console.print("[bold]Networks[/]")
+        console.print("")
+        os.system("docker network ls")
+        console.print("")
+        self.mainMenu()
+
+    def cleanDockerAll(self):
+        console.print("[bold]Removing all Docker resources[/]")
+        os.system("docker stop $(docker ps -a -q)")
+        os.system("docker rm -v $(docker ps -a -q)")
+        os.system("docker rmi $(docker images -a -q)")
+        os.system("docker system prune -a -f")
+        console.print("")
+        self.mainMenu()
+
+    def selectNetwork(self):
+        console.print("[bold orange1]SELECT A NETWORK[/]")
+        console.print("")
+        dirdomains = "".join(
+            [
+                str(Path().absolute()),
+                "/domains",
+            ]
+        )
+        listnetworks = [
+            name
+            for name in os.listdir(dirdomains)
+            if os.path.isdir(os.path.join(dirdomains, name))
+        ]
+        for i, folder in enumerate(listnetworks):
+            console.print("[bold]" + str(i) + " : " + folder)
+        console.print("[bold]P - Return to previous menu[/]")
+        console.print("[bold]Q - Quit[/]")
+        console.print("")
+
+        option = console.input("[bold]Select a network:[/] ")
+        selected = True
+        while selected:
+            if option.lower() == "p":
+                selected = False
+                console.print("")
+                self.mainMenu()
+            elif option.lower() == "q":
+                selected = False
+                console.print("")
+                exit(0)
+            elif option.isdigit() and (int(option) <= (len(listnetworks) - 1)):
+                selected = False
+                console.print("")
+                self.networkSelected(listnetworks[int(option)])
+            else:
+                option = console.input(
+                    "[bold red]Wrong option.[/] [bold white]Select a network:[/] "
+                )
+
+    def networkSelected(self, network: str):
+        console.print("[bold orange1]NETWORK " + network + "[/]")
+        console.print("")
+        console.print("[bold white]N - Network status[/]")
+        console.print("[bold white]O - Add organization[/]")
+        console.print("[bold white]P - Add peer[/]")
+        console.print("[bold white]C - Add chaincode[/]")
+        console.print("[bold white]G - Start network[/]")
+        console.print("[bold white]S - Stop network[/]")
+        console.print("[bold white]D - Clean docker[/]")
+        console.print("[bold white]P - Return to previous menu[/]")
+        console.print("[bold white]M - Return to main menu[/]")
+        console.print("[bold white]Q - Quit[/]")
+        console.print("")
+        option = console.input("[bold]Select an option (N,O,P,C,G,S,D,P,M or Q):[/] ")
+        console.print("")
+
+        selectoption = True
+        while selectoption:
+            match option.lower():
+                case "n":
+                    selectoption = False
+                    # self.questions()
+                case "s":
+                    selectoption = False
+                    # self.selectNetwork()
+                case "d":
+                    selectoption = False
+                    # self.checkDockerStatus()
+                case "c":
+                    selectoption = False
+                    # self.cleanDockerAll()
+                case "q":
+                    selectoption = False
+                    exit(0)
+                case _:
+                    option = console.input(
+                        "[bold]Select an option (N,O,P,C,G,S,D,P,M or Q):[/] "
+                    )
