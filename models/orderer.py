@@ -1,3 +1,4 @@
+from typing import Optional
 from pydantic import BaseModel
 
 
@@ -23,7 +24,7 @@ class Orderer(BaseModel):
     ORDERER_GENERAL_TLS_ENABLED: bool = True
     ORDERER_GENERAL_TLS_PRIVATEKEY: str = "/var/hyperledger/orderer/tls/server.key"
     ORDERER_GENERAL_TLS_ROOTCAS: str = "[/var/hyperledger/orderer/tls/ca.crt]"
-    ORDERER_OPERATIONS_LISTENADDRESS: str = None
+    ORDERER_OPERATIONS_LISTENADDRESS: Optional[str] = None
     adminlistenport: int = 0
     generallistenport: int = 0
     operationslistenport: int = 0

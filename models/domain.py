@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -13,4 +13,4 @@ class Domain(BaseModel):
     ca: Ca = None
     qtyorgs: int = 0
     organizations: List[Organization] = []
-    networkname: str = None
+    networkname: Optional[str] = None

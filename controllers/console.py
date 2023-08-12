@@ -1,3 +1,4 @@
+import json
 import os
 from pathlib import Path
 from typing import List
@@ -5,7 +6,9 @@ from typing import List
 import validators
 from rich.console import Console
 
+from controllers.build import Build
 from controllers.requirements import Requirements
+from controllers.run import Run
 from models.ca import Ca
 from models.domain import Domain
 from models.orderer import Orderer
@@ -66,12 +69,14 @@ class ConsoleOutput:
         console.print("")
 
         domainname = console.input("[bold]Domain name:[/] ")
-        if domainname.lower() == "q": exit(0)
+        if domainname.lower() == "q":
+            self.mainMenu()
         while not validators.domain(domainname):
             domainname = console.input(
                 "[bold red]Domain name not valid. Please retype again:[/] "
             )
-            if domainname.lower() == "q": exit(0)
+            if domainname.lower() == "q":
+                self.mainMenu()
         self.domain.name = domainname
         self.domain.networkname = domainname.split(".")[0]
 
@@ -97,20 +102,23 @@ class ConsoleOutput:
         portlist.append(self.domain.ca.operationslistenport)
 
         qtyorgs = console.input("[bold]Number of Organizations:[/] ")
-        if qtyorgs.lower() == "q": exit(0)
+        if qtyorgs.lower() == "q":
+            self.mainMenu()
         value = 0
         while not qtyorgs.isdigit():
             qtyorgs = console.input(
                 "[bold red]Number of Organizations value not valid. Please retype again:[/] "
             )
-            if qtyorgs.lower() == "q": exit(0)
+            if qtyorgs.lower() == "q":
+                self.mainMenu()
         value = int(qtyorgs)
 
         while not validators.between(value, min=1):
             qtyorgs = console.input(
                 "[bold red]Number of Organizations value not valid, min 1. Please retype again:[/] "
             )
-            if qtyorgs.lower() == "q": exit(0)
+            if qtyorgs.lower() == "q":
+                self.mainMenu()
             while not qtyorgs.isdigit():
                 value = 0
             value = int(qtyorgs)
@@ -126,14 +134,16 @@ class ConsoleOutput:
         while iorgs <= self.domain.qtyorgs:
             org = Organization()
             orgname = console.input("[bold]Organization #" + str(iorgs) + " name:[/] ")
-            if orgname.lower() == "q": exit(0)
+            if orgname.lower() == "q":
+                self.mainMenu()
             while not orgname.isalpha():
                 orgname = console.input(
                     "[bold red]Organization #"
                     + str(iorgs)
                     + " name not valid. Please retype again:[/] "
                 )
-                if orgname.lower() == "q": exit(0)
+                if orgname.lower() == "q":
+                    self.mainMenu()
             org.name = orgname
 
             caorg = Ca()
@@ -160,20 +170,23 @@ class ConsoleOutput:
             org.ca = caorg
 
             qtypeers = console.input("[bold]Number of Peers:[/] ")
-            if qtypeers.lower() == "q": exit(0)
+            if qtypeers.lower() == "q":
+                self.mainMenu()
             valuepeers = 0
             while not qtypeers.isdigit():
                 qtypeers = console.input(
                     "[bold red]Number of Peers value not valid. Please retype again:[/] "
                 )
-                if qtypeers.lower() == "q": exit(0)
+                if qtypeers.lower() == "q":
+                    self.mainMenu()
             valuepeers = int(qtypeers)
 
             while not validators.between(valuepeers, min=1):
                 qtypeers = console.input(
                     "[bold red]Number of Peers value not valid, min 1. Please retype again:[/] "
                 )
-                if qtypeers.lower() == "q": exit(0)
+                if qtypeers.lower() == "q":
+                    self.mainMenu()
                 while not qtypeers.isdigit():
                     valuepeers = 0
                 valuepeers = int(qtypeers)
@@ -192,7 +205,8 @@ class ConsoleOutput:
                     + str(portpeer)
                     + "):[/] "
                 )
-                if peerport.lower() == "q": exit(0)
+                if peerport.lower() == "q":
+                    self.mainMenu()
                 valueport = 0
                 while not peerport.isdigit():
                     peerport = console.input(
@@ -200,7 +214,8 @@ class ConsoleOutput:
                         + peer.name
                         + " Port Number value not valid. Please retype again:[/] "
                     )
-                    if peerport.lower() == "q": exit(0)
+                    if peerport.lower() == "q":
+                        self.mainMenu()
                 valueport = int(peerport)
 
                 validport = True
@@ -212,7 +227,8 @@ class ConsoleOutput:
                             + peer.name
                             + " Port Number value in use. Please retype again:[/] "
                         )
-                        if peerport.lower() == "q": exit(0)
+                        if peerport.lower() == "q":
+                            self.mainMenu()
                         valueport = int(peerport)
                     else:
                         validport = False
@@ -225,7 +241,8 @@ class ConsoleOutput:
                         + str(portpeer)
                         + ". Please retype again:[/] "
                     )
-                    if peerport.lower() == "q": exit(0)
+                    if peerport.lower() == "q":
+                        self.mainMenu()
                     while not peerport.isdigit():
                         valueport = 0
                     valueport = int(peerport)
@@ -243,8 +260,13 @@ class ConsoleOutput:
 
             iorgs += 1
             portpeer += 1000
+            caorgserverport += 100
+            caorgoplstport += 100
 
         console.print("")
+        build = Build(self.domain)
+        build.buildAll()
+        self.selectNetwork()
 
     def mainMenu(self):
         os.system("clear")
@@ -285,6 +307,8 @@ class ConsoleOutput:
     def checkDockerStatus(self):
         os.system("clear")
         self.header()
+        console.print("[bold orange1]DOCKER STATUS[/]")
+        console.print("")
         console.print("[bold]Containers[/]")
         console.print("")
         os.system("docker ps")
@@ -319,6 +343,8 @@ class ConsoleOutput:
     def cleanDockerAll(self):
         os.system("clear")
         self.header()
+        console.print("[bold orange1]DOCKER CLEANING[/]")
+        console.print("")
         console.print("[bold]Removing all Docker resources[/]")
         os.system("docker stop $(docker ps -a -q)")
         os.system("docker rm -v $(docker ps -a -q)")
@@ -389,6 +415,19 @@ class ConsoleOutput:
         option = console.input("[bold]Select an option (N,O,P,C,G,S,D,R,M or Q):[/] ")
         console.print("")
 
+        configfile = "".join(
+            [
+                str(Path().absolute()),
+                "/domains/",
+                network,
+                "/setup.json",
+            ]
+        )
+        domain: Domain() = None
+        with open(configfile) as config_file:
+            j = json.loads(config_file.read())
+            domain = Domain(**j)
+
         selectoption = True
         while selectoption:
             match option.lower():
@@ -402,7 +441,9 @@ class ConsoleOutput:
                     selectoption = False
                 case "g":
                     selectoption = False
-                    # self.questions()
+                    run = Run(domain)
+                    run.runAll()
+                    self.checkDockerStatus()
                 case "s":
                     selectoption = False
                     # self.selectNetwork()
