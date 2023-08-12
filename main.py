@@ -6,7 +6,7 @@ from models.domain import Domain
 network = Domain()
 
 consoleOutput = ConsoleOutput(network)
-consoleOutput.header()
+consoleOutput.start()
 
 # consoleOutput.questions()
 

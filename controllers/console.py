@@ -19,6 +19,12 @@ class ConsoleOutput:
     def __init__(self, domain: Domain) -> None:
         self.domain = domain
 
+    def start(self):
+        console.print("")
+        requirements = Requirements()
+        requirements.checkAll()
+        self.mainMenu()
+
     def header(self):
         console.print(
             """[blue]
@@ -45,20 +51,16 @@ class ConsoleOutput:
         console.print("[bold]Welcome to the DockerFabric Wizard![/]")
         console.print("")
         console.print(
-            "You will guided during all Hyperledger Fabric deployment starting now."
-        )
-        console.print(
-            "First, you need answer some questions to build your HLF Network. Let's start..."
+            "You will guided during all Hyperledger Fabric deployment. Let's start..."
         )
         console.print("")
-        requirements = Requirements()
-        requirements.checkAll()
-        self.mainMenu()
 
     def questions(self):
+        os.system("clear")
+        self.header()
         portlist: List[int] = []
 
-        console.print("[bold orange1]QUESTIONS[/]")
+        console.print("[bold orange1]NEW NETWORK[/]")
         console.print("")
 
         domainname = console.input("[bold]Domain name:[/] ")
@@ -229,6 +231,8 @@ class ConsoleOutput:
         console.print("")
 
     def mainMenu(self):
+        os.system("clear")
+        self.header()
         console.print("[bold orange1]MENU[/]")
         console.print("")
         console.print("[bold white]N - New network[/]")
@@ -263,6 +267,8 @@ class ConsoleOutput:
                     console.print("")
 
     def checkDockerStatus(self):
+        os.system("clear")
+        self.header()
         console.print("[bold]Containers[/]")
         console.print("")
         os.system("docker ps")
@@ -275,9 +281,28 @@ class ConsoleOutput:
         console.print("")
         os.system("docker network ls")
         console.print("")
-        self.mainMenu()
+        console.print("[bold white]M - Return to main menu[/]")
+        console.print("[bold white]Q - Quit[/]")
+        console.print("")
+        option = console.input("[bold]Select an option (M or Q):[/] ")
+        console.print("")
+
+        selectoption = True
+        while selectoption:
+            match option.lower():
+                case "m":
+                    selectoption = False
+                    self.mainMenu()
+                case "q":
+                    selectoption = False
+                    exit(0)
+                case _:
+                    option = console.input("[bold]Select an option (M or Q):[/] ")
+                    console.print("")
 
     def cleanDockerAll(self):
+        os.system("clear")
+        self.header()
         console.print("[bold]Removing all Docker resources[/]")
         os.system("docker stop $(docker ps -a -q)")
         os.system("docker rm -v $(docker ps -a -q)")
@@ -287,6 +312,8 @@ class ConsoleOutput:
         self.mainMenu()
 
     def selectNetwork(self):
+        os.system("clear")
+        self.header()
         console.print("[bold orange1]SELECT A NETWORK[/]")
         console.print("")
         dirdomains = "".join(
@@ -328,6 +355,8 @@ class ConsoleOutput:
                 console.print("")
 
     def networkSelected(self, network: str):
+        os.system("clear")
+        self.header()
         console.print("[bold orange1]NETWORK " + network + "[/]")
         console.print("")
         console.print("[bold white]N - Network status[/]")
