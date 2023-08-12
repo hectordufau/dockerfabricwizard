@@ -16,8 +16,8 @@ console = Console()
 
 
 class ConsoleOutput:
-    def __init__(self, domain: Domain) -> None:
-        self.domain = domain
+    def __init__(self) -> None:
+        self.domain = Domain()
 
     def start(self):
         console.print("")
@@ -62,12 +62,16 @@ class ConsoleOutput:
 
         console.print("[bold orange1]NEW NETWORK[/]")
         console.print("")
+        console.print("[bold red]Press 'Q' to quit anytime[/]")
+        console.print("")
 
         domainname = console.input("[bold]Domain name:[/] ")
+        if domainname.lower() == "q": exit(0)
         while not validators.domain(domainname):
             domainname = console.input(
                 "[bold red]Domain name not valid. Please retype again:[/] "
             )
+            if domainname.lower() == "q": exit(0)
         self.domain.name = domainname
         self.domain.networkname = domainname.split(".")[0]
 
@@ -93,17 +97,20 @@ class ConsoleOutput:
         portlist.append(self.domain.ca.operationslistenport)
 
         qtyorgs = console.input("[bold]Number of Organizations:[/] ")
+        if qtyorgs.lower() == "q": exit(0)
         value = 0
         while not qtyorgs.isdigit():
             qtyorgs = console.input(
                 "[bold red]Number of Organizations value not valid. Please retype again:[/] "
             )
+            if qtyorgs.lower() == "q": exit(0)
         value = int(qtyorgs)
 
         while not validators.between(value, min=1):
             qtyorgs = console.input(
                 "[bold red]Number of Organizations value not valid, min 1. Please retype again:[/] "
             )
+            if qtyorgs.lower() == "q": exit(0)
             while not qtyorgs.isdigit():
                 value = 0
             value = int(qtyorgs)
@@ -119,12 +126,14 @@ class ConsoleOutput:
         while iorgs <= self.domain.qtyorgs:
             org = Organization()
             orgname = console.input("[bold]Organization #" + str(iorgs) + " name:[/] ")
+            if orgname.lower() == "q": exit(0)
             while not orgname.isalpha():
                 orgname = console.input(
                     "[bold red]Organization #"
                     + str(iorgs)
                     + " name not valid. Please retype again:[/] "
                 )
+                if orgname.lower() == "q": exit(0)
             org.name = orgname
 
             caorg = Ca()
@@ -151,17 +160,20 @@ class ConsoleOutput:
             org.ca = caorg
 
             qtypeers = console.input("[bold]Number of Peers:[/] ")
+            if qtypeers.lower() == "q": exit(0)
             valuepeers = 0
             while not qtypeers.isdigit():
                 qtypeers = console.input(
                     "[bold red]Number of Peers value not valid. Please retype again:[/] "
                 )
+                if qtypeers.lower() == "q": exit(0)
             valuepeers = int(qtypeers)
 
             while not validators.between(valuepeers, min=1):
                 qtypeers = console.input(
                     "[bold red]Number of Peers value not valid, min 1. Please retype again:[/] "
                 )
+                if qtypeers.lower() == "q": exit(0)
                 while not qtypeers.isdigit():
                     valuepeers = 0
                 valuepeers = int(qtypeers)
@@ -180,6 +192,7 @@ class ConsoleOutput:
                     + str(portpeer)
                     + "):[/] "
                 )
+                if peerport.lower() == "q": exit(0)
                 valueport = 0
                 while not peerport.isdigit():
                     peerport = console.input(
@@ -187,6 +200,7 @@ class ConsoleOutput:
                         + peer.name
                         + " Port Number value not valid. Please retype again:[/] "
                     )
+                    if peerport.lower() == "q": exit(0)
                 valueport = int(peerport)
 
                 validport = True
@@ -198,6 +212,7 @@ class ConsoleOutput:
                             + peer.name
                             + " Port Number value in use. Please retype again:[/] "
                         )
+                        if peerport.lower() == "q": exit(0)
                         valueport = int(peerport)
                     else:
                         validport = False
@@ -210,6 +225,7 @@ class ConsoleOutput:
                         + str(portpeer)
                         + ". Please retype again:[/] "
                     )
+                    if peerport.lower() == "q": exit(0)
                     while not peerport.isdigit():
                         valueport = 0
                     valueport = int(peerport)
