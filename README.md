@@ -70,7 +70,6 @@ Would you like to contribute with a donation?
 
 ### Todo
 
-- [ ] Main menu
 - [ ] Identities
 - [ ] Enrolling CA admin
 - [ ] Orderer and Peers registering
@@ -94,6 +93,7 @@ Would you like to contribute with a donation?
 
 ### Done ✓
 
+- [x] Main menu
 - [x] Building network CAs (fabric-ca)
 
 ## License
