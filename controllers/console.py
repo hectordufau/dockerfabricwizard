@@ -260,6 +260,7 @@ class ConsoleOutput:
                     exit(0)
                 case _:
                     option = console.input("[bold]Select an option (N,S,D,C or Q):[/] ")
+                    console.print("")
 
     def checkDockerStatus(self):
         console.print("[bold]Containers[/]")
@@ -324,6 +325,7 @@ class ConsoleOutput:
                 option = console.input(
                     "[bold red]Wrong option.[/] [bold white]Select a network:[/] "
                 )
+                console.print("")
 
     def networkSelected(self, network: str):
         console.print("[bold orange1]NETWORK " + network + "[/]")
@@ -335,11 +337,11 @@ class ConsoleOutput:
         console.print("[bold white]G - Start network[/]")
         console.print("[bold white]S - Stop network[/]")
         console.print("[bold white]D - Clean docker[/]")
-        console.print("[bold white]P - Return to previous menu[/]")
+        console.print("[bold white]R - Return to previous menu[/]")
         console.print("[bold white]M - Return to main menu[/]")
         console.print("[bold white]Q - Quit[/]")
         console.print("")
-        option = console.input("[bold]Select an option (N,O,P,C,G,S,D,P,M or Q):[/] ")
+        option = console.input("[bold]Select an option (N,O,P,C,G,S,D,R,M or Q):[/] ")
         console.print("")
 
         selectoption = True
@@ -347,20 +349,31 @@ class ConsoleOutput:
             match option.lower():
                 case "n":
                     selectoption = False
+                case "o":
+                    selectoption = False
+                case "p":
+                    selectoption = False
+                case "c":
+                    selectoption = False
+                case "g":
+                    selectoption = False
                     # self.questions()
                 case "s":
                     selectoption = False
                     # self.selectNetwork()
                 case "d":
                     selectoption = False
-                    # self.checkDockerStatus()
-                case "c":
+                case "r":
                     selectoption = False
-                    # self.cleanDockerAll()
+                    self.selectNetwork()
+                case "m":
+                    selectoption = False
+                    self.mainMenu()
                 case "q":
                     selectoption = False
                     exit(0)
                 case _:
                     option = console.input(
-                        "[bold]Select an option (N,O,P,C,G,S,D,P,M or Q):[/] "
+                        "[bold]Select an option (N,O,P,C,G,S,D,R,M or Q):[/] "
                     )
+                    console.print("")
