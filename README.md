@@ -72,10 +72,6 @@ Would you like to contribute with a donation?
 
 ### Todo
 
-- [ ] Identities
-- [ ] Enrolling CA admin
-- [ ] Orderer and Peers registering
-- [ ] Certificates and MSP
 - [ ] Volumes
 - [ ] Genesis block
 - [ ] Channel
@@ -92,6 +88,10 @@ Would you like to contribute with a donation?
 
 - [ ] Questions
 - [ ] Config files folder structure
+- [ ] Identities
+- [ ] Enrolling CA admin
+- [ ] Orderer and Peers registering
+- [ ] Certificates and MSP
 
 ### Done ✓
 

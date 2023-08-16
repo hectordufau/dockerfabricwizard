@@ -1,4 +1,6 @@
+import os
 from pathlib import Path
+import time
 
 from python_on_whales import DockerClient
 from rich.console import Console
@@ -34,3 +36,4 @@ class Run:
 
         docker = DockerClient(compose_files=[pathfabricca])
         docker.compose.up(detach=True)
+        time.sleep(5)
