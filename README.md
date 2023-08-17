@@ -106,6 +106,7 @@ Would you like to contribute with a donation?
 - [x] Enrolling CA admin
 - [x] Orderer and Peers registering
 - [x] Certificates and MSP
+- [x] Building Orderer
 
 ## License
 
