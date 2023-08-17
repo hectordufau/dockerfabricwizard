@@ -60,6 +60,12 @@ Before you begin, make sure you have the following prerequisites:
 
 5. Once the installation is complete, you will have a Hyperledger Fabric network up and running within Docker containers.
 
+## Screenshots
+
+![Main menu](/screenshots/screen1.png "Main menu")
+
+![New network](/screenshots/screen2.png "New network")
+
 ## Contributing
 
 Contributions are welcome! If you have any improvements, bug fixes, or new features to propose, feel free to open an issue or submit a pull request. Please make sure to follow the existing coding style and conventions.
@@ -86,17 +92,17 @@ Would you like to contribute with a donation?
 
 ### In Progress
 
-- [ ] Questions
-- [ ] Config files folder structure
-- [ ] Identities
-- [ ] Enrolling CA admin
-- [ ] Orderer and Peers registering
-- [ ] Certificates and MSP
+- [ ] Questions (improving during development)
 
 ### Done ✓
 
 - [x] Main menu
+- [x] Config files folder structure
 - [x] Building network CAs (fabric-ca)
+- [x] Identities
+- [x] Enrolling CA admin
+- [x] Orderer and Peers registering
+- [x] Certificates and MSP
 
 ## License
 

@@ -262,8 +262,8 @@ class ConsoleOutput:
             portpeer += 1000
             caorgserverport += 100
             caorgoplstport += 100
+            console.print("")
 
-        console.print("")
         build = Build(self.domain)
         build.buildAll()
         self.selectNetwork()

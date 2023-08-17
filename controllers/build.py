@@ -520,3 +520,271 @@ class Build:
                     configpath + "/config.yaml",
                     str(Path().absolute()) + "/" + str(adminpath) + "/config.yaml",
                 )
+
+        console.print("[bold]## Enrolling the CA admin[/]")
+        pathorder = Path("domains/" + self.domain.name + "/ordererOrganizations")
+        pathfabriccaorderer = Path(
+            "domains/" + self.domain.name + "/fabric-ca/" + self.domain.ca.name
+        )
+
+        os.environ["FABRIC_CA_CLIENT_HOME"] = str(pathorder)
+
+        os.system(
+            str(Path().absolute())
+            + "/bin/fabric-ca-client enroll -u https://admin:adminpw@localhost:"
+            + str(self.domain.ca.serverport)
+            + " --caname "
+            + self.domain.ca.name
+            + " --tls.certfiles "
+            + str(Path().absolute())
+            + "/"
+            + str(pathfabriccaorderer)
+            + "/ca-cert.pem"
+        )
+        configfile = {
+            "NodeOUs": {
+                "Enable": "true",
+                "ClientOUIdentifier": {
+                    "Certificate": "cacerts/localhost-"
+                    + str(self.domain.ca.serverport)
+                    + "-"
+                    + self.domain.ca.name
+                    + ".pem",
+                    "OrganizationalUnitIdentifier": "client",
+                },
+                "PeerOUIdentifier": {
+                    "Certificate": "cacerts/localhost-"
+                    + str(self.domain.ca.serverport)
+                    + "-"
+                    + self.domain.ca.name
+                    + ".pem",
+                    "OrganizationalUnitIdentifier": "peer",
+                },
+                "AdminOUIdentifier": {
+                    "Certificate": "cacerts/localhost-"
+                    + str(self.domain.ca.serverport)
+                    + "-"
+                    + self.domain.ca.name
+                    + ".pem",
+                    "OrganizationalUnitIdentifier": "admin",
+                },
+                "OrdererOUIdentifier": {
+                    "Certificate": "cacerts/localhost-"
+                    + str(self.domain.ca.serverport)
+                    + "-"
+                    + self.domain.ca.name
+                    + ".pem",
+                    "OrganizationalUnitIdentifier": "orderer",
+                },
+            }
+        }
+
+        configpath = "".join([str(Path().absolute()), "/", str(pathorder), "/msp"])
+        with open(configpath + "/config.yaml", "w") as yaml_file:
+            yaml.dump(configfile, yaml_file)
+
+        cacert = (
+            str(Path().absolute()) + "/" + str(pathfabriccaorderer) + "/ca-cert.pem"
+        )
+
+        tlscacerts = Path(
+            "domains/" + self.domain.name + "/ordererOrganizations/msp/tlscacerts"
+        )
+        tlscacerts.mkdir(parents=True, exist_ok=True)
+        shutil.copy(
+            cacert,
+            str(Path().absolute())
+            + "/"
+            + str(tlscacerts)
+            + "/tlsca."
+            + self.domain.name
+            + "-cert.pem",
+        )
+
+        tlsca = Path("domains/" + self.domain.name + "/ordererOrganizations/tlsca")
+        tlsca.mkdir(parents=True, exist_ok=True)
+        shutil.copy(
+            cacert,
+            str(Path().absolute())
+            + "/"
+            + str(tlsca)
+            + "/tlsca."
+            + self.domain.name
+            + "-cert.pem",
+        )
+
+        console.print("[bold]## Registering orderer[/]")
+        os.system(
+            str(Path().absolute())
+            + "/bin/fabric-ca-client register "
+            + " --caname "
+            + self.domain.ca.name
+            + " --id.name orderer"
+            + " --id.secret ordererpw"
+            + " --id.type orderer "
+            + " --tls.certfiles "
+            + str(Path().absolute())
+            + "/"
+            + str(pathfabriccaorderer)
+            + "/ca-cert.pem"
+        )
+
+        console.print("[bold]## Registering orderer admin[/]")
+        os.system(
+            str(Path().absolute())
+            + "/bin/fabric-ca-client register "
+            + " --caname "
+            + self.domain.ca.name
+            + " --id.name ordererAdmin"
+            + " --id.secret ordererAdminpw"
+            + " --id.type admin "
+            + " --tls.certfiles "
+            + str(Path().absolute())
+            + "/"
+            + str(pathfabriccaorderer)
+            + "/ca-cert.pem"
+        )
+
+        console.print("[bold]## Registering orderer msp[/]")
+        msppath = Path(
+            "domains/"
+            + self.domain.name
+            + "/ordererOrganizations/"
+            + self.domain.orderer.name
+            + "/msp"
+        )
+        os.system(
+            str(Path().absolute())
+            + "/bin/fabric-ca-client enroll "
+            + " -u https://orderer:ordererpw@localhost:"
+            + str(self.domain.ca.serverport)
+            + " --caname "
+            + self.domain.ca.name
+            + " -M "
+            + str(Path().absolute())
+            + "/"
+            + str(msppath)
+            + " --tls.certfiles "
+            + str(Path().absolute())
+            + "/"
+            + str(pathfabriccaorderer)
+            + "/ca-cert.pem"
+        )
+        shutil.copy(
+            configpath + "/config.yaml",
+            str(Path().absolute()) + "/" + str(msppath) + "/config.yaml",
+        )
+
+        console.print("[bold]## Generating the orderer-tls certificates[/]")
+        tlspath = Path(
+            "domains/"
+            + self.domain.name
+            + "/ordererOrganizations/"
+            + self.domain.orderer.name
+            + "/tls"
+        )
+        os.system(
+            str(Path().absolute())
+            + "/bin/fabric-ca-client enroll "
+            + " -u https://orderer:ordererpw@localhost:"
+            + str(self.domain.ca.serverport)
+            + " --caname "
+            + self.domain.ca.name
+            + " -M "
+            + str(Path().absolute())
+            + "/"
+            + str(tlspath)
+            + " --enrollment.profile tls --csr.hosts "
+            + self.domain.orderer.name
+            + "."
+            + self.domain.name
+            + " --csr.hosts localhost"
+            + " --tls.certfiles "
+            + str(Path().absolute())
+            + "/"
+            + str(pathfabriccaorderer)
+            + "/ca-cert.pem"
+        )
+
+        shutil.copy(
+            str(Path().absolute()) + "/" + str(tlspath) + "/signcerts/cert.pem",
+            str(Path().absolute()) + "/" + str(tlspath) + "/server.crt",
+        )
+
+        for file_name in os.listdir(
+            str(Path().absolute()) + "/" + str(tlspath) + "/tlscacerts/"
+        ):
+            shutil.copy(
+                str(Path().absolute())
+                + "/"
+                + str(tlspath)
+                + "/tlscacerts/"
+                + file_name,
+                str(Path().absolute()) + "/" + str(tlspath) + "/ca.crt",
+            )
+
+        for file_name in os.listdir(
+            str(Path().absolute()) + "/" + str(tlspath) + "/keystore/"
+        ):
+            shutil.copy(
+                str(Path().absolute()) + "/" + str(tlspath) + "/keystore/" + file_name,
+                str(Path().absolute()) + "/" + str(tlspath) + "/server.key",
+            )
+
+        msptlscacerts = Path(
+            "domains/"
+            + self.domain.name
+            + "/ordererOrganizations/"
+            + self.domain.orderer.name
+            + "/msp/tlscacerts"
+        )
+        msptlscacerts.mkdir(parents=True, exist_ok=True)
+
+        for file_name in os.listdir(
+            str(Path().absolute()) + "/" + str(tlspath) + "/tlscacerts/"
+        ):
+            shutil.copy(
+                str(Path().absolute())
+                + "/"
+                + str(tlspath)
+                + "/tlscacerts/"
+                + file_name,
+                str(Path().absolute())
+                + "/"
+                + str(msptlscacerts)
+                + "/tlsca."
+                + self.domain.name
+                + "-cert.pem",
+            )
+
+        console.print("[bold]## Generating admin msp[/]")
+        adminpath = Path(
+            "domains/"
+            + self.domain.name
+            + "/ordererOrganizations/users"
+            + "/Admin@"
+            + self.domain.name
+            + "/msp"
+        )
+        os.system(
+            str(Path().absolute())
+            + "/bin/fabric-ca-client enroll "
+            + " -u https://ordererAdmin:ordererAdminpw@localhost:"
+            + str(self.domain.ca.serverport)
+            + " --caname "
+            + self.domain.ca.name
+            + " -M "
+            + str(Path().absolute())
+            + "/"
+            + str(adminpath)
+            + " --tls.certfiles "
+            + str(Path().absolute())
+            + "/"
+            + str(pathfabriccaorderer)
+            + "/ca-cert.pem"
+        )
+
+        shutil.copy(
+            configpath + "/config.yaml",
+            str(Path().absolute()) + "/" + str(adminpath) + "/config.yaml",
+        )
