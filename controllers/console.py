@@ -10,6 +10,7 @@ from controllers.build import Build
 from controllers.requirements import Requirements
 from controllers.run import Run
 from models.ca import Ca
+from models.database import Database
 from models.domain import Domain
 from models.orderer import Orderer
 from models.organization import Organization
@@ -163,6 +164,7 @@ class ConsoleOutput:
         console.print("")
         iorgs = 1
         portpeer = 7051
+        portcouchdb = 5984
         caorgserverport = self.domain.ca.serverport + 100
         caorgoplstport = self.domain.ca.operationslistenport + 100
 
@@ -295,12 +297,29 @@ class ConsoleOutput:
                     peer.name + "." + self.domain.name + ":/var/hyperledger/production",
                 ]
 
+                database = Database()
+                database.port = portcouchdb
+                database.name = "peer" + str(ipeers) + org.name + "db"
+                database.COUCHDB_USER = "admin"
+                database.COUCHDB_PASSWORD = "adminpw"
+
+                peer.CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME = database.COUCHDB_USER
+                peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD = (
+                    database.COUCHDB_PASSWORD
+                )
+                peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS = (
+                    database.name + ":5984"
+                )
+
+                peer.database = database
+
                 org.peers.append(peer)
 
                 portlist.append(valueport)
 
                 ipeers += 1
                 portpeer += 1000
+                portcouchdb += 1000
 
             self.domain.organizations.append(org)
 
@@ -312,7 +331,7 @@ class ConsoleOutput:
 
         build = Build(self.domain)
         build.buildAll()
-        # self.selectNetwork()
+        self.selectNetwork()
 
     def mainMenu(self):
         os.system("clear")
