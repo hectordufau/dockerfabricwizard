@@ -521,6 +521,8 @@ class Build:
                     str(Path().absolute()) + "/" + str(adminpath) + "/config.yaml",
                 )
 
+        ## ORDERER
+
         console.print("[bold]## Enrolling the CA admin[/]")
         pathorder = Path("domains/" + self.domain.name + "/ordererOrganizations")
         pathfabriccaorderer = Path(
