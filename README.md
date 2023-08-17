@@ -79,7 +79,6 @@ Would you like to contribute with a donation?
 
 ### Todo
 
-- [ ] Volumes
 - [ ] Genesis block
 - [ ] Channel
 - [ ] Orderer and Peers channel joining
@@ -96,6 +95,7 @@ Would you like to contribute with a donation?
 - [ ] Questions (improving during development)
 - [ ] Building Peers
 - [ ] Building CouchDBs
+- [ ] Volumes
 
 ### Done ✓
 
