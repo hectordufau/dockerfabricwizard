@@ -31,6 +31,10 @@ class Build:
         self.buildCa()
         console.print("[bold white]# Creating and registering identities[/]")
         self.buildIdentities()
+        console.print("[bold white]# Creating and starting peers[/]")
+        self.buildPeers()
+        console.print("[bold white]# Creating and starting databases[/]")
+        self.buildDatabases()
         console.print("")
 
     def buildFolders(self):
@@ -790,3 +794,9 @@ class Build:
             configpath + "/config.yaml",
             str(Path().absolute()) + "/" + str(adminpath) + "/config.yaml",
         )
+
+    def buildPeers(self):
+        pass
+    
+    def buildDatabases(self):
+        pass

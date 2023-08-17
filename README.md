@@ -94,6 +94,8 @@ Would you like to contribute with a donation?
 ### In Progress
 
 - [ ] Questions (improving during development)
+- [ ] Building Peers
+- [ ] Building CouchDBs
 
 ### Done ✓
 
