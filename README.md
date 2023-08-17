@@ -12,6 +12,7 @@ This project is under development, so it is not ready for use yet. It is also no
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Screenshots](#screenshots)
 - [Contributing](#contributing)
 - [Development Status](#development-status)
 - [License](#license)
