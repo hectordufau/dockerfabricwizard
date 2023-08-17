@@ -1,6 +1,5 @@
-import os
-from pathlib import Path
 import time
+from pathlib import Path
 
 from python_on_whales import DockerClient
 from rich.console import Console
@@ -37,3 +36,18 @@ class Run:
         docker = DockerClient(compose_files=[pathfabricca])
         docker.compose.up(detach=True)
         time.sleep(5)
+
+    def startingOPD(self):
+        pathorderer = "".join(
+            [
+                str(Path().absolute()),
+                "/domains/",
+                self.domain.name,
+                "/compose/",
+                "compose-orderer.yaml",
+            ]
+        )
+
+        docker = DockerClient(compose_files=[pathorderer])
+        docker.compose.up(detach=True)
+        # docker.compose.up()

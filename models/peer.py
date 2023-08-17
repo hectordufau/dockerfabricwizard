@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, List
+
 from pydantic import BaseModel
 
 
@@ -32,3 +33,4 @@ class Peer(BaseModel):
     operationslistenport: int = 0
     chaincodelistenport: int = 0
     peerlistenport: int = 0
+    volumes: List[Optional[str]] = []

@@ -82,6 +82,41 @@ class ConsoleOutput:
 
         ordererdomain = Orderer()
         ordererdomain.name = "orderer"
+        ordererdomain.generallistenport = 7050
+        portlist.append(ordererdomain.generallistenport)
+        ordererdomain.operationslistenport = 9443
+        portlist.append(ordererdomain.operationslistenport)
+        ordererdomain.adminlistenport = 7053
+        portlist.append(ordererdomain.adminlistenport)
+        ordererdomain.ORDERER_GENERAL_LISTENPORT = ordererdomain.generallistenport
+        ordererdomain.ORDERER_OPERATIONS_LISTENADDRESS = (
+            ordererdomain.name
+            + "."
+            + domainname
+            + ":"
+            + str(ordererdomain.operationslistenport)
+        )
+        ordererdomain.ORDERER_ADMIN_LISTENADDRESS = "0.0.0.0:" + str(
+            ordererdomain.adminlistenport
+        )
+        ordererdomain.volumes = [
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
+            + "/ordererOrganizations/"
+            + ordererdomain.name
+            + "/msp:/var/hyperledger/orderer/msp",
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
+            + "/ordererOrganizations/"
+            + ordererdomain.name
+            + "/tls/:/var/hyperledger/orderer/tls",
+            ordererdomain.name
+            + "."
+            + domainname
+            + ":/var/hyperledger/production/orderer",
+        ]
         self.domain.orderer = ordererdomain
 
         cadomain = Ca()
@@ -248,6 +283,17 @@ class ConsoleOutput:
                     valueport = int(peerport)
 
                 peer.CORE_PEER_LISTENADDRESS = "0.0.0.0:" + str(valueport)
+                peer.volumes = [
+                    str(Path().absolute())
+                    + "/domains/"
+                    + self.domain.name
+                    + "/peerOrganizations/"
+                    + org.name
+                    + "/"
+                    + peer.name
+                    + ":/etc/hyperledger/fabric",
+                    peer.name + "." + self.domain.name + ":/var/hyperledger/production",
+                ]
 
                 org.peers.append(peer)
 
@@ -266,7 +312,7 @@ class ConsoleOutput:
 
         build = Build(self.domain)
         build.buildAll()
-        self.selectNetwork()
+        # self.selectNetwork()
 
     def mainMenu(self):
         os.system("clear")

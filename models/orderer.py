@@ -1,4 +1,5 @@
-from typing import Optional
+from typing import Optional, List
+
 from pydantic import BaseModel
 
 
@@ -13,8 +14,12 @@ class Orderer(BaseModel):
     ORDERER_ADMIN_TLS_PRIVATEKEY: str = "/var/hyperledger/orderer/tls/server.key"
     ORDERER_ADMIN_TLS_ROOTCAS: str = "[/var/hyperledger/orderer/tls/ca.crt]"
     ORDERER_CHANNELPARTICIPATION_ENABLED: bool = True
-    ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE: str = "/var/hyperledger/orderer/tls/server.crt"
-    ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY: str = "/var/hyperledger/orderer/tls/server.key"
+    ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE: str = (
+        "/var/hyperledger/orderer/tls/server.crt"
+    )
+    ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY: str = (
+        "/var/hyperledger/orderer/tls/server.key"
+    )
     ORDERER_GENERAL_CLUSTER_ROOTCAS: str = "[/var/hyperledger/orderer/tls/ca.crt]"
     ORDERER_GENERAL_LISTENADDRESS: str = "0.0.0.0"
     ORDERER_GENERAL_LISTENPORT: int = 0
@@ -28,3 +33,4 @@ class Orderer(BaseModel):
     adminlistenport: int = 0
     generallistenport: int = 0
     operationslistenport: int = 0
+    volumes:  List[Optional[str]] = []

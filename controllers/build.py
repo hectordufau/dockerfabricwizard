@@ -13,6 +13,7 @@ from models.domain import Domain
 
 yaml = ruamel.yaml.YAML()
 yaml.indent(sequence=3, offset=2)
+yaml.boolean_representation = [f"false", f"true"]
 console = Console()
 
 
@@ -31,10 +32,14 @@ class Build:
         self.buildCa()
         console.print("[bold white]# Creating and registering identities[/]")
         self.buildIdentities()
-        console.print("[bold white]# Creating and starting peers[/]")
+        console.print("[bold white]# Building orderer[/]")
+        self.buildOrderer()
+        console.print("[bold white]# Building peers[/]")
         self.buildPeers()
-        console.print("[bold white]# Creating and starting databases[/]")
+        console.print("[bold white]# Building databases[/]")
         self.buildDatabases()
+        console.print("[bold white]# Starting orderer, peers and databases[/]")
+        self.startingOPD()
         console.print("")
 
     def buildFolders(self):
@@ -204,7 +209,7 @@ class Build:
 
             configfile = {
                 "NodeOUs": {
-                    "Enable": "true",
+                    "Enable": True,
                     "ClientOUIdentifier": {
                         "Certificate": "cacerts/localhost-"
                         + str(org.ca.serverport)
@@ -549,7 +554,7 @@ class Build:
         )
         configfile = {
             "NodeOUs": {
-                "Enable": "true",
+                "Enable": True,
                 "ClientOUIdentifier": {
                     "Certificate": "cacerts/localhost-"
                     + str(self.domain.ca.serverport)
@@ -795,8 +800,92 @@ class Build:
             str(Path().absolute()) + "/" + str(adminpath) + "/config.yaml",
         )
 
+    def buildOrderer(self):
+        pathorderer = "domains/" + self.domain.name + "/compose/"
+
+        ordfile = {
+            "version": "3.7",
+            "networks": {self.domain.networkname: {"name": self.domain.networkname}},
+            "volumes": {self.domain.orderer.name + "." + self.domain.name},
+            "services": {},
+        }
+
+        orderer = {
+            "image": "hyperledger/fabric-orderer:latest",
+            # "user": str(os.geteuid()) + ":" + str(os.getgid()),
+            "labels": {"service": "hyperledger-fabric"},
+            "environment": [
+                "FABRIC_LOGGING_SPEC=" + self.domain.orderer.FABRIC_LOGGING_SPEC,
+                "ORDERER_GENERAL_LISTENADDRESS="
+                + self.domain.orderer.ORDERER_GENERAL_LISTENADDRESS,
+                "ORDERER_GENERAL_LISTENPORT="
+                + str(self.domain.orderer.ORDERER_GENERAL_LISTENPORT),
+                "ORDERER_GENERAL_LOCALMSPID="
+                + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID,
+                "ORDERER_GENERAL_LOCALMSPDIR="
+                + self.domain.orderer.ORDERER_GENERAL_LOCALMSPDIR,
+                "ORDERER_GENERAL_TLS_ENABLED="
+                + str(self.domain.orderer.ORDERER_GENERAL_TLS_ENABLED).lower(),
+                "ORDERER_GENERAL_TLS_PRIVATEKEY="
+                + self.domain.orderer.ORDERER_GENERAL_TLS_PRIVATEKEY,
+                "ORDERER_GENERAL_TLS_CERTIFICATE="
+                + self.domain.orderer.ORDERER_GENERAL_TLS_CERTIFICATE,
+                "ORDERER_GENERAL_TLS_ROOTCAS="
+                + self.domain.orderer.ORDERER_GENERAL_TLS_ROOTCAS,
+                "ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE="
+                + self.domain.orderer.ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE,
+                "ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY="
+                + self.domain.orderer.ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY,
+                "ORDERER_GENERAL_CLUSTER_ROOTCAS="
+                + self.domain.orderer.ORDERER_GENERAL_CLUSTER_ROOTCAS,
+                "ORDERER_GENERAL_BOOTSTRAPMETHOD=none",
+                "ORDERER_CHANNELPARTICIPATION_ENABLED="
+                + str(self.domain.orderer.ORDERER_CHANNELPARTICIPATION_ENABLED).lower(),
+                "ORDERER_ADMIN_TLS_ENABLED="
+                + str(self.domain.orderer.ORDERER_ADMIN_TLS_ENABLED).lower(),
+                "ORDERER_ADMIN_TLS_CERTIFICATE="
+                + self.domain.orderer.ORDERER_ADMIN_TLS_CERTIFICATE,
+                "ORDERER_ADMIN_TLS_PRIVATEKEY="
+                + self.domain.orderer.ORDERER_ADMIN_TLS_PRIVATEKEY,
+                "ORDERER_ADMIN_TLS_ROOTCAS="
+                + self.domain.orderer.ORDERER_ADMIN_TLS_ROOTCAS,
+                "ORDERER_ADMIN_TLS_CLIENTROOTCAS="
+                + self.domain.orderer.ORDERER_ADMIN_TLS_CLIENTROOTCAS,
+                "ORDERER_ADMIN_LISTENADDRESS="
+                + self.domain.orderer.ORDERER_ADMIN_LISTENADDRESS,
+                "ORDERER_OPERATIONS_LISTENADDRESS="
+                + self.domain.orderer.ORDERER_OPERATIONS_LISTENADDRESS,
+                "ORDERER_METRICS_PROVIDER=prometheus",
+            ],
+            "ports": ["0", "1", "2"],
+            "working_dir": "/root",
+            "command": "orderer",
+            "volumes": self.domain.orderer.volumes,
+            "container_name": self.domain.orderer.name + "." + self.domain.name,
+            "networks": [self.domain.networkname],
+        }
+
+        orderer["ports"][0] = DoubleQuotedScalarString(
+            f'{str(self.domain.orderer.adminlistenport)+":"+str(self.domain.orderer.adminlistenport)}'
+        )
+        orderer["ports"][1] = DoubleQuotedScalarString(
+            f'{str(self.domain.orderer.operationslistenport)+":"+str(self.domain.orderer.operationslistenport)}'
+        )
+        orderer["ports"][2] = DoubleQuotedScalarString(
+            f'{str(self.domain.orderer.generallistenport)+":"+str(self.domain.orderer.generallistenport)}'
+        )
+
+        ordfile["services"][self.domain.ca.name] = orderer
+
+        with open(pathorderer + "compose-orderer.yaml", "w") as yaml_file:
+            yaml.dump(ordfile, yaml_file)
+
     def buildPeers(self):
         pass
 
     def buildDatabases(self):
         pass
+
+    def startingOPD(self):
+        run = Run(self.domain)
+        run.startingOPD()
