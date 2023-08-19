@@ -35,6 +35,7 @@ class Run:
 
         docker = DockerClient(compose_files=[pathfabricca])
         docker.compose.up(detach=True)
+        # docker.compose.up()
         time.sleep(5)
 
     def startingOPD(self):
@@ -47,7 +48,17 @@ class Run:
                 "compose-orderer.yaml",
             ]
         )
+        
+        pathnet = "".join(
+            [
+                str(Path().absolute()),
+                "/domains/",
+                self.domain.name,
+                "/compose/",
+                "compose-net.yaml",
+            ]
+        )
 
-        docker = DockerClient(compose_files=[pathorderer])
+        docker = DockerClient(compose_files=[pathorderer, pathnet])
         docker.compose.up(detach=True)
         # docker.compose.up()

@@ -165,6 +165,8 @@ class ConsoleOutput:
         iorgs = 1
         portpeer = 7051
         portcouchdb = 5984
+        peeroperationlisten = 9444
+        peerchaincodelistenport = 7052
         caorgserverport = self.domain.ca.serverport + 100
         caorgoplstport = self.domain.ca.operationslistenport + 100
 
@@ -284,7 +286,6 @@ class ConsoleOutput:
                         valueport = 0
                     valueport = int(peerport)
 
-                peer.CORE_PEER_LISTENADDRESS = "0.0.0.0:" + str(valueport)
                 peer.volumes = [
                     str(Path().absolute())
                     + "/domains/"
@@ -295,6 +296,16 @@ class ConsoleOutput:
                     + peer.name
                     + ":/etc/hyperledger/fabric",
                     peer.name + "." + self.domain.name + ":/var/hyperledger/production",
+                    str(Path().absolute())
+                    + "/domains/"
+                    + self.domain.name
+                    + "/peerOrganizations/"
+                    + org.name
+                    + "/"
+                    + peer.name
+                    + "/peercfg"
+                    + ":/etc/hyperledger/peercfg",
+                    "/var/run/docker.sock:/host/var/run/docker.sock",
                 ]
 
                 database = Database()
@@ -310,6 +321,32 @@ class ConsoleOutput:
                 peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS = (
                     database.name + ":5984"
                 )
+                peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE = self.domain.networkname
+                peer.CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG = (
+                    '{"peername":"' + "peer" + str(ipeers) + org.name + '"}'
+                )
+                peer.CORE_PEER_LISTENADDRESS = "0.0.0.0:" + str(valueport)
+                peer.CORE_OPERATIONS_LISTENADDRESS = (
+                    peer.name + "." + self.domain.name + ":" + str(peeroperationlisten)
+                )
+                peer.peerlistenport = valueport
+                peer.operationslistenport = peeroperationlisten
+                portlist.append(peeroperationlisten)
+                peer.CORE_PEER_ADDRESS = (
+                    peer.name + "." + self.domain.name + ":" + str(valueport)
+                )
+                peer.CORE_PEER_CHAINCODEADDRESS = (
+                    peer.name + "." + self.domain.name + ":" + str(peerchaincodelistenport)
+                )
+                peer.chaincodelistenport = peerchaincodelistenport
+                peer.CORE_PEER_CHAINCODELISTENADDRESS = "0.0.0.0:" + str(
+                    peerchaincodelistenport
+                )
+                portlist.append(peerchaincodelistenport)
+                peer.CORE_PEER_GOSSIP_EXTERNALENDPOINT = peer.CORE_PEER_ADDRESS
+                peer.CORE_PEER_GOSSIP_BOOTSTRAP = peer.CORE_PEER_ADDRESS
+                peer.CORE_PEER_LOCALMSPID = org.name + "MSP"
+                peer.CORE_PEER_ID = peer.name + "." + self.domain.name
 
                 peer.database = database
 
@@ -320,6 +357,8 @@ class ConsoleOutput:
                 ipeers += 1
                 portpeer += 1000
                 portcouchdb += 1000
+                peeroperationlisten += 1000
+                peerchaincodelistenport += 1000
 
             self.domain.organizations.append(org)
 
@@ -415,10 +454,11 @@ class ConsoleOutput:
         os.system("docker stop $(docker ps -a -q)")
         console.print("[bold]# Removing containers and volumes[/]")
         os.system("docker rm -v $(docker ps -a -q)")
-        console.print("[bold]# Removing inmages[/]")
+        console.print("[bold]# Removing images[/]")
         os.system("docker rmi $(docker images -a -q)")
         console.print("[bold]# Removing other resources[/]")
         os.system("docker system prune -a -f")
+        os.system("docker volume prune -a -f")
         console.print("")
         self.mainMenu()
 

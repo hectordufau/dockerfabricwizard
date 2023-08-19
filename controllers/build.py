@@ -34,10 +34,8 @@ class Build:
         self.buildIdentities()
         console.print("[bold white]# Building orderer[/]")
         self.buildOrderer()
-        console.print("[bold white]# Building peers[/]")
-        self.buildPeers()
-        console.print("[bold white]# Building databases[/]")
-        self.buildDatabases()
+        console.print("[bold white]# Building peers and databases[/]")
+        self.buildPeersDatabases()
         console.print("[bold white]# Starting orderer, peers and databases[/]")
         self.startingOPD()
         console.print("")
@@ -68,6 +66,8 @@ class Build:
         )
         pathorderer.mkdir(parents=True, exist_ok=True)
 
+        configpeer = str(Path("config/core.yaml"))
+
         for org in self.domain.organizations:
             pathfabriccaorg = Path(
                 "domains/" + self.domain.name + "/fabric-ca/" + org.ca.name
@@ -87,8 +87,14 @@ class Build:
                     + org.name
                     + "/"
                     + peer.name
+                    + "/peercfg"
                 )
                 pathpeers.mkdir(parents=True, exist_ok=True)
+
+                shutil.copy(
+                    str(Path().absolute()) + "/" + configpeer,
+                    str(Path().absolute()) + "/" + str(pathpeers) + "/core.yaml",
+                )
 
     def buildConfig(self):
         pathdomains = "domains/" + self.domain.name
@@ -214,7 +220,7 @@ class Build:
                         "Certificate": "cacerts/localhost-"
                         + str(org.ca.serverport)
                         + "-"
-                        + org.ca.name
+                        + org.ca.name.replace(".", "-")
                         + ".pem",
                         "OrganizationalUnitIdentifier": "client",
                     },
@@ -222,7 +228,7 @@ class Build:
                         "Certificate": "cacerts/localhost-"
                         + str(org.ca.serverport)
                         + "-"
-                        + org.ca.name
+                        + org.ca.name.replace(".", "-")
                         + ".pem",
                         "OrganizationalUnitIdentifier": "peer",
                     },
@@ -230,7 +236,7 @@ class Build:
                         "Certificate": "cacerts/localhost-"
                         + str(org.ca.serverport)
                         + "-"
-                        + org.ca.name
+                        + org.ca.name.replace(".", "-")
                         + ".pem",
                         "OrganizationalUnitIdentifier": "admin",
                     },
@@ -238,7 +244,7 @@ class Build:
                         "Certificate": "cacerts/localhost-"
                         + str(org.ca.serverport)
                         + "-"
-                        + org.ca.name
+                        + org.ca.name.replace(".", "-")
                         + ".pem",
                         "OrganizationalUnitIdentifier": "orderer",
                     },
@@ -812,7 +818,7 @@ class Build:
 
         orderer = {
             "image": "hyperledger/fabric-orderer:latest",
-            # "user": str(os.geteuid()) + ":" + str(os.getgid()),
+            #"user": str(os.geteuid()) + ":" + str(os.getgid()),
             "labels": {"service": "hyperledger-fabric"},
             "environment": [
                 "FABRIC_LOGGING_SPEC=" + self.domain.orderer.FABRIC_LOGGING_SPEC,
@@ -880,11 +886,102 @@ class Build:
         with open(pathorderer + "compose-orderer.yaml", "w") as yaml_file:
             yaml.dump(ordfile, yaml_file)
 
-    def buildPeers(self):
-        pass
+    def buildPeersDatabases(self):
+        pathpeer = "domains/" + self.domain.name + "/compose/"
 
-    def buildDatabases(self):
-        pass
+        peerfile = {
+            "version": "3.7",
+            "networks": {self.domain.networkname: {"name": self.domain.networkname}},
+            "volumes": {},
+            "services": {},
+        }
+
+        for org in self.domain.organizations:
+            for peer in org.peers:
+                peerdata = {
+                    "container_name": peer.name + "." + self.domain.name,
+                    "image": "hyperledger/fabric-peer:latest",
+                    "labels": {"service": "hyperledger-fabric"},
+                    #"user": str(os.geteuid()) + ":" + str(os.getgid()),
+                    "environment": [
+                        "FABRIC_CFG_PATH=" + peer.FABRIC_CFG_PATH,
+                        "FABRIC_LOGGING_SPEC=" + peer.FABRIC_LOGGING_SPEC,
+                        "CORE_PEER_TLS_ENABLED=" + str(peer.CORE_PEER_TLS_ENABLED),
+                        "CORE_PEER_PROFILE_ENABLED="
+                        + str(peer.CORE_PEER_PROFILE_ENABLED),
+                        "CORE_PEER_TLS_CERT_FILE=" + peer.CORE_PEER_TLS_CERT_FILE,
+                        "CORE_PEER_TLS_KEY_FILE=" + peer.CORE_PEER_TLS_KEY_FILE,
+                        "CORE_PEER_TLS_ROOTCERT_FILE="
+                        + peer.CORE_PEER_TLS_ROOTCERT_FILE,
+                        "CORE_PEER_ID=" + peer.CORE_PEER_ID,
+                        "CORE_PEER_ADDRESS=" + peer.CORE_PEER_ADDRESS,
+                        "CORE_PEER_LISTENADDRESS=" + peer.CORE_PEER_LISTENADDRESS,
+                        "CORE_PEER_CHAINCODEADDRESS=" + peer.CORE_PEER_CHAINCODEADDRESS,
+                        "CORE_PEER_CHAINCODELISTENADDRESS="
+                        + peer.CORE_PEER_CHAINCODELISTENADDRESS,
+                        "CORE_PEER_GOSSIP_BOOTSTRAP=" + peer.CORE_PEER_GOSSIP_BOOTSTRAP,
+                        "CORE_PEER_GOSSIP_EXTERNALENDPOINT="
+                        + peer.CORE_PEER_GOSSIP_EXTERNALENDPOINT,
+                        "CORE_PEER_LOCALMSPID=" + peer.CORE_PEER_LOCALMSPID,
+                        "CORE_PEER_MSPCONFIGPATH=" + peer.CORE_PEER_MSPCONFIGPATH,
+                        "CORE_OPERATIONS_LISTENADDRESS="
+                        + peer.CORE_OPERATIONS_LISTENADDRESS,
+                        "CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG="
+                        + peer.CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG,
+                        "CORE_CHAINCODE_EXECUTETIMEOUT="
+                        + peer.CORE_CHAINCODE_EXECUTETIMEOUT,
+                        "CORE_VM_ENDPOINT=" + peer.CORE_VM_ENDPOINT,
+                        "CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE="
+                        + peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE,
+                        "CORE_LEDGER_STATE_STATEDATABASE="
+                        + peer.CORE_LEDGER_STATE_STATEDATABASE,
+                        "CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS="
+                        + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS,
+                        "CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME="
+                        + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME,
+                        "CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD="
+                        + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD,
+                        "CORE_METRICS_PROVIDER=prometheus",
+                    ],
+                    "ports": ["0", "1"],
+                    "working_dir": "/root",
+                    "command": "peer node start",
+                    "volumes": peer.volumes,
+                    "networks": [self.domain.networkname],
+                    "depends_on": [peer.database.name],
+                }
+
+                peerdata["ports"][0] = DoubleQuotedScalarString(
+                    f'{str(peer.peerlistenport)+":"+str(peer.peerlistenport)}'
+                )
+                peerdata["ports"][1] = DoubleQuotedScalarString(
+                    f'{str(peer.operationslistenport)+":"+str(peer.operationslistenport)}'
+                )
+
+                peerfile["volumes"][peer.name + "." + self.domain.name] = {}
+
+                peerfile["services"][peer.name + "." + self.domain.name] = peerdata
+
+                databasedata = {
+                    "image": "couchdb:3.3.2",
+                    "labels": {"service": "hyperledger-fabric"},
+                    "environment": [
+                        "COUCHDB_USER=" + peer.database.COUCHDB_USER,
+                        "COUCHDB_PASSWORD=" + peer.database.COUCHDB_PASSWORD,
+                    ],
+                    "ports": ["0"],
+                    "container_name": peer.database.name,
+                    "networks": [self.domain.networkname],
+                }
+
+                databasedata["ports"][0] = DoubleQuotedScalarString(
+                    f'{str(peer.database.port)+":5984"}'
+                )
+
+                peerfile["services"][peer.database.name] = databasedata
+
+        with open(pathpeer + "compose-net.yaml", "w") as yaml_file:
+            yaml.dump(peerfile, yaml_file)
 
     def startingOPD(self):
         run = Run(self.domain)

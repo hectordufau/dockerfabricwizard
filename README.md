@@ -79,7 +79,6 @@ Would you like to contribute with a donation?
 
 ### Todo
 
-- [ ] Genesis block
 - [ ] Channel
 - [ ] Orderer and Peers channel joining
 - [ ] Network up selector
@@ -92,14 +91,12 @@ Would you like to contribute with a donation?
 
 ### In Progress
 
-- [ ] Questions (improving during development)
-- [ ] Building Peers
-- [ ] Building CouchDBs
-- [ ] Volumes
+- [ ] Genesis block
 
 ### Done ✓
 
 - [x] Main menu
+- [x] Questions
 - [x] Config files folder structure
 - [x] Building network CAs (fabric-ca)
 - [x] Identities
@@ -107,6 +104,10 @@ Would you like to contribute with a donation?
 - [x] Orderer and Peers registering
 - [x] Certificates and MSP
 - [x] Building Orderer
+- [x] Building Peers
+- [x] Building CouchDBs
+- [x] Volumes
+- [x] Starting network containers
 
 ## License
 
