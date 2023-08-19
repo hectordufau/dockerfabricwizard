@@ -79,8 +79,6 @@ Would you like to contribute with a donation?
 
 ### Todo
 
-- [ ] Channel
-- [ ] Orderer and Peers channel joining
 - [ ] Network up selector
 - [ ] Network down
 - [ ] Chaincode as a Service installer
@@ -92,6 +90,8 @@ Would you like to contribute with a donation?
 ### In Progress
 
 - [ ] Genesis block
+- [ ] Channel
+- [ ] Orderer and Peers channel joining
 
 ### Done ✓
 
