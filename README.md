@@ -61,6 +61,41 @@ Before you begin, make sure you have the following prerequisites:
 
 5. Once the installation is complete, you will have a Hyperledger Fabric network up and running within Docker containers.
 
+## Fixing docker permissions
+
+1. Enable non-root user access
+
+   ```
+   sudo groupadd -f docker
+   sudo usermod -aG docker $USER
+   newgrp docker
+   sudo chown root:docker /var/run/docker.sock
+   sudo chown -R "$USER":"$USER" $HOME/.docker
+   sudo chmod -R g+rw "$HOME/.docker"
+   ```
+
+2. Edit docker service file
+
+   ```
+   sudo nano /usr/lib/systemd/system/docker.service
+   ```
+
+3. Append the following lines to the bottom of the Service section:
+
+   ```
+   [Service]
+   ...
+   SupplementaryGroups=docker
+   ExecStartPost=/bin/chmod 666 /var/run/docker.sock
+
+   ```
+
+4. Restart Docker Engine
+
+   ```
+   sudo service docker restart
+   ```
+
 ## Screenshots
 
 ![Main menu](/screenshots/screen1.png "Main menu")
@@ -89,7 +124,6 @@ Would you like to contribute with a donation?
 
 ### In Progress
 
-- [ ] Genesis block
 - [ ] Channel
 - [ ] Orderer and Peers channel joining
 
@@ -108,6 +142,7 @@ Would you like to contribute with a donation?
 - [x] Building CouchDBs
 - [x] Volumes
 - [x] Starting network containers
+- [x] Genesis block
 
 ## License
 

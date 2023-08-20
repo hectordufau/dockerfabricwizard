@@ -50,6 +50,9 @@ class Build:
         rmfolders = str(Path("domains/" + self.domain.name + "/ordererOrganizations"))
         os.system("rm -fR " + rmfolders)
 
+        rmfolders = str(Path("domains/" + self.domain.name + "/channel-artifacts"))
+        os.system("rm -fR " + rmfolders)
+
         pathcompose = Path("domains/" + self.domain.name + "/compose")
         pathcompose.mkdir(parents=True, exist_ok=True)
 
@@ -818,7 +821,7 @@ class Build:
 
         orderer = {
             "image": "hyperledger/fabric-orderer:latest",
-            #"user": str(os.geteuid()) + ":" + str(os.getgid()),
+            # "user": str(os.geteuid()) + ":" + str(os.getgid()),
             "labels": {"service": "hyperledger-fabric"},
             "environment": [
                 "FABRIC_LOGGING_SPEC=" + self.domain.orderer.FABRIC_LOGGING_SPEC,
@@ -902,7 +905,7 @@ class Build:
                     "container_name": peer.name + "." + self.domain.name,
                     "image": "hyperledger/fabric-peer:latest",
                     "labels": {"service": "hyperledger-fabric"},
-                    #"user": str(os.geteuid()) + ":" + str(os.getgid()),
+                    # "user": str(os.geteuid()) + ":" + str(os.getgid()),
                     "environment": [
                         "FABRIC_CFG_PATH=" + peer.FABRIC_CFG_PATH,
                         "FABRIC_LOGGING_SPEC=" + peer.FABRIC_LOGGING_SPEC,

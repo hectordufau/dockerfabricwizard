@@ -5,6 +5,7 @@ from typing import List
 
 import validators
 from rich.console import Console
+from controllers.blockchain import Blockchain
 
 from controllers.build import Build
 from controllers.requirements import Requirements
@@ -370,7 +371,9 @@ class ConsoleOutput:
 
         build = Build(self.domain)
         build.buildAll()
-        self.selectNetwork()
+        blockchain = Blockchain(self.domain)
+        blockchain.buildAll()
+        # self.selectNetwork()
 
     def mainMenu(self):
         os.system("clear")
