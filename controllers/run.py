@@ -36,6 +36,7 @@ class Run:
         docker = DockerClient(compose_files=[pathfabricca])
         docker.compose.up(detach=True)
         # docker.compose.up()
+        console.print("[bold]# Waiting CAs...[/]")
         time.sleep(5)
 
     def startingOPD(self):

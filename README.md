@@ -124,8 +124,6 @@ Would you like to contribute with a donation?
 
 ### In Progress
 
-- [ ] Genesis block
-- [ ] Channel
 - [ ] Orderer and Peers channel joining
 
 ### Done ✓
@@ -143,6 +141,8 @@ Would you like to contribute with a donation?
 - [x] Building CouchDBs
 - [x] Volumes
 - [x] Starting network containers
+- [X] Genesis block
+- [X] Channel
 
 ## License
 
