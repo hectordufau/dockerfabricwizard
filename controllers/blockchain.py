@@ -1,3 +1,4 @@
+import json
 import os
 import shutil
 import time
@@ -33,10 +34,6 @@ class Blockchain:
         console.print("")
         self.joinChannel()
         console.print("")
-        console.print("[bold white]# Setting anchor peers[/]")
-        console.print("")
-        self.setAnchorPeer()
-        console.print("")
 
     def genesisBlock(self):
         # Preparing configtx
@@ -54,6 +51,12 @@ class Blockchain:
         with open(config + "/configtx.yaml") as cftx:
             datacfg = yaml.load(cftx)
 
+        datacfg["Organizations"][0][
+            "Name"
+        ] = self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
+        datacfg["Organizations"][0][
+            "ID"
+        ] = self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
         datacfg["Organizations"][0]["MSPDir"] = (
             str(Path().absolute())
             + "/domains/"
@@ -61,6 +64,29 @@ class Blockchain:
             + "/ordererOrganizations/"
             + "msp"
         )
+        datacfg["Organizations"][0]["Policies"]["Readers"]["Rule"] = (
+            "OR('"
+            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
+            + ".admin', '"
+            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
+            + ".peer', '"
+            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
+            + ".client')"
+        )
+        datacfg["Organizations"][0]["Policies"]["Writers"]["Rule"] = (
+            "OR('"
+            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
+            + ".admin', '"
+            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
+            + ".client')"
+        )
+        datacfg["Organizations"][0]["Policies"]["Admins"]["Rule"] = (
+            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".admin')"
+        )
+        datacfg["Organizations"][0]["Policies"]["Endorsement"]["Rule"] = (
+            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
+        )
+
         datacfg["Organizations"][0]["OrdererEndpoints"] = [
             self.domain.orderer.name
             + "."
@@ -68,6 +94,72 @@ class Blockchain:
             + ":"
             + str(self.domain.orderer.generallistenport)
         ]
+
+        datacfg["Organizations"][0]["AnchorPeers"] = []
+
+        for org in self.domain.organizations:
+            for peer in org.peers:
+                if peer.name.split(".")[0] == "peer1":
+                    anchorpeer = {"Host": "127.0.0.1", "Port": peer.peerlistenport}
+                    datacfg["Organizations"][0]["AnchorPeers"].append(anchorpeer)
+
+                    organization = {
+                        "Name": peer.CORE_PEER_LOCALMSPID,
+                        "ID": peer.CORE_PEER_LOCALMSPID,
+                        "MSPDir": (
+                            str(Path().absolute())
+                            + "/domains/"
+                            + self.domain.name
+                            + "/peerOrganizations/"
+                            + org.name
+                            + "/msp"
+                        ),
+                        "AnchorPeers": [
+                            {"Host": "127.0.0.1", "Port": peer.peerlistenport}
+                        ],
+                        "Policies": {
+                            "Readers": {
+                                "Type": "Signature",
+                                "Rule": (
+                                    "OR('"
+                                    + peer.CORE_PEER_LOCALMSPID
+                                    + ".admin', '"
+                                    + peer.CORE_PEER_LOCALMSPID
+                                    + ".peer', '"
+                                    + peer.CORE_PEER_LOCALMSPID
+                                    + ".client')"
+                                ),
+                            },
+                            "Writers": {
+                                "Type": "Signature",
+                                "Rule": (
+                                    "OR('"
+                                    + peer.CORE_PEER_LOCALMSPID
+                                    + ".admin', '"
+                                    + peer.CORE_PEER_LOCALMSPID
+                                    + ".client')"
+                                ),
+                            },
+                            "Admins": {
+                                "Type": "Signature",
+                                "Rule": (
+                                    "OR('" + peer.CORE_PEER_LOCALMSPID + ".admin')"
+                                ),
+                            },
+                            "Endorsement": {
+                                "Type": "Signature",
+                                "Rule": (
+                                    "OR('" + peer.CORE_PEER_LOCALMSPID + ".member')"
+                                ),
+                            },
+                        },
+                    }
+
+                    datacfg["Organizations"].append(organization)
+                    datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"][
+                        "Organizations"
+                    ].append(organization)
+
         datacfg["Orderer"]["OrdererType"] = "etcdraft"
         datacfg["Orderer"]["Addresses"] = [
             self.domain.orderer.name
@@ -98,6 +190,21 @@ class Blockchain:
                 ),
             },
         ]
+
+        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"]["Organizations"][0][
+            "Policies"
+        ]["Admins"]["Rule"] = (
+            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
+        )
+        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"]["Organizations"][
+            0
+        ]["Policies"]["Admins"]["Rule"] = (
+            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
+        )
+
+        out_file = config + "configtx.json"
+        with open(out_file, "w") as fpo:
+            json.dump(datacfg, fpo, indent=2)
 
         with open(config + "/configtx.yaml", "w") as cftx:
             yaml.dump(datacfg, cftx)
@@ -256,6 +363,3 @@ class Blockchain:
                 time.sleep(5)
 
                 os.system(str(Path().absolute()) + "/bin/peer channel join -b " + block)
-
-    def setAnchorPeer(self):
-        pass

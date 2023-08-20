@@ -373,7 +373,7 @@ class ConsoleOutput:
         build.buildAll()
         blockchain = Blockchain(self.domain)
         blockchain.buildAll()
-        # self.selectNetwork()
+        self.selectNetwork()
 
     def mainMenu(self):
         os.system("clear")

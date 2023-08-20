@@ -884,7 +884,7 @@ class Build:
             f'{str(self.domain.orderer.generallistenport)+":"+str(self.domain.orderer.generallistenport)}'
         )
 
-        ordfile["services"][self.domain.ca.name] = orderer
+        ordfile["services"][self.domain.orderer.name] = orderer
 
         with open(pathorderer + "compose-orderer.yaml", "w") as yaml_file:
             yaml.dump(ordfile, yaml_file)

@@ -114,8 +114,6 @@ Would you like to contribute with a donation?
 
 ### Todo
 
-- [ ] Network up selector
-- [ ] Network down
 - [ ] Chaincode as a Service installer
    - [ ] Go chaincode
    - [ ] Typescript chaincode
@@ -124,7 +122,8 @@ Would you like to contribute with a donation?
 
 ### In Progress
 
-- [ ] Orderer and Peers channel joining
+- [ ] Network up selector
+- [ ] Network down
 
 ### Done ✓
 
@@ -143,6 +142,7 @@ Would you like to contribute with a donation?
 - [x] Starting network containers
 - [X] Genesis block
 - [X] Channel
+- [x] Orderer and Peers channel joining
 
 ## License
 
