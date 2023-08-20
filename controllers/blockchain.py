@@ -25,6 +25,9 @@ class Blockchain:
         self.setAnchorPeer()
 
     def genesisBlock(self):
+        # Preparing configtx
+
+        # Creating gblock
         pathchannel = Path("domains/" + self.domain.name + "/channel-artifacts")
         pathchannel.mkdir(parents=True, exist_ok=True)
 
@@ -43,14 +46,67 @@ class Blockchain:
             str(Path().absolute())
             + "/bin/configtxgen -configPath "
             + config
-            + " -profile SampleAppChannelInsecureSolo -outputBlock "
+            + " -profile TwoOrgsApplicationGenesis -outputBlock "
             + block
             + " -channelID "
             + self.domain.networkname
         )
 
     def createChannel(self):
-        pass
+        config = str(Path().absolute()) + "/config/"
+        pathchannel = Path("domains/" + self.domain.name + "/channel-artifacts")
+        block = (
+            str(Path().absolute())
+            + "/"
+            + str(pathchannel)
+            + "/"
+            + self.domain.networkname
+            + ".block"
+        )
+        os.environ["FABRIC_CFG_PATH"] = config
+        os.environ["BLOCKFILE"] = block
+
+        ORDERER_CA = (
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
+            + "/ordererOrganizations/tlsca/tlsca."
+            + self.domain.name
+            + "-cert.pem"
+        )
+        ORDERER_ADMIN_TLS_SIGN_CERT = (
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
+            + "/ordererOrganizations/"
+            + self.domain.orderer.name
+            + "/tls/server.crt"
+        )
+        ORDERER_ADMIN_TLS_PRIVATE_KEY = (
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
+            + "/ordererOrganizations/"
+            + self.domain.orderer.name
+            + "/tls/server.key"
+        )
+
+        os.system(
+            str(Path().absolute())
+            + "/bin/osnadmin channel join --channelID "
+            + self.domain.networkname
+            + " --config-block "
+            + block
+            + " -o localhost:"
+            + str(self.domain.orderer.adminlistenport)
+            + " --ca-file '"
+            + ORDERER_CA
+            + "' --client-cert '"
+            + ORDERER_ADMIN_TLS_SIGN_CERT
+            + "' --client-key '"
+            + ORDERER_ADMIN_TLS_PRIVATE_KEY
+            + "'"
+        )
 
     def joinChannel(self):
         pass
