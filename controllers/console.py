@@ -5,8 +5,8 @@ from typing import List
 
 import validators
 from rich.console import Console
-from controllers.blockchain import Blockchain
 
+from controllers.blockchain import Blockchain
 from controllers.build import Build
 from controllers.requirements import Requirements
 from controllers.run import Run
@@ -337,7 +337,11 @@ class ConsoleOutput:
                     peer.name + "." + self.domain.name + ":" + str(valueport)
                 )
                 peer.CORE_PEER_CHAINCODEADDRESS = (
-                    peer.name + "." + self.domain.name + ":" + str(peerchaincodelistenport)
+                    peer.name
+                    + "."
+                    + self.domain.name
+                    + ":"
+                    + str(peerchaincodelistenport)
                 )
                 peer.chaincodelistenport = peerchaincodelistenport
                 peer.CORE_PEER_CHAINCODELISTENADDRESS = "0.0.0.0:" + str(
@@ -411,14 +415,17 @@ class ConsoleOutput:
                     option = console.input("[bold]Select an option (N,S,D,C or Q):[/] ")
                     console.print("")
 
-    def checkDockerStatus(self):
+    def checkDockerStatus(self, networkname: str = None):
         os.system("clear")
         self.header()
         console.print("[bold orange1]DOCKER STATUS[/]")
         console.print("")
         console.print("[bold]Containers[/]")
         console.print("")
-        os.system("docker ps")
+        if networkname is None:
+            os.system("docker ps")
+        else:
+            os.system('docker ps -f "network=' + networkname + '"')
         console.print("")
         console.print("[bold]Volumes[/]")
         console.print("")
@@ -426,7 +433,10 @@ class ConsoleOutput:
         console.print("")
         console.print("[bold]Networks[/]")
         console.print("")
-        os.system("docker network ls")
+        if networkname is None:
+            os.system("docker network ls")
+        else:
+            os.system('docker network ls -f "name=' + networkname + '"')
         console.print("")
         console.print("[bold white]M - Return to main menu[/]")
         console.print("[bold white]Q - Quit[/]")
@@ -545,6 +555,7 @@ class ConsoleOutput:
             match option.lower():
                 case "n":
                     selectoption = False
+                    self.checkDockerStatus(domain.networkname)
                 case "o":
                     selectoption = False
                 case "p":
@@ -555,7 +566,7 @@ class ConsoleOutput:
                     selectoption = False
                     run = Run(domain)
                     run.runAll()
-                    self.checkDockerStatus()
+                    self.checkDockerStatus(domain.networkname)
                 case "s":
                     selectoption = False
                     # self.selectNetwork()
