@@ -123,8 +123,12 @@ Would you like to contribute with a donation?
 ### In Progress
 
 - [ ] Selected network menu options
-- [ ] Network up selector
-- [ ] Network down
+   - [x] Network status
+   - [ ] Add organization
+   - [ ] Add peer
+   - [ ] Start network
+   - [ ] Stop network
+   - [x] Clean docker
 
 ### Done ✓
 
