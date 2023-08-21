@@ -20,6 +20,7 @@ class Run:
         console.print("[bold white]# Starting CAs[/]")
         self.startCA()
         console.print("")
+        console.print("[bold white]# Starting orderer, peers and databases[/]")
         self.startingOPD()
         console.print("")
 
@@ -36,7 +37,6 @@ class Run:
 
         docker = DockerClient(compose_files=[pathfabricca])
         docker.compose.up(detach=True)
-        # docker.compose.up()
         console.print("[bold]# Waiting CAs...[/]")
         time.sleep(5)
 
@@ -63,4 +63,3 @@ class Run:
 
         docker = DockerClient(compose_files=[pathorderer, pathnet])
         docker.compose.up(detach=True)
-        # docker.compose.up()

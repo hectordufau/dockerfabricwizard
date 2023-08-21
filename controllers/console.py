@@ -601,11 +601,15 @@ class ConsoleOutput:
                     self.checkDockerStatus(domain)
                 case "s":
                     selectoption = False
+                    console.print("[bold white]# Stopping network...[/]")
                     docker.compose.stop()
                     self.checkDockerStatus(domain)
                 case "d":
                     selectoption = False
-                    self.cleanDockerAll(domain)
+                    #self.cleanDockerAll(domain)
+                    console.print("[bold white]# Cleaning...[/]")
+                    docker.compose.down(remove_orphans=True, remove_images="all", volumes=True)
+                    self.networkSelected(domain.name)
                 case "r":
                     selectoption = False
                     self.selectNetwork()
