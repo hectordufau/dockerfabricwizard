@@ -380,6 +380,242 @@ class ConsoleOutput:
         blockchain.buildAll()
         self.selectNetwork()
 
+    def createOrganization(self, domain: Domain):
+        os.system("clear")
+        self.header()
+        portlist: List[int] = []
+
+        console.print("[bold orange1]NEW ORGANIZATION[/]")
+        console.print("")
+        console.print("[bold red]Press 'Q' to quit anytime[/]")
+        console.print("")
+
+        iorgs = len(domain.organizations) + 1
+        portpeer = 0
+        peeroperationlisten = 0
+        peerchaincodelistenport = 0
+        portcouchdb = 0
+
+        portlist.append(domain.ca.serverport)
+        portlist.append(domain.ca.operationslistenport)
+        portlist.append(domain.orderer.adminlistenport)
+        portlist.append(domain.orderer.generallistenport)
+        portlist.append(domain.orderer.operationslistenport)
+        for org in domain.organizations:
+            portlist.append(org.ca.serverport)
+            portlist.append(org.ca.operationslistenport)
+            for peer in org.peers:
+                portlist.append(peer.operationslistenport)
+                peeroperationlisten = peer.operationslistenport + 1000
+                portlist.append(peer.chaincodelistenport)
+                peerchaincodelistenport = peer.chaincodelistenport + 1000
+                portlist.append(peer.peerlistenport)
+                portpeer = peer.peerlistenport + 1000
+                portlist.append(peer.database.port)
+                portcouchdb = peer.database.port + 1000
+
+        caorgserverport = domain.ca.serverport + 100
+        caorgoplstport = domain.ca.operationslistenport + 100
+
+        org = Organization()
+        orgname = console.input("[bold]Organization #" + str(iorgs) + " name:[/] ")
+        if orgname.lower() == "q":
+            self.networkSelected(domain.name)
+        while not orgname.isalpha():
+            orgname = console.input(
+                "[bold red]Organization #"
+                + str(iorgs)
+                + " name not valid. Please retype again:[/] "
+            )
+            if orgname.lower() == "q":
+                self.networkSelected(domain.name)
+        org.name = orgname
+
+        caorg = Ca()
+        caorg.name = "ca." + org.name
+        caorg.FABRIC_CA_SERVER_CA_NAME = caorg.name
+        caorg.FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS = "0.0.0.0:" + str(
+            caorgoplstport
+        )
+        caorg.FABRIC_CA_SERVER_PORT = caorgserverport
+        caorg.volumes = "".join(
+            [
+                str(Path().absolute()),
+                "/domains/",
+                self.domain.name,
+                "/fabric-ca/",
+                caorg.name,
+                ":/etc/hyperledger/fabric-ca-server",
+            ]
+        )
+        caorg.serverport = caorgserverport
+        caorg.operationslistenport = caorgoplstport
+        portlist.append(caorgserverport)
+        portlist.append(caorgoplstport)
+        org.ca = caorg
+
+        qtypeers = console.input("[bold]Number of Peers:[/] ")
+        if qtypeers.lower() == "q":
+            self.networkSelected(domain.name)
+        valuepeers = 0
+        while not qtypeers.isdigit():
+            qtypeers = console.input(
+                "[bold red]Number of Peers value not valid. Please retype again:[/] "
+            )
+            if qtypeers.lower() == "q":
+                self.networkSelected(domain.name)
+        valuepeers = int(qtypeers)
+
+        while not validators.between(valuepeers, min=1):
+            qtypeers = console.input(
+                "[bold red]Number of Peers value not valid, min 1. Please retype again:[/] "
+            )
+            if qtypeers.lower() == "q":
+                self.networkSelected(domain.name)
+            while not qtypeers.isdigit():
+                valuepeers = 0
+            valuepeers = int(qtypeers)
+
+        org.qtypeers = valuepeers
+
+        ipeers = 1
+
+        while ipeers <= org.qtypeers:
+            peer = Peer()
+            peer.name = "peer" + str(ipeers) + "." + org.name
+            peerport = console.input(
+                "[bold]Peer "
+                + peer.name
+                + " Port Number (ex. "
+                + str(portpeer)
+                + "):[/] "
+            )
+            if peerport.lower() == "q":
+                self.networkSelected(domain.name)
+            valueport = 0
+            while not peerport.isdigit():
+                peerport = console.input(
+                    "[bold red]Peer "
+                    + peer.name
+                    + " Port Number value not valid. Please retype again:[/] "
+                )
+                if peerport.lower() == "q":
+                    self.networkSelected(domain.name)
+            valueport = int(peerport)
+
+            validport = True
+            while validport:
+                if valueport in portlist:
+                    validport = True
+                    peerport = console.input(
+                        "[bold red]Peer "
+                        + peer.name
+                        + " Port Number value in use. Please retype again:[/] "
+                    )
+                    if peerport.lower() == "q":
+                        self.networkSelected(domain.name)
+                    valueport = int(peerport)
+                else:
+                    validport = False
+
+            while not validators.between(valueport, min=portpeer, max=65535):
+                peerport = console.input(
+                    "[bold red]Peer "
+                    + peer.name
+                    + " Port Number value not valid, min "
+                    + str(portpeer)
+                    + ". Please retype again:[/] "
+                )
+                if peerport.lower() == "q":
+                    self.networkSelected(domain.name)
+                while not peerport.isdigit():
+                    valueport = 0
+                valueport = int(peerport)
+
+            peer.volumes = [
+                str(Path().absolute())
+                + "/domains/"
+                + self.domain.name
+                + "/peerOrganizations/"
+                + org.name
+                + "/"
+                + peer.name
+                + ":/etc/hyperledger/fabric",
+                peer.name + "." + self.domain.name + ":/var/hyperledger/production",
+                str(Path().absolute())
+                + "/domains/"
+                + self.domain.name
+                + "/peerOrganizations/"
+                + org.name
+                + "/"
+                + peer.name
+                + "/peercfg"
+                + ":/etc/hyperledger/peercfg",
+                "/var/run/docker.sock:/host/var/run/docker.sock",
+            ]
+
+            database = Database()
+            database.port = portcouchdb
+            database.name = "peer" + str(ipeers) + org.name + "db"
+            database.COUCHDB_USER = "admin"
+            database.COUCHDB_PASSWORD = "adminpw"
+
+            peer.CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME = database.COUCHDB_USER
+            peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD = database.COUCHDB_PASSWORD
+            peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS = (
+                database.name + ":5984"
+            )
+            peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE = self.domain.networkname
+            peer.CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG = (
+                '{"peername":"' + "peer" + str(ipeers) + org.name + '"}'
+            )
+            peer.CORE_PEER_LISTENADDRESS = "0.0.0.0:" + str(valueport)
+            peer.CORE_OPERATIONS_LISTENADDRESS = (
+                peer.name + "." + self.domain.name + ":" + str(peeroperationlisten)
+            )
+            peer.peerlistenport = valueport
+            peer.operationslistenport = peeroperationlisten
+            portlist.append(peeroperationlisten)
+            peer.CORE_PEER_ADDRESS = (
+                peer.name + "." + self.domain.name + ":" + str(valueport)
+            )
+            peer.CORE_PEER_CHAINCODEADDRESS = (
+                peer.name + "." + self.domain.name + ":" + str(peerchaincodelistenport)
+            )
+            peer.chaincodelistenport = peerchaincodelistenport
+            peer.CORE_PEER_CHAINCODELISTENADDRESS = "0.0.0.0:" + str(
+                peerchaincodelistenport
+            )
+            portlist.append(peerchaincodelistenport)
+            peer.CORE_PEER_GOSSIP_EXTERNALENDPOINT = peer.CORE_PEER_ADDRESS
+            peer.CORE_PEER_GOSSIP_BOOTSTRAP = peer.CORE_PEER_ADDRESS
+            peer.CORE_PEER_LOCALMSPID = org.name + "MSP"
+            peer.CORE_PEER_ID = peer.name + "." + self.domain.name
+
+            peer.database = database
+
+            org.peers.append(peer)
+
+            portlist.append(valueport)
+
+            ipeers += 1
+            portpeer += 1000
+            portcouchdb += 1000
+            peeroperationlisten += 1000
+            peerchaincodelistenport += 1000
+
+        domain.organizations.append(org)
+        console.print("")
+
+        build = Build(domain)
+        build.buildNewOrganization()
+        blockchain = Blockchain(domain)
+        blockchain.buildNewOrganization()
+        self.networkSelected(domain.name)
+
+    def createPeer(self, domain: Domain):
+        pass
+
     def mainMenu(self):
         os.system("clear")
         self.header()
@@ -592,9 +828,11 @@ class ConsoleOutput:
                     self.checkDockerStatus(domain)
                 case "o":
                     selectoption = False
+                    # TODO self.createOrganization(domain)
                     self.networkSelected(domain.name)
                 case "p":
                     selectoption = False
+                    # TODO self.createPeer(domain)
                     self.networkSelected(domain.name)
                 case "a":
                     selectoption = False
@@ -612,7 +850,9 @@ class ConsoleOutput:
                 case "c":
                     selectoption = False
                     console.print("[bold white]# Cleaning...[/]")
-                    docker.compose.down(remove_orphans=True, remove_images="all", volumes=True)
+                    docker.compose.down(
+                        remove_orphans=True, remove_images="all", volumes=True
+                    )
                     self.networkSelected(domain.name)
                 case "d":
                     selectoption = False

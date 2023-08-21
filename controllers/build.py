@@ -986,6 +986,12 @@ class Build:
         with open(pathpeer + "compose-net.yaml", "w") as yaml_file:
             yaml.dump(peerfile, yaml_file)
 
+    def buildNewOrganization(self):
+        pass
+
+    def buildNewPeer(self):
+        pass
+
     def startingOPD(self):
         run = Run(self.domain)
         run.startingOPD()

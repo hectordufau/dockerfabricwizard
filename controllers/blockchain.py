@@ -369,3 +369,6 @@ class Blockchain:
                 time.sleep(5)
 
                 os.system(str(Path().absolute()) + "/bin/peer channel join -b " + block)
+
+    def buildNewOrganization(self):
+        pass

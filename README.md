@@ -123,13 +123,8 @@ Would you like to contribute with a donation?
 ### In Progress
 
 - [ ] Selected network menu options
-   - [x] Network status
    - [ ] Add organization
    - [ ] Add peer
-   - [x] Start network
-   - [x] Stop network   
-   - [x] Clean docker
-   - [x] Delete network configs
 
 ### Done ✓
 
@@ -149,6 +144,12 @@ Would you like to contribute with a donation?
 - [X] Genesis block
 - [X] Channel
 - [x] Orderer and Peers channel joining
+- [ ] Selected network menu options
+   - [x] Network status
+   - [x] Start network
+   - [x] Stop network
+   - [x] Clean docker
+   - [x] Delete network configs
 
 ## License
 
