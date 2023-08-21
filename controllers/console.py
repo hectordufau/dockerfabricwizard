@@ -549,15 +549,16 @@ class ConsoleOutput:
         console.print("[bold white]N - Network status[/]")
         console.print("[bold white]O - Add organization[/]")
         console.print("[bold white]P - Add peer[/]")
-        console.print("[bold white]C - Add chaincode[/]")
+        console.print("[bold white]A - Add chaincode[/]")
         console.print("[bold white]G - Start network[/]")
         console.print("[bold white]S - Stop network[/]")
-        console.print("[bold white]D - Clean docker[/]")
+        console.print("[bold white]C - Clean docker[/]")
+        console.print("[bold white]D - Delete configs[/]")
         console.print("[bold white]R - Return to previous menu[/]")
         console.print("[bold white]M - Return to main menu[/]")
         console.print("[bold white]Q - Quit[/]")
         console.print("")
-        option = console.input("[bold]Select an option (N,O,P,C,G,S,D,R,M or Q):[/] ")
+        option = console.input("[bold]Select an option (N,O,P,A,G,S,C,D,R,M or Q):[/] ")
         console.print("")
 
         configfile = "".join(
@@ -573,7 +574,8 @@ class ConsoleOutput:
             j = json.loads(config_file.read())
             domain = Domain(**j)
 
-        dockpath = str(Path().absolute()) + "/domains/" + domain.name + "/compose/"
+        netpath = str(Path().absolute()) + "/domains/" + domain.name
+        dockpath = netpath + "/compose/"
         docker = DockerClient(
             compose_files=[
                 dockpath + "compose-ca.yaml",
@@ -590,10 +592,13 @@ class ConsoleOutput:
                     self.checkDockerStatus(domain)
                 case "o":
                     selectoption = False
+                    self.networkSelected(domain.name)
                 case "p":
                     selectoption = False
-                case "c":
+                    self.networkSelected(domain.name)
+                case "a":
                     selectoption = False
+                    self.networkSelected(domain.name)
                 case "g":
                     selectoption = False
                     run = Run(domain)
@@ -604,12 +609,16 @@ class ConsoleOutput:
                     console.print("[bold white]# Stopping network...[/]")
                     docker.compose.stop()
                     self.checkDockerStatus(domain)
-                case "d":
+                case "c":
                     selectoption = False
-                    #self.cleanDockerAll(domain)
                     console.print("[bold white]# Cleaning...[/]")
                     docker.compose.down(remove_orphans=True, remove_images="all", volumes=True)
                     self.networkSelected(domain.name)
+                case "d":
+                    selectoption = False
+                    console.print("[bold white]# Deleting...[/]")
+                    os.system("rm -fR " + netpath)
+                    self.selectNetwork()
                 case "r":
                     selectoption = False
                     self.selectNetwork()
@@ -621,6 +630,6 @@ class ConsoleOutput:
                     exit(0)
                 case _:
                     option = console.input(
-                        "[bold]Select an option (N,O,P,C,G,S,D,R,M or Q):[/] "
+                        "[bold]Select an option (N,O,P,A,G,S,C,D,R,M or Q):[/] "
                     )
                     console.print("")

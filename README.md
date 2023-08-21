@@ -127,8 +127,9 @@ Would you like to contribute with a donation?
    - [ ] Add organization
    - [ ] Add peer
    - [x] Start network
-   - [x] Stop network
+   - [x] Stop network   
    - [x] Clean docker
+   - [x] Delete network configs
 
 ### Done ✓
 
