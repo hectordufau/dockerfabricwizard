@@ -415,17 +415,17 @@ class ConsoleOutput:
                     option = console.input("[bold]Select an option (N,S,D,C or Q):[/] ")
                     console.print("")
 
-    def checkDockerStatus(self, networkname: str = None):
+    def checkDockerStatus(self, domain: Domain = None):
         os.system("clear")
         self.header()
         console.print("[bold orange1]DOCKER STATUS[/]")
         console.print("")
         console.print("[bold]Containers[/]")
         console.print("")
-        if networkname is None:
+        if domain is None:
             os.system("docker ps")
         else:
-            os.system('docker ps -f "network=' + networkname + '"')
+            os.system('docker ps -f "network=' + domain.networkname + '"')
         console.print("")
         console.print("[bold]Volumes[/]")
         console.print("")
@@ -433,12 +433,12 @@ class ConsoleOutput:
         console.print("")
         console.print("[bold]Networks[/]")
         console.print("")
-        if networkname is None:
+        if domain is None:
             os.system("docker network ls")
         else:
-            os.system('docker network ls -f "name=' + networkname + '"')
+            os.system('docker network ls -f "name=' + domain.networkname + '"')
         console.print("")
-        console.print("[bold white]M - Return to main menu[/]")
+        console.print("[bold white]M - Return to menu[/]")
         console.print("[bold white]Q - Quit[/]")
         console.print("")
         option = console.input("[bold]Select an option (M or Q):[/] ")
@@ -449,7 +449,10 @@ class ConsoleOutput:
             match option.lower():
                 case "m":
                     selectoption = False
-                    self.mainMenu()
+                    if domain is None:
+                        self.mainMenu()
+                    else:
+                        self.networkSelected(domain.name)
                 case "q":
                     selectoption = False
                     exit(0)
@@ -457,26 +460,29 @@ class ConsoleOutput:
                     option = console.input("[bold]Select an option (M or Q):[/] ")
                     console.print("")
 
-    def cleanDockerAll(self, networkname: str = None):
+    def cleanDockerAll(self, domain: Domain = None):
         os.system("clear")
         self.header()
         console.print("[bold orange1]DOCKER CLEANING[/]")
         console.print("")
         console.print("[bold green]Removing all Docker resources[/]")
         console.print("[bold]# Stopping containers[/]")
-        if networkname is None:
+        if domain is None:
             os.system("docker stop $(docker ps -a -q)")
         else:
-            os.system('docker stop $(docker ps -a -q -f "network=' + networkname + '")')
+            os.system('docker stop $(docker ps -a -q -f "network=' + domain.networkname + '")')
         console.print("[bold]# Removing containers and volumes[/]")
-        if networkname is None:
-            os.system("docker rm -v $(docker ps -a -q)")
+        if domain is None:
+            os.system("docker rm -v $(docker ps -a -q) -f")
         else:
             os.system(
-                'docker rm -v $(docker ps -a -q -f "network=' + networkname + '")'
+                'docker rm -v $(docker ps -a -q -f "network=' + domain.networkname + '")'
             )
+        if domain is not None:
+            console.print("[bold]# Removing network[/]")
+            os.system('docker network rm ' + domain.networkname + ' -f')
 
-        if networkname is None:
+        if domain is None:
             console.print("[bold]# Removing images[/]")
             os.system("docker rmi $(docker images -a -q)")
             console.print("[bold]# Removing other resources[/]")
@@ -485,7 +491,7 @@ class ConsoleOutput:
             console.print("")
             self.mainMenu()
         else:
-            self.networkSelected(networkname)
+            self.networkSelected(domain.name)
 
     def selectNetwork(self):
         os.system("clear")
@@ -567,7 +573,7 @@ class ConsoleOutput:
             match option.lower():
                 case "n":
                     selectoption = False
-                    self.checkDockerStatus(domain.networkname)
+                    self.checkDockerStatus(domain)
                 case "o":
                     selectoption = False
                 case "p":
@@ -578,13 +584,13 @@ class ConsoleOutput:
                     selectoption = False
                     run = Run(domain)
                     run.runAll()
-                    self.checkDockerStatus(domain.networkname)
+                    self.checkDockerStatus(domain)
                 case "s":
                     selectoption = False
                     # self.selectNetwork()
                 case "d":
                     selectoption = False
-                    self.cleanDockerAll(domain.networkname)
+                    self.cleanDockerAll(domain)
                 case "r":
                     selectoption = False
                     self.selectNetwork()
