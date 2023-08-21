@@ -457,23 +457,35 @@ class ConsoleOutput:
                     option = console.input("[bold]Select an option (M or Q):[/] ")
                     console.print("")
 
-    def cleanDockerAll(self):
+    def cleanDockerAll(self, networkname: str = None):
         os.system("clear")
         self.header()
         console.print("[bold orange1]DOCKER CLEANING[/]")
         console.print("")
         console.print("[bold green]Removing all Docker resources[/]")
         console.print("[bold]# Stopping containers[/]")
-        os.system("docker stop $(docker ps -a -q)")
+        if networkname is None:
+            os.system("docker stop $(docker ps -a -q)")
+        else:
+            os.system('docker stop $(docker ps -a -q -f "network=' + networkname + '")')
         console.print("[bold]# Removing containers and volumes[/]")
-        os.system("docker rm -v $(docker ps -a -q)")
-        console.print("[bold]# Removing images[/]")
-        os.system("docker rmi $(docker images -a -q)")
-        console.print("[bold]# Removing other resources[/]")
-        os.system("docker system prune -a -f")
-        os.system("docker volume prune -a -f")
-        console.print("")
-        self.mainMenu()
+        if networkname is None:
+            os.system("docker rm -v $(docker ps -a -q)")
+        else:
+            os.system(
+                'docker rm -v $(docker ps -a -q -f "network=' + networkname + '")'
+            )
+
+        if networkname is None:
+            console.print("[bold]# Removing images[/]")
+            os.system("docker rmi $(docker images -a -q)")
+            console.print("[bold]# Removing other resources[/]")
+            os.system("docker system prune -a -f")
+            os.system("docker volume prune -a -f")
+            console.print("")
+            self.mainMenu()
+        else:
+            self.networkSelected(networkname)
 
     def selectNetwork(self):
         os.system("clear")
@@ -572,6 +584,7 @@ class ConsoleOutput:
                     # self.selectNetwork()
                 case "d":
                     selectoption = False
+                    self.cleanDockerAll(domain.networkname)
                 case "r":
                     selectoption = False
                     self.selectNetwork()

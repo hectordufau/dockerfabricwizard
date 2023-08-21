@@ -122,6 +122,7 @@ Would you like to contribute with a donation?
 
 ### In Progress
 
+- [ ] Selected network menu options
 - [ ] Network up selector
 - [ ] Network down
 
