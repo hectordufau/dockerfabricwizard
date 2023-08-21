@@ -19,7 +19,8 @@ class Run:
         console.print("[bold green]Starting network[/]")
         console.print("[bold white]# Starting CAs[/]")
         self.startCA()
-
+        console.print("")
+        self.startingOPD()
         console.print("")
 
     def startCA(self):

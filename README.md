@@ -126,8 +126,8 @@ Would you like to contribute with a donation?
    - [x] Network status
    - [ ] Add organization
    - [ ] Add peer
-   - [ ] Start network
-   - [ ] Stop network
+   - [x] Start network
+   - [x] Stop network
    - [x] Clean docker
 
 ### Done ✓

@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import List
 
 import validators
+from python_on_whales import DockerClient
 from rich.console import Console
 
 from controllers.blockchain import Blockchain
@@ -470,17 +471,21 @@ class ConsoleOutput:
         if domain is None:
             os.system("docker stop $(docker ps -a -q)")
         else:
-            os.system('docker stop $(docker ps -a -q -f "network=' + domain.networkname + '")')
+            os.system(
+                'docker stop $(docker ps -a -q -f "network=' + domain.networkname + '")'
+            )
         console.print("[bold]# Removing containers and volumes[/]")
         if domain is None:
             os.system("docker rm -v $(docker ps -a -q) -f")
         else:
             os.system(
-                'docker rm -v $(docker ps -a -q -f "network=' + domain.networkname + '")'
+                'docker rm -v $(docker ps -a -q -f "network='
+                + domain.networkname
+                + '")'
             )
         if domain is not None:
             console.print("[bold]# Removing network[/]")
-            os.system('docker network rm ' + domain.networkname + ' -f')
+            os.system("docker network rm " + domain.networkname + " -f")
 
         if domain is None:
             console.print("[bold]# Removing images[/]")
@@ -568,6 +573,15 @@ class ConsoleOutput:
             j = json.loads(config_file.read())
             domain = Domain(**j)
 
+        dockpath = str(Path().absolute()) + "/domains/" + domain.name + "/compose/"
+        docker = DockerClient(
+            compose_files=[
+                dockpath + "compose-ca.yaml",
+                dockpath + "compose-net.yaml",
+                dockpath + "compose-orderer.yaml",
+            ]
+        )
+
         selectoption = True
         while selectoption:
             match option.lower():
@@ -587,7 +601,8 @@ class ConsoleOutput:
                     self.checkDockerStatus(domain)
                 case "s":
                     selectoption = False
-                    # self.selectNetwork()
+                    docker.compose.stop()
+                    self.checkDockerStatus(domain)
                 case "d":
                     selectoption = False
                     self.cleanDockerAll(domain)
