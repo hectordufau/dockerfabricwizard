@@ -100,7 +100,10 @@ class Blockchain:
         for org in self.domain.organizations:
             for peer in org.peers:
                 if peer.name.split(".")[0] == "peer1":
-                    anchorpeer = {"Host": "127.0.0.1", "Port": peer.peerlistenport}
+                    anchorpeer = {
+                        "Host": peer.name + "." + self.domain.name,
+                        "Port": peer.peerlistenport,
+                    }
                     datacfg["Organizations"][0]["AnchorPeers"].append(anchorpeer)
 
                     organization = {
@@ -115,7 +118,10 @@ class Blockchain:
                             + "/msp"
                         ),
                         "AnchorPeers": [
-                            {"Host": "127.0.0.1", "Port": peer.peerlistenport}
+                            {
+                                "Host": peer.name + "." + self.domain.name,
+                                "Port": peer.peerlistenport,
+                            }
                         ],
                         "Policies": {
                             "Readers": {
