@@ -4,15 +4,21 @@ import shutil
 import time
 from pathlib import Path
 
+import docker
 import ruamel.yaml
+
+# from python_on_whales import DockerClient
 from rich.console import Console
 
 from models.domain import Domain
+from models.organization import Organization
+from models.peer import Peer
 
 yaml = ruamel.yaml.YAML()
 yaml.indent(sequence=3, offset=1)
 yaml.boolean_representation = [f"false", f"true"]
 console = Console()
+client = docker.from_env()
 
 
 class Blockchain:
@@ -22,20 +28,16 @@ class Blockchain:
     def buildAll(self):
         console.print("[bold orange1]BLOCKCHAIN[/]")
         console.print("")
-        console.print("[bold white]# Creating genesis block[/]")
-        console.print("")
         self.genesisBlock()
         console.print("")
-        console.print("[bold white]# Creating channel[/]")
-        console.print("")
         self.createChannel()
-        console.print("")
-        console.print("[bold white]# Joinning channel[/]")
         console.print("")
         self.joinChannel()
         console.print("")
 
     def genesisBlock(self):
+        console.print("[bold white]# Creating genesis block[/]")
+        console.print("")
         # Preparing configtx
         config = str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
         pathconfig = Path(config)
@@ -45,10 +47,10 @@ class Blockchain:
 
         shutil.copy(
             origconfig,
-            config + "/configtx.yaml",
+            config + "configtx.yaml",
         )
 
-        with open(config + "/configtx.yaml") as cftx:
+        with open(config + "configtx.yaml") as cftx:
             datacfg = yaml.load(cftx)
 
         datacfg["Organizations"][0][
@@ -84,7 +86,7 @@ class Blockchain:
             "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".admin')"
         )
         datacfg["Organizations"][0]["Policies"]["Endorsement"]["Rule"] = (
-            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
+            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".peer')"
         )
 
         datacfg["Organizations"][0]["OrdererEndpoints"] = [
@@ -155,7 +157,7 @@ class Blockchain:
                             "Endorsement": {
                                 "Type": "Signature",
                                 "Rule": (
-                                    "OR('" + peer.CORE_PEER_LOCALMSPID + ".member')"
+                                    "OR('" + peer.CORE_PEER_LOCALMSPID + ".peer')"
                                 ),
                             },
                         },
@@ -212,7 +214,7 @@ class Blockchain:
         with open(out_file, "w") as fpo:
             json.dump(datacfg, fpo, indent=2)
 
-        with open(config + "/configtx.yaml", "w") as cftx:
+        with open(config + "configtx.yaml", "w") as cftx:
             yaml.dump(datacfg, cftx)
 
         # Creating gblock
@@ -239,6 +241,8 @@ class Blockchain:
         )
 
     def createChannel(self):
+        console.print("[bold white]# Creating channel[/]")
+        console.print("")
         config = str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
         pathchannel = Path("domains/" + self.domain.name + "/channel-artifacts")
         block = (
@@ -298,6 +302,17 @@ class Blockchain:
         )
 
     def joinChannel(self):
+        for org in self.domain.organizations:
+            self.joinChannelOrg(org)
+
+    def joinChannelOrg(self, org: Organization):
+        for peer in org.peers:
+            self.joinChannelPeer(org, peer)
+
+    def joinChannelPeer(self, org: Organization, peer: Peer):
+        console.print("[bold white]# Joinning channel " + peer.name + "[/]")
+        console.print("")
+
         pathchannel = Path("domains/" + self.domain.name + "/channel-artifacts")
         block = (
             str(Path().absolute())
@@ -310,65 +325,412 @@ class Blockchain:
 
         os.environ["BLOCKFILE"] = block
 
+        config = (
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
+            + "/peerOrganizations/"
+            + org.name
+            + "/"
+            + peer.name
+            + "/peercfg"
+        )
+
+        PEER_CA = (
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
+            + "/peerOrganizations/"
+            + org.name
+            + "/tlsca"
+            + "/tlsca."
+            + org.name
+            + "-cert.pem"
+        )
+
+        PEER_MSP = (
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
+            + "/peerOrganizations/"
+            + org.name
+            + "/users"
+            + "/Admin@"
+            + org.name
+            + "."
+            + self.domain.name
+            + "/msp"
+        )
+
+        PEER_ADDRESS = "localhost:" + str(peer.peerlistenport)
+
+        os.environ["FABRIC_CFG_PATH"] = config
+        os.environ["CORE_PEER_TLS_ENABLED"] = "true"
+        os.environ["CORE_PEER_LOCALMSPID"] = org.name + "MSP"
+        os.environ["CORE_PEER_TLS_ROOTCERT_FILE"] = PEER_CA
+        os.environ["CORE_PEER_MSPCONFIGPATH"] = PEER_MSP
+        os.environ["CORE_PEER_ADDRESS"] = PEER_ADDRESS
+
+        console.print("## Waiting Peer...")
+        console.print("")
+        time.sleep(5)
+
+        os.system(str(Path().absolute()) + "/bin/peer channel join -b " + block)
+
+    def buildNewOrganization(self, org: Organization):
+        console.print("[bold orange1]BLOCKCHAIN[/]")
+        console.print("")
+        console.print("[bold white]# Updating configtx file[/]")
+        console.print("")
+        config = str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
+        with open(config + "configtx.yaml", encoding="utf-8") as cftx:
+            datacfg = yaml.load(cftx)
+
+        for peer in org.peers:
+            if peer.name.split(".")[0] == "peer1":
+                anchorpeer = {
+                    "Host": peer.name + "." + self.domain.name,
+                    "Port": peer.peerlistenport,
+                }
+                datacfg["Organizations"][0]["AnchorPeers"].append(anchorpeer)
+
+                organization = {
+                    "Name": peer.CORE_PEER_LOCALMSPID,
+                    "ID": peer.CORE_PEER_LOCALMSPID,
+                    "MSPDir": (
+                        str(Path().absolute())
+                        + "/domains/"
+                        + self.domain.name
+                        + "/peerOrganizations/"
+                        + org.name
+                        + "/msp"
+                    ),
+                    "AnchorPeers": [
+                        {
+                            "Host": peer.name + "." + self.domain.name,
+                            "Port": peer.peerlistenport,
+                        }
+                    ],
+                    "Policies": {
+                        "Readers": {
+                            "Type": "Signature",
+                            "Rule": (
+                                "OR('"
+                                + peer.CORE_PEER_LOCALMSPID
+                                + ".admin', '"
+                                + peer.CORE_PEER_LOCALMSPID
+                                + ".peer', '"
+                                + peer.CORE_PEER_LOCALMSPID
+                                + ".client')"
+                            ),
+                        },
+                        "Writers": {
+                            "Type": "Signature",
+                            "Rule": (
+                                "OR('"
+                                + peer.CORE_PEER_LOCALMSPID
+                                + ".admin', '"
+                                + peer.CORE_PEER_LOCALMSPID
+                                + ".client')"
+                            ),
+                        },
+                        "Admins": {
+                            "Type": "Signature",
+                            "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".admin')"),
+                        },
+                        "Endorsement": {
+                            "Type": "Signature",
+                            "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".peer')"),
+                        },
+                    },
+                }
+
+                datacfg["Organizations"].append(organization)
+                datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"][
+                    "Organizations"
+                ].append(organization)
+
+        out_file = config + "configtx.json"
+        with open(out_file, "w", encoding="utf-8") as fpo:
+            json.dump(datacfg, fpo, indent=2)
+
+        with open(config + "configtx.yaml", "w", encoding="utf-8") as cftx:
+            yaml.dump(datacfg, cftx)
+
+        self.generateOrgDefinition(org)
+
+        self.fetchChannelConfig(org)
+
+    def generateOrgDefinition(self, org: Organization):
+        console.print("[bold white]# Generating org definition[/]")
+        console.print("")
+        config = str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
+
+        os.environ["FABRIC_CFG_PATH"] = config
+
+        os.system(
+            str(Path().absolute())
+            + "/bin/configtxgen -printOrg "
+            + org.name
+            + "MSP > "
+            + config
+            + org.name
+            + ".json"
+        )
+
+    def fetchChannelConfig(self, orgnew: Organization):
+        console.print("[bold white]# Fetching channel config[/]")
+        console.print("")
+        org = self.domain.organizations[0]
+        peer = org.peers[0]
+
+        orderer = self.domain.orderer.name + "." + self.domain.name
+
+        excorg1 = org.name
+        excorg2 = orgnew.name
+
+        pathnet = "".join(
+            [
+                str(Path().absolute()),
+                "/domains/",
+                self.domain.name,
+                "/compose/",
+                "compose-net.yaml",
+            ]
+        )
+
+        clipath = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/"
+
+        pathchannel = Path("domains/" + self.domain.name + "/channel-artifacts/")
+        block = (
+            str(Path().absolute())
+            + "/"
+            + str(pathchannel)
+            + self.domain.networkname
+            + ".block"
+        )
+
+        configupttx = clipath + "config/"
+
+        ORDERER_CA = (
+            clipath
+            + "ordererOrganizations/orderer/msp/tlscacerts/tlsca."
+            + self.domain.name
+            + "-cert.pem"
+        )
+
+        console.print("[bold white]# Updating config[/]")
+        console.print("")
+
+        command = (
+            "peer channel fetch config "
+            + configupttx
+            + "config_block.pb -o "
+            + orderer
+            + ":"
+            + str(self.domain.orderer.generallistenport)
+            + " --ordererTLSHostnameOverride "
+            + orderer
+            + " -c "
+            + self.domain.networkname
+            + " --tls --cafile "
+            + ORDERER_CA
+        )
+
+        client.containers.get("cli").exec_run(command)
+
+        console.print("## Waiting Peer...")
+        console.print("")
+        time.sleep(5)
+
+        """ os.system(
+            str(Path().absolute())
+            + "/bin/configtxlator proto_decode --input "
+            + configupttx
+            + "config_block.pb --type common.Block --output "
+            + configupttx
+            + "config_block.json"
+        )
+
+        os.system(
+            "jq .data.data[0].payload.data.config "
+            + configupttx
+            + "config_block.json >"
+            + configupttx
+            + "config.json"
+        )
+
+        os.system(
+            'jq -s \'.[0] * {"channel_group":{"groups":{"Application":{"groups": {"'
+            + orgnew.name
+            + "MSP\":.[1]}}}}}' "
+            + configupttx
+            + "config.json "
+            + configupttx
+            + orgnew.name
+            + ".json > "
+            + configupttx
+            + "modified_config.json"
+        )
+
+        os.system(
+            str(Path().absolute())
+            + "/bin/configtxlator proto_encode --input "
+            + configupttx
+            + "config.json --type common.Config --output "
+            + configupttx
+            + "original_config.pb"
+        )
+
+        os.system(
+            str(Path().absolute())
+            + "/bin/configtxlator proto_encode --input "
+            + configupttx
+            + "modified_config.json --type common.Config --output "
+            + configupttx
+            + "modified_config.pb"
+        )
+
+        os.system(
+            str(Path().absolute())
+            + "/bin/configtxlator compute_update --channel_id "
+            + self.domain.networkname
+            + " --original "
+            + configupttx
+            + "original_config.pb --updated "
+            + configupttx
+            + "modified_config.pb --output "
+            + configupttx
+            + "config_update.pb"
+        )
+
+        os.system(
+            str(Path().absolute())
+            + "/bin/configtxlator proto_decode --input "
+            + configupttx
+            + "config_update.pb --type common.ConfigUpdate --output "
+            + configupttx
+            + "config_update.json"
+        )
+
+        with open(configupttx + "config_update.json", encoding="utf-8") as f:
+            config_update = f.read()
+
+        os.system(
+            'echo \'{"payload":{"header":{"channel_header":{"channel_id":"'
+            + self.domain.networkname
+            + '", "type":2}},"data":{"config_update":'
+            + config_update
+            + "}}}' | jq . >"
+            + configupttx
+            + "config_update_in_envelope.json"
+        )
+
+        os.system(
+            str(Path().absolute())
+            + "/bin/configtxlator proto_encode --input "
+            + configupttx
+            + "config_update_in_envelope.json --type common.Envelope --output "
+            + configupttx
+            + orgnew.name
+            + "_update_in_envelope.pb"
+        )
+
+        console.print("[bold white]# Signing config transaction[/]")
+        console.print("")
+        os.system(
+            str(Path().absolute())
+            + "/bin/peer channel signconfigtx -f "
+            + configupttx
+            + orgnew.name
+            + "_update_in_envelope.pb"
+        )
+
+        console.print("[bold white]# Submitting transaction from peers[/]")
+        console.print("")
         for org in self.domain.organizations:
-            for peer in org.peers:
-                config = (
-                    str(Path().absolute())
-                    + "/domains/"
-                    + self.domain.name
-                    + "/peerOrganizations/"
-                    + org.name
-                    + "/"
-                    + peer.name
-                    + "/peercfg"
-                )
+            if (org.name != excorg1) and (org.name != excorg2):
+                for peer in org.peers:
+                    if peer.name.split(".")[0] == "peer1":
+                        PEER_CA = (
+                            str(Path().absolute())
+                            + "/domains/"
+                            + self.domain.name
+                            + "/peerOrganizations/"
+                            + org.name
+                            + "/tlsca"
+                            + "/tlsca."
+                            + org.name
+                            + "-cert.pem"
+                        )
 
-                PEER_CA = (
-                    str(Path().absolute())
-                    + "/domains/"
-                    + self.domain.name
-                    + "/peerOrganizations/"
-                    + org.name
-                    + "/tlsca"
-                    + "/tlsca."
-                    + org.name
-                    + "-cert.pem"
-                )
+                        PEER_MSP = (
+                            str(Path().absolute())
+                            + "/domains/"
+                            + self.domain.name
+                            + "/peerOrganizations/"
+                            + org.name
+                            + "/users"
+                            + "/Admin@"
+                            + org.name
+                            + "."
+                            + self.domain.name
+                            + "/msp"
+                        )
 
-                PEER_MSP = (
-                    str(Path().absolute())
-                    + "/domains/"
-                    + self.domain.name
-                    + "/peerOrganizations/"
-                    + org.name
-                    + "/users"
-                    + "/Admin@"
-                    + org.name
-                    + "."
-                    + self.domain.name
-                    + "/msp"
-                )
+                        ORDERER_CA = (
+                            str(Path().absolute())
+                            + "/domains/"
+                            + self.domain.name
+                            + "/ordererOrganizations/tlsca/tlsca."
+                            + self.domain.name
+                            + "-cert.pem"
+                        )
 
-                os.environ["FABRIC_CFG_PATH"] = config
-                os.environ["CORE_PEER_TLS_ENABLED"] = "true"
-                os.environ["CORE_PEER_LOCALMSPID"] = org.name + "MSP"
-                os.environ["CORE_PEER_TLS_ROOTCERT_FILE"] = PEER_CA
-                os.environ["CORE_PEER_MSPCONFIGPATH"] = PEER_MSP
-                os.environ["CORE_PEER_ADDRESS"] = "localhost:" + str(
-                    peer.peerlistenport
-                )
+                        PEER_ADDRESS = (
+                            peer.name
+                            + "."
+                            + self.domain.name
+                            + ":"
+                            + str(peer.peerlistenport)
+                        )
 
-                console.print(
-                    "## Peer "
-                    + peer.name
-                    + " Address: "
-                    + os.environ["CORE_PEER_ADDRESS"]
-                )
+                        os.environ["FABRIC_CFG_PATH"] = config
+                        os.environ["CORE_PEER_TLS_ENABLED"] = "true"
+                        os.environ["CORE_PEER_LOCALMSPID"] = org.name + "MSP"
+                        os.environ["CORE_PEER_TLS_ROOTCERT_FILE"] = PEER_CA
+                        os.environ["CORE_PEER_MSPCONFIGPATH"] = PEER_MSP
+                        os.environ["CORE_PEER_ADDRESS"] = PEER_ADDRESS
 
-                console.print("## Waiting Peer...")
-                time.sleep(5)
+                        os.system(
+                            str(Path().absolute())
+                            + "/bin/peer channel update -f "
+                            + configupttx
+                            + orgnew.name
+                            + "_update_in_envelope.pb -c "
+                            + self.domain.networkname
+                            + " -o localhost:"
+                            + str(self.domain.orderer.generallistenport)
+                            + " --ordererTLSHostnameOverride "
+                            + orderer
+                            + " --tls --cafile "
+                            + ORDERER_CA
+                        )
 
-                os.system(str(Path().absolute()) + "/bin/peer channel join -b " + block)
+        console.print("[bold white]# Fetching channel config block from orderer[/]")
+        console.print("")
+        os.system(
+            str(Path().absolute())
+            + "/bin/peer channel fetch 0 "
+            + block
+            + " -o localhost:"
+            + str(self.domain.orderer.generallistenport)
+            + " --ordererTLSHostnameOverride "
+            + orderer
+            + " -c "
+            + self.domain.networkname
+            + " --tls --cafile "
+            + ORDERER_CA
+        )
 
-    def buildNewOrganization(self):
-        pass
+        self.joinChannelOrg(orgnew) """

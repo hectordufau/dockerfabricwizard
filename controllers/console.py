@@ -70,6 +70,7 @@ class ConsoleOutput:
         console.print("")
         console.print("[bold red]Press 'Q' to quit anytime[/]")
         console.print("")
+        self.domain = Domain()
 
         domainname = console.input("[bold]Domain name:[/] ")
         if domainname.lower() == "q":
@@ -390,11 +391,13 @@ class ConsoleOutput:
         console.print("[bold red]Press 'Q' to quit anytime[/]")
         console.print("")
 
-        iorgs = len(domain.organizations) + 1
+        iorgs = domain.qtyorgs + 1
         portpeer = 0
         peeroperationlisten = 0
         peerchaincodelistenport = 0
         portcouchdb = 0
+        caorgserverport = 0
+        caorgoplstport = 0
 
         portlist.append(domain.ca.serverport)
         portlist.append(domain.ca.operationslistenport)
@@ -414,8 +417,8 @@ class ConsoleOutput:
                 portlist.append(peer.database.port)
                 portcouchdb = peer.database.port + 1000
 
-        caorgserverport = domain.ca.serverport + 100
-        caorgoplstport = domain.ca.operationslistenport + 100
+            caorgserverport = org.ca.serverport + 100
+            caorgoplstport = org.ca.operationslistenport + 100
 
         org = Organization()
         orgname = console.input("[bold]Organization #" + str(iorgs) + " name:[/] ")
@@ -442,7 +445,7 @@ class ConsoleOutput:
             [
                 str(Path().absolute()),
                 "/domains/",
-                self.domain.name,
+                domain.name,
                 "/fabric-ca/",
                 caorg.name,
                 ":/etc/hyperledger/fabric-ca-server",
@@ -535,16 +538,16 @@ class ConsoleOutput:
             peer.volumes = [
                 str(Path().absolute())
                 + "/domains/"
-                + self.domain.name
+                + domain.name
                 + "/peerOrganizations/"
                 + org.name
                 + "/"
                 + peer.name
                 + ":/etc/hyperledger/fabric",
-                peer.name + "." + self.domain.name + ":/var/hyperledger/production",
+                peer.name + "." + domain.name + ":/var/hyperledger/production",
                 str(Path().absolute())
                 + "/domains/"
-                + self.domain.name
+                + domain.name
                 + "/peerOrganizations/"
                 + org.name
                 + "/"
@@ -565,22 +568,22 @@ class ConsoleOutput:
             peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS = (
                 database.name + ":5984"
             )
-            peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE = self.domain.networkname
+            peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE = domain.networkname
             peer.CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG = (
                 '{"peername":"' + "peer" + str(ipeers) + org.name + '"}'
             )
             peer.CORE_PEER_LISTENADDRESS = "0.0.0.0:" + str(valueport)
             peer.CORE_OPERATIONS_LISTENADDRESS = (
-                peer.name + "." + self.domain.name + ":" + str(peeroperationlisten)
+                peer.name + "." + domain.name + ":" + str(peeroperationlisten)
             )
             peer.peerlistenport = valueport
             peer.operationslistenport = peeroperationlisten
             portlist.append(peeroperationlisten)
             peer.CORE_PEER_ADDRESS = (
-                peer.name + "." + self.domain.name + ":" + str(valueport)
+                peer.name + "." + domain.name + ":" + str(valueport)
             )
             peer.CORE_PEER_CHAINCODEADDRESS = (
-                peer.name + "." + self.domain.name + ":" + str(peerchaincodelistenport)
+                peer.name + "." + domain.name + ":" + str(peerchaincodelistenport)
             )
             peer.chaincodelistenport = peerchaincodelistenport
             peer.CORE_PEER_CHAINCODELISTENADDRESS = "0.0.0.0:" + str(
@@ -590,7 +593,7 @@ class ConsoleOutput:
             peer.CORE_PEER_GOSSIP_EXTERNALENDPOINT = peer.CORE_PEER_ADDRESS
             peer.CORE_PEER_GOSSIP_BOOTSTRAP = peer.CORE_PEER_ADDRESS
             peer.CORE_PEER_LOCALMSPID = org.name + "MSP"
-            peer.CORE_PEER_ID = peer.name + "." + self.domain.name
+            peer.CORE_PEER_ID = peer.name + "." + domain.name
 
             peer.database = database
 
@@ -605,12 +608,13 @@ class ConsoleOutput:
             peerchaincodelistenport += 1000
 
         domain.organizations.append(org)
+        domain.qtyorgs += 1
         console.print("")
 
         build = Build(domain)
-        build.buildNewOrganization()
+        build.buildNewOrganization(org)
         blockchain = Blockchain(domain)
-        blockchain.buildNewOrganization()
+        blockchain.buildNewOrganization(org)
         self.networkSelected(domain.name)
 
     def createPeer(self, domain: Domain):
@@ -789,7 +793,7 @@ class ConsoleOutput:
         console.print("[bold white]G - Start network[/]")
         console.print("[bold white]S - Stop network[/]")
         console.print("[bold white]C - Clean docker[/]")
-        console.print("[bold white]D - Delete configs[/]")
+        console.print("[bold white]D - Delete network and configs[/]")
         console.print("[bold white]R - Return to previous menu[/]")
         console.print("[bold white]M - Return to main menu[/]")
         console.print("[bold white]Q - Quit[/]")
@@ -828,8 +832,8 @@ class ConsoleOutput:
                     self.checkDockerStatus(domain)
                 case "o":
                     selectoption = False
-                    # TODO self.createOrganization(domain)
-                    self.networkSelected(domain.name)
+                    self.createOrganization(domain)
+                    #self.networkSelected(domain.name)
                 case "p":
                     selectoption = False
                     # TODO self.createPeer(domain)
@@ -857,6 +861,9 @@ class ConsoleOutput:
                 case "d":
                     selectoption = False
                     console.print("[bold white]# Deleting...[/]")
+                    docker.compose.down(
+                        remove_orphans=True, remove_images="all", volumes=True
+                    )
                     os.system("rm -fR " + netpath)
                     self.selectNetwork()
                 case "r":

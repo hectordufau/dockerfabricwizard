@@ -5,6 +5,7 @@ from python_on_whales import DockerClient
 from rich.console import Console
 
 from models.domain import Domain
+from models.organization import Organization
 
 console = Console()
 
@@ -40,6 +41,22 @@ class Run:
         console.print("[bold]# Waiting CAs...[/]")
         time.sleep(5)
 
+    def startCANew(self, orgname: str):
+        pathfabricca = "".join(
+            [
+                str(Path().absolute()),
+                "/domains/",
+                self.domain.name,
+                "/compose/",
+                "compose-ca-" + orgname + ".yaml",
+            ]
+        )
+
+        docker = DockerClient(compose_files=[pathfabricca])
+        docker.compose.up(detach=True)
+        console.print("[bold]# Waiting new CA...[/]")
+        time.sleep(5)
+
     def startingOPD(self):
         pathorderer = "".join(
             [
@@ -50,7 +67,7 @@ class Run:
                 "compose-orderer.yaml",
             ]
         )
-        
+
         pathnet = "".join(
             [
                 str(Path().absolute()),
@@ -62,4 +79,18 @@ class Run:
         )
 
         docker = DockerClient(compose_files=[pathorderer, pathnet])
+        docker.compose.up(detach=True)
+
+    def startingPDOrg(self, org: Organization):
+        pathnet = "".join(
+            [
+                str(Path().absolute()),
+                "/domains/",
+                self.domain.name,
+                "/compose/",
+                "compose-net-" + org.name + ".yaml",
+            ]
+        )
+
+        docker = DockerClient(compose_files=[pathnet])
         docker.compose.up(detach=True)
