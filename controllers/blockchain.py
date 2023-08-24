@@ -482,14 +482,14 @@ class Blockchain:
         console.print("[bold white]# Fetching channel config[/]")
         console.print("")
         org = self.domain.organizations[0]
-        peer = org.peers[0]
+        # peer = org.peers[0]
 
         orderer = self.domain.orderer.name + "." + self.domain.name
 
         excorg1 = org.name
         excorg2 = orgnew.name
 
-        pathnet = "".join(
+        """ pathnet = "".join(
             [
                 str(Path().absolute()),
                 "/domains/",
@@ -497,20 +497,16 @@ class Blockchain:
                 "/compose/",
                 "compose-net.yaml",
             ]
-        )
+        ) """
 
         clipath = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/"
 
-        pathchannel = Path("domains/" + self.domain.name + "/channel-artifacts/")
-        block = (
-            str(Path().absolute())
-            + "/"
-            + str(pathchannel)
-            + self.domain.networkname
-            + ".block"
-        )
+        pathchannel = clipath + "/channel-artifacts/"
 
         configupttx = clipath + "config/"
+        configupttxlocal = (
+            str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
+        )
 
         ORDERER_CA = (
             clipath
@@ -537,26 +533,28 @@ class Blockchain:
             + ORDERER_CA
         )
 
-        client.containers.get("cli").exec_run(command)
+        clidocker = client.containers.get("cli")
+
+        clidocker.exec_run(command)
 
         console.print("## Waiting Peer...")
         console.print("")
         time.sleep(5)
 
-        """ os.system(
+        os.system(
             str(Path().absolute())
             + "/bin/configtxlator proto_decode --input "
-            + configupttx
+            + configupttxlocal
             + "config_block.pb --type common.Block --output "
-            + configupttx
+            + configupttxlocal
             + "config_block.json"
         )
 
         os.system(
             "jq .data.data[0].payload.data.config "
-            + configupttx
+            + configupttxlocal
             + "config_block.json >"
-            + configupttx
+            + configupttxlocal
             + "config.json"
         )
 
@@ -564,30 +562,30 @@ class Blockchain:
             'jq -s \'.[0] * {"channel_group":{"groups":{"Application":{"groups": {"'
             + orgnew.name
             + "MSP\":.[1]}}}}}' "
-            + configupttx
+            + configupttxlocal
             + "config.json "
-            + configupttx
+            + configupttxlocal
             + orgnew.name
             + ".json > "
-            + configupttx
+            + configupttxlocal
             + "modified_config.json"
         )
 
         os.system(
             str(Path().absolute())
             + "/bin/configtxlator proto_encode --input "
-            + configupttx
+            + configupttxlocal
             + "config.json --type common.Config --output "
-            + configupttx
+            + configupttxlocal
             + "original_config.pb"
         )
 
         os.system(
             str(Path().absolute())
             + "/bin/configtxlator proto_encode --input "
-            + configupttx
+            + configupttxlocal
             + "modified_config.json --type common.Config --output "
-            + configupttx
+            + configupttxlocal
             + "modified_config.pb"
         )
 
@@ -596,24 +594,24 @@ class Blockchain:
             + "/bin/configtxlator compute_update --channel_id "
             + self.domain.networkname
             + " --original "
-            + configupttx
+            + configupttxlocal
             + "original_config.pb --updated "
-            + configupttx
+            + configupttxlocal
             + "modified_config.pb --output "
-            + configupttx
+            + configupttxlocal
             + "config_update.pb"
         )
 
         os.system(
             str(Path().absolute())
             + "/bin/configtxlator proto_decode --input "
-            + configupttx
+            + configupttxlocal
             + "config_update.pb --type common.ConfigUpdate --output "
-            + configupttx
+            + configupttxlocal
             + "config_update.json"
         )
 
-        with open(configupttx + "config_update.json", encoding="utf-8") as f:
+        with open(configupttxlocal + "config_update.json", encoding="utf-8") as f:
             config_update = f.read()
 
         os.system(
@@ -622,29 +620,30 @@ class Blockchain:
             + '", "type":2}},"data":{"config_update":'
             + config_update
             + "}}}' | jq . >"
-            + configupttx
+            + configupttxlocal
             + "config_update_in_envelope.json"
         )
 
         os.system(
             str(Path().absolute())
             + "/bin/configtxlator proto_encode --input "
-            + configupttx
+            + configupttxlocal
             + "config_update_in_envelope.json --type common.Envelope --output "
-            + configupttx
+            + configupttxlocal
             + orgnew.name
             + "_update_in_envelope.pb"
         )
 
         console.print("[bold white]# Signing config transaction[/]")
         console.print("")
-        os.system(
-            str(Path().absolute())
-            + "/bin/peer channel signconfigtx -f "
+        command = (
+            "peer channel signconfigtx -f "
             + configupttx
             + orgnew.name
             + "_update_in_envelope.pb"
         )
+
+        clidocker.exec_run(command)
 
         console.print("[bold white]# Submitting transaction from peers[/]")
         console.print("")
@@ -695,7 +694,6 @@ class Blockchain:
                             + str(peer.peerlistenport)
                         )
 
-                        os.environ["FABRIC_CFG_PATH"] = config
                         os.environ["CORE_PEER_TLS_ENABLED"] = "true"
                         os.environ["CORE_PEER_LOCALMSPID"] = org.name + "MSP"
                         os.environ["CORE_PEER_TLS_ROOTCERT_FILE"] = PEER_CA
@@ -719,9 +717,11 @@ class Blockchain:
 
         console.print("[bold white]# Fetching channel config block from orderer[/]")
         console.print("")
-        os.system(
-            str(Path().absolute())
-            + "/bin/peer channel fetch 0 "
+
+        block = pathchannel + self.domain.networkname + ".block"
+
+        command = (
+            "peer channel fetch 0 "
             + block
             + " -o localhost:"
             + str(self.domain.orderer.generallistenport)
@@ -733,4 +733,6 @@ class Blockchain:
             + ORDERER_CA
         )
 
-        self.joinChannelOrg(orgnew) """
+        clidocker.exec_run(command)
+
+        self.joinChannelOrg(orgnew)
