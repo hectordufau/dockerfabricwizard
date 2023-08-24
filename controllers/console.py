@@ -308,6 +308,10 @@ class ConsoleOutput:
                     + peer.name
                     + "/peercfg"
                     + ":/etc/hyperledger/peercfg",
+                    str(Path().absolute())
+                    + "/domains/"
+                    + self.domain.name
+                    + ":/etc/hyperledger/organizations",
                     "/var/run/docker.sock:/host/var/run/docker.sock",
                 ]
 
@@ -554,6 +558,10 @@ class ConsoleOutput:
                 + peer.name
                 + "/peercfg"
                 + ":/etc/hyperledger/peercfg",
+                str(Path().absolute())
+                + "/domains/"
+                + domain.name
+                + ":/etc/hyperledger/organizations",
                 "/var/run/docker.sock:/host/var/run/docker.sock",
             ]
 
@@ -833,7 +841,7 @@ class ConsoleOutput:
                 case "o":
                     selectoption = False
                     self.createOrganization(domain)
-                    #self.networkSelected(domain.name)
+                    # self.networkSelected(domain.name)
                 case "p":
                     selectoption = False
                     # TODO self.createPeer(domain)

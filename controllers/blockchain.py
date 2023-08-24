@@ -313,69 +313,19 @@ class Blockchain:
         console.print("[bold white]# Joinning channel " + peer.name + "[/]")
         console.print("")
 
-        pathchannel = Path("domains/" + self.domain.name + "/channel-artifacts")
-        block = (
-            str(Path().absolute())
-            + "/"
-            + str(pathchannel)
-            + "/"
-            + self.domain.networkname
-            + ".block"
-        )
+        pathchannel = "/etc/hyperledger/organizations/channel-artifacts/"
 
-        os.environ["BLOCKFILE"] = block
+        block = pathchannel + self.domain.networkname + ".block"
 
-        config = (
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/"
-            + peer.name
-            + "/peercfg"
-        )
+        command = "peer channel join -b " + block
 
-        PEER_CA = (
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/tlsca"
-            + "/tlsca."
-            + org.name
-            + "-cert.pem"
-        )
+        clidocker = client.containers.get(peer.name + "." + self.domain.name)
 
-        PEER_MSP = (
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/users"
-            + "/Admin@"
-            + org.name
-            + "."
-            + self.domain.name
-            + "/msp"
-        )
-
-        PEER_ADDRESS = "localhost:" + str(peer.peerlistenport)
-
-        os.environ["FABRIC_CFG_PATH"] = config
-        os.environ["CORE_PEER_TLS_ENABLED"] = "true"
-        os.environ["CORE_PEER_LOCALMSPID"] = org.name + "MSP"
-        os.environ["CORE_PEER_TLS_ROOTCERT_FILE"] = PEER_CA
-        os.environ["CORE_PEER_MSPCONFIGPATH"] = PEER_MSP
-        os.environ["CORE_PEER_ADDRESS"] = PEER_ADDRESS
+        clidocker.exec_run(command)
 
         console.print("## Waiting Peer...")
         console.print("")
         time.sleep(5)
-
-        os.system(str(Path().absolute()) + "/bin/peer channel join -b " + block)
 
     def buildNewOrganization(self, org: Organization):
         console.print("[bold orange1]BLOCKCHAIN[/]")
@@ -482,28 +432,18 @@ class Blockchain:
         console.print("[bold white]# Fetching channel config[/]")
         console.print("")
         org = self.domain.organizations[0]
-        # peer = org.peers[0]
+        peer = org.peers[0]
+        newpeer = orgnew.peers[0]
 
         orderer = self.domain.orderer.name + "." + self.domain.name
 
         excorg1 = org.name
         excorg2 = orgnew.name
 
-        """ pathnet = "".join(
-            [
-                str(Path().absolute()),
-                "/domains/",
-                self.domain.name,
-                "/compose/",
-                "compose-net.yaml",
-            ]
-        ) """
-
-        clipath = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/"
-
-        pathchannel = clipath + "/channel-artifacts/"
-
+        clipath = "/etc/hyperledger/organizations/"
+        pathchannel = clipath + "channel-artifacts/"
         configupttx = clipath + "config/"
+
         configupttxlocal = (
             str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
         )
@@ -533,7 +473,7 @@ class Blockchain:
             + ORDERER_CA
         )
 
-        clidocker = client.containers.get("cli")
+        clidocker = client.containers.get(peer.name + "." + self.domain.name)
 
         clidocker.exec_run(command)
 
@@ -651,58 +591,8 @@ class Blockchain:
             if (org.name != excorg1) and (org.name != excorg2):
                 for peer in org.peers:
                     if peer.name.split(".")[0] == "peer1":
-                        PEER_CA = (
-                            str(Path().absolute())
-                            + "/domains/"
-                            + self.domain.name
-                            + "/peerOrganizations/"
-                            + org.name
-                            + "/tlsca"
-                            + "/tlsca."
-                            + org.name
-                            + "-cert.pem"
-                        )
-
-                        PEER_MSP = (
-                            str(Path().absolute())
-                            + "/domains/"
-                            + self.domain.name
-                            + "/peerOrganizations/"
-                            + org.name
-                            + "/users"
-                            + "/Admin@"
-                            + org.name
-                            + "."
-                            + self.domain.name
-                            + "/msp"
-                        )
-
-                        ORDERER_CA = (
-                            str(Path().absolute())
-                            + "/domains/"
-                            + self.domain.name
-                            + "/ordererOrganizations/tlsca/tlsca."
-                            + self.domain.name
-                            + "-cert.pem"
-                        )
-
-                        PEER_ADDRESS = (
-                            peer.name
-                            + "."
-                            + self.domain.name
-                            + ":"
-                            + str(peer.peerlistenport)
-                        )
-
-                        os.environ["CORE_PEER_TLS_ENABLED"] = "true"
-                        os.environ["CORE_PEER_LOCALMSPID"] = org.name + "MSP"
-                        os.environ["CORE_PEER_TLS_ROOTCERT_FILE"] = PEER_CA
-                        os.environ["CORE_PEER_MSPCONFIGPATH"] = PEER_MSP
-                        os.environ["CORE_PEER_ADDRESS"] = PEER_ADDRESS
-
-                        os.system(
-                            str(Path().absolute())
-                            + "/bin/peer channel update -f "
+                        command = (
+                            "peer channel update -f "
                             + configupttx
                             + orgnew.name
                             + "_update_in_envelope.pb -c "
@@ -714,6 +604,11 @@ class Blockchain:
                             + " --tls --cafile "
                             + ORDERER_CA
                         )
+
+                        clidocker = client.containers.get(
+                            peer.name + "." + self.domain.name
+                        )
+                        clidocker.exec_run(command)
 
         console.print("[bold white]# Fetching channel config block from orderer[/]")
         console.print("")
@@ -733,6 +628,7 @@ class Blockchain:
             + ORDERER_CA
         )
 
+        clidocker = client.containers.get(newpeer.name + "." + self.domain.name)
         clidocker.exec_run(command)
 
         self.joinChannelOrg(orgnew)
