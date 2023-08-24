@@ -917,7 +917,6 @@ class Build:
         }
 
         clidataCORE_PEER_LOCALMSPID = self.domain.organizations[0].name + "MSP"
-        
         clidataCORE_PEER_TLS_ROOTCERT_FILE = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
             + cliorg.name
@@ -925,7 +924,6 @@ class Build:
             + clipeer.name
             + "/tls/ca.crt"
         )
-
         clidataCORE_PEER_TLS_CERT_FILE = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
             + cliorg.name
@@ -933,7 +931,6 @@ class Build:
             + clipeer.name
             + "/tls/server.crt"
         )
-
         clidataCORE_PEER_TLS_KEY_FILE = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
             + cliorg.name
@@ -941,7 +938,6 @@ class Build:
             + clipeer.name
             + "/tls/server.key"
         )
-
         clidataCORE_PEER_MSPCONFIGPATH = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
             + cliorg.name
@@ -951,9 +947,13 @@ class Build:
             + self.domain.name
             + "/msp"
         )
-        clidataCORE_PEER_ADDRESS = "localhost:" + str(
-            clipeer.peerlistenport
+        clidataCORE_PEER_ADDRESS = "localhost:" + str(clipeer.peerlistenport)
+        clidataORDERER_CA = (
+            "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/msp/tlscacerts/tlsca."
+            + self.domain.name
+            + "-cert.pem"
         )
+        clidataCHANNEL_NAME = self.domain.networkname
 
         clidata = {
             "container_name": "cli",
@@ -972,6 +972,8 @@ class Build:
                 "CORE_PEER_TLS_ROOTCERT_FILE=" + clidataCORE_PEER_TLS_ROOTCERT_FILE,
                 "CORE_PEER_MSPCONFIGPATH=" + clidataCORE_PEER_MSPCONFIGPATH,
                 "CORE_PEER_ADDRESS=" + clidataCORE_PEER_ADDRESS,
+                "ORDERER_CA=" + clidataORDERER_CA,
+                "CHANNEL_NAME=" + clidataCHANNEL_NAME,
             ],
             "working_dir": "/opt/gopath/src/github.com/hyperledger/fabric/peer",
             "command": "/bin/bash",
@@ -1037,7 +1039,10 @@ class Build:
                     "command": "peer node start",
                     "volumes": peer.volumes,
                     "networks": [self.domain.networkname],
-                    "depends_on": [peer.database.name],
+                    "depends_on": [
+                        peer.database.name,
+                        self.domain.orderer.name + "." + self.domain.name,
+                    ],
                 }
 
                 peerdata["ports"][0] = DoubleQuotedScalarString(
@@ -1071,8 +1076,6 @@ class Build:
 
                 peerfile["services"][peer.database.name] = databasedata
                 peerfile["services"]["cli"] = clidata
-
-        # clidata["environment"].append()
 
         with open(pathpeer + "compose-net.yaml", "w") as yaml_file:
             yaml.dump(peerfile, yaml_file)
@@ -1141,7 +1144,10 @@ class Build:
                 "command": "peer node start",
                 "volumes": peer.volumes,
                 "networks": [self.domain.networkname],
-                "depends_on": [peer.database.name],
+                "depends_on": [
+                    peer.database.name,
+                    self.domain.orderer.name + "." + self.domain.name,
+                ],
             }
 
             peerdata["ports"][0] = DoubleQuotedScalarString(

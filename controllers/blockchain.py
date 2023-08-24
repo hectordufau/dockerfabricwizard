@@ -6,8 +6,6 @@ from pathlib import Path
 
 import docker
 import ruamel.yaml
-
-# from python_on_whales import DockerClient
 from rich.console import Console
 
 from models.domain import Domain
@@ -67,26 +65,16 @@ class Blockchain:
             + "msp"
         )
         datacfg["Organizations"][0]["Policies"]["Readers"]["Rule"] = (
-            "OR('"
-            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
-            + ".admin', '"
-            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
-            + ".peer', '"
-            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
-            + ".client')"
+            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
         )
         datacfg["Organizations"][0]["Policies"]["Writers"]["Rule"] = (
-            "OR('"
-            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
-            + ".admin', '"
-            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
-            + ".client')"
+            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
         )
         datacfg["Organizations"][0]["Policies"]["Admins"]["Rule"] = (
             "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".admin')"
         )
         datacfg["Organizations"][0]["Policies"]["Endorsement"]["Rule"] = (
-            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".peer')"
+            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
         )
 
         datacfg["Organizations"][0]["OrdererEndpoints"] = [
@@ -129,23 +117,13 @@ class Blockchain:
                             "Readers": {
                                 "Type": "Signature",
                                 "Rule": (
-                                    "OR('"
-                                    + peer.CORE_PEER_LOCALMSPID
-                                    + ".admin', '"
-                                    + peer.CORE_PEER_LOCALMSPID
-                                    + ".peer', '"
-                                    + peer.CORE_PEER_LOCALMSPID
-                                    + ".client')"
+                                    "OR('" + peer.CORE_PEER_LOCALMSPID + ".member')"
                                 ),
                             },
                             "Writers": {
                                 "Type": "Signature",
                                 "Rule": (
-                                    "OR('"
-                                    + peer.CORE_PEER_LOCALMSPID
-                                    + ".admin', '"
-                                    + peer.CORE_PEER_LOCALMSPID
-                                    + ".client')"
+                                    "OR('" + peer.CORE_PEER_LOCALMSPID + ".member')"
                                 ),
                             },
                             "Admins": {
@@ -157,7 +135,7 @@ class Blockchain:
                             "Endorsement": {
                                 "Type": "Signature",
                                 "Rule": (
-                                    "OR('" + peer.CORE_PEER_LOCALMSPID + ".peer')"
+                                    "OR('" + peer.CORE_PEER_LOCALMSPID + ".member')"
                                 ),
                             },
                         },
@@ -380,20 +358,18 @@ class Blockchain:
     def buildNewOrganization(self, org: Organization):
         console.print("[bold orange1]BLOCKCHAIN[/]")
         console.print("")
-        console.print("[bold white]# Updating configtx file[/]")
+        console.print("[bold white]# Creating org configtx file[/]")
         console.print("")
-        config = str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
-        with open(config + "configtx.yaml", encoding="utf-8") as cftx:
-            datacfg = yaml.load(cftx)
+        configbuild = (
+            str(Path().absolute()) + "/domains/" + self.domain.name + "/config/build/"
+        )
+        pathconfigbuild = Path(configbuild)
+        pathconfigbuild.mkdir(parents=True, exist_ok=True)
+
+        datacfg = {"Organizations": []}
 
         for peer in org.peers:
             if peer.name.split(".")[0] == "peer1":
-                anchorpeer = {
-                    "Host": peer.name + "." + self.domain.name,
-                    "Port": peer.peerlistenport,
-                }
-                datacfg["Organizations"][0]["AnchorPeers"].append(anchorpeer)
-
                 organization = {
                     "Name": peer.CORE_PEER_LOCALMSPID,
                     "ID": peer.CORE_PEER_LOCALMSPID,
@@ -414,25 +390,11 @@ class Blockchain:
                     "Policies": {
                         "Readers": {
                             "Type": "Signature",
-                            "Rule": (
-                                "OR('"
-                                + peer.CORE_PEER_LOCALMSPID
-                                + ".admin', '"
-                                + peer.CORE_PEER_LOCALMSPID
-                                + ".peer', '"
-                                + peer.CORE_PEER_LOCALMSPID
-                                + ".client')"
-                            ),
+                            "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".member')"),
                         },
                         "Writers": {
                             "Type": "Signature",
-                            "Rule": (
-                                "OR('"
-                                + peer.CORE_PEER_LOCALMSPID
-                                + ".admin', '"
-                                + peer.CORE_PEER_LOCALMSPID
-                                + ".client')"
-                            ),
+                            "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".member')"),
                         },
                         "Admins": {
                             "Type": "Signature",
@@ -440,21 +402,14 @@ class Blockchain:
                         },
                         "Endorsement": {
                             "Type": "Signature",
-                            "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".peer')"),
+                            "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".member')"),
                         },
                     },
                 }
 
                 datacfg["Organizations"].append(organization)
-                datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"][
-                    "Organizations"
-                ].append(organization)
 
-        out_file = config + "configtx.json"
-        with open(out_file, "w", encoding="utf-8") as fpo:
-            json.dump(datacfg, fpo, indent=2)
-
-        with open(config + "configtx.yaml", "w", encoding="utf-8") as cftx:
+        with open(configbuild + "configtx.yaml", "w", encoding="utf-8") as cftx:
             yaml.dump(datacfg, cftx)
 
         self.generateOrgDefinition(org)
@@ -465,8 +420,11 @@ class Blockchain:
         console.print("[bold white]# Generating org definition[/]")
         console.print("")
         config = str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
+        configbuild = (
+            str(Path().absolute()) + "/domains/" + self.domain.name + "/config/build"
+        )
 
-        os.environ["FABRIC_CFG_PATH"] = config
+        os.environ["FABRIC_CFG_PATH"] = configbuild
 
         os.system(
             str(Path().absolute())
@@ -494,8 +452,18 @@ class Blockchain:
         pathchannel = clipath + "channel-artifacts/"
         configupttx = clipath + "config/"
 
+        cliextpath = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/"
+        extconfigupttx = cliextpath + "config/"
+
         configupttxlocal = (
             str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
+        )
+
+        CLIORDERER_CA = (
+            cliextpath
+            + "ordererOrganizations/orderer/msp/tlscacerts/tlsca."
+            + self.domain.name
+            + "-cert.pem"
         )
 
         ORDERER_CA = (
@@ -510,7 +478,7 @@ class Blockchain:
 
         command = (
             "peer channel fetch config "
-            + configupttx
+            + extconfigupttx
             + "config_block.pb -o "
             + orderer
             + ":"
@@ -520,10 +488,10 @@ class Blockchain:
             + " -c "
             + self.domain.networkname
             + " --tls --cafile "
-            + ORDERER_CA
+            + CLIORDERER_CA
         )
 
-        clidocker = client.containers.get(peer.name + "." + self.domain.name)
+        clidocker = client.containers.get("cli")
 
         clidocker.exec_run(command)
 
@@ -623,6 +591,21 @@ class Blockchain:
             + orgnew.name
             + "_update_in_envelope.pb"
         )
+
+        command = (
+            "peer channel update -f "
+            + extconfigupttx
+            + orgnew.name
+            + "_update_in_envelope.pb -c "
+            + self.domain.networkname
+            + " -o "
+            + orderer
+            + ":"
+            + str(self.domain.orderer.generallistenport)
+            + " --tls --cafile $ORDERER_CA"
+        )
+
+        clidocker.exec_run(command)
 
         console.print("[bold white]# Signing config transaction[/]")
         console.print("")
