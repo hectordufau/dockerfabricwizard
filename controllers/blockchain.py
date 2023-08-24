@@ -51,6 +51,43 @@ class Blockchain:
         with open(config + "configtx.yaml") as cftx:
             datacfg = yaml.load(cftx)
 
+        ### NEW PROFILES
+
+        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"]["Organizations"][0][
+            "Policies"
+        ]["Admins"]["Rule"] = (
+            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
+        )
+        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"]["Organizations"][
+            0
+        ]["Policies"]["Admins"]["Rule"] = (
+            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
+        )
+
+        datacfg["Profiles"]["OrgsApplicationGenesis"] = {
+            "Policies": datacfg["Channel"]["Policies"],
+            "Orderer": datacfg["Orderer"],
+            "Application": datacfg["Application"],
+            "Capabilities": datacfg["Capabilities"]["Channel"],
+        }
+
+        datacfg["Profiles"]["OrgsApplicationGenesis"]["Orderer"]["Organizations"] = [
+            datacfg["Organizations"][0]
+        ]
+
+        datacfg["Profiles"]["OrgsApplicationGenesis"]["Application"][
+            "Organizations"
+        ] = []
+
+        datacfg["Profiles"]["OrgsApplicationGenesis"]["Orderer"][
+            "Capabilities"
+        ] = datacfg["Capabilities"]["Orderer"]
+        datacfg["Profiles"]["OrgsApplicationGenesis"]["Application"][
+            "Capabilities"
+        ] = datacfg["Capabilities"]["Application"]
+
+        #####
+
         datacfg["Organizations"][0][
             "Name"
         ] = self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
@@ -73,9 +110,9 @@ class Blockchain:
         datacfg["Organizations"][0]["Policies"]["Admins"]["Rule"] = (
             "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".admin')"
         )
-        datacfg["Organizations"][0]["Policies"]["Endorsement"]["Rule"] = (
-            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
-        )
+        """ datacfg["Organizations"][0]["Policies"]["Endorsement"]["Rule"] = (
+            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".peer')"
+        ) """
 
         datacfg["Organizations"][0]["OrdererEndpoints"] = [
             self.domain.orderer.name
@@ -117,13 +154,23 @@ class Blockchain:
                             "Readers": {
                                 "Type": "Signature",
                                 "Rule": (
-                                    "OR('" + peer.CORE_PEER_LOCALMSPID + ".member')"
+                                    "OR('"
+                                    + peer.CORE_PEER_LOCALMSPID
+                                    + ".admin', '"
+                                    + peer.CORE_PEER_LOCALMSPID
+                                    + ".peer', '"
+                                    + peer.CORE_PEER_LOCALMSPID
+                                    + ".client')"
                                 ),
                             },
                             "Writers": {
                                 "Type": "Signature",
                                 "Rule": (
-                                    "OR('" + peer.CORE_PEER_LOCALMSPID + ".member')"
+                                    "OR('"
+                                    + peer.CORE_PEER_LOCALMSPID
+                                    + ".admin', '"
+                                    + peer.CORE_PEER_LOCALMSPID
+                                    + ".client')"
                                 ),
                             },
                             "Admins": {
@@ -135,7 +182,7 @@ class Blockchain:
                             "Endorsement": {
                                 "Type": "Signature",
                                 "Rule": (
-                                    "OR('" + peer.CORE_PEER_LOCALMSPID + ".member')"
+                                    "OR('" + peer.CORE_PEER_LOCALMSPID + ".peer')"
                                 ),
                             },
                         },
@@ -143,6 +190,9 @@ class Blockchain:
 
                     datacfg["Organizations"].append(organization)
                     datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"][
+                        "Organizations"
+                    ].append(organization)
+                    datacfg["Profiles"]["OrgsApplicationGenesis"]["Application"][
                         "Organizations"
                     ].append(organization)
 
@@ -177,17 +227,6 @@ class Blockchain:
             },
         ]
 
-        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"]["Organizations"][0][
-            "Policies"
-        ]["Admins"]["Rule"] = (
-            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
-        )
-        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"]["Organizations"][
-            0
-        ]["Policies"]["Admins"]["Rule"] = (
-            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
-        )
-
         out_file = config + "configtx.json"
         with open(out_file, "w") as fpo:
             json.dump(datacfg, fpo, indent=2)
@@ -212,7 +251,7 @@ class Blockchain:
             str(Path().absolute())
             + "/bin/configtxgen -configPath "
             + config
-            + " -profile SampleAppChannelEtcdRaft -outputBlock "
+            + " -profile OrgsApplicationGenesis -outputBlock "
             + block
             + " -channelID "
             + self.domain.networkname
@@ -390,11 +429,25 @@ class Blockchain:
                     "Policies": {
                         "Readers": {
                             "Type": "Signature",
-                            "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".member')"),
+                            "Rule": (
+                                "OR('"
+                                + peer.CORE_PEER_LOCALMSPID
+                                + ".admin', '"
+                                + peer.CORE_PEER_LOCALMSPID
+                                + ".peer', '"
+                                + peer.CORE_PEER_LOCALMSPID
+                                + ".client')"
+                            ),
                         },
                         "Writers": {
                             "Type": "Signature",
-                            "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".member')"),
+                            "Rule": (
+                                "OR('"
+                                + peer.CORE_PEER_LOCALMSPID
+                                + ".admin', '"
+                                + peer.CORE_PEER_LOCALMSPID
+                                + ".client')"
+                            ),
                         },
                         "Admins": {
                             "Type": "Signature",
@@ -402,7 +455,7 @@ class Blockchain:
                         },
                         "Endorsement": {
                             "Type": "Signature",
-                            "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".member')"),
+                            "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".peer')"),
                         },
                     },
                 }
