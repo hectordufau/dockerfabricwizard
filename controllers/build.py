@@ -917,13 +917,7 @@ class Build:
         }
 
         clidataCORE_PEER_LOCALMSPID = self.domain.organizations[0].name + "MSP"
-        """ clidataCORE_PEER_TLS_ROOTCERT_FILE = (
-            "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
-            + self.domain.organizations[0].name
-            + "/tlsca/tlsca."
-            + self.domain.organizations[0].name
-            + "-cert.pem"
-        ) """
+        
         clidataCORE_PEER_TLS_ROOTCERT_FILE = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
             + cliorg.name

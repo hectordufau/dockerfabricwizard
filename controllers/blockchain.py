@@ -313,15 +313,65 @@ class Blockchain:
         console.print("[bold white]# Joinning channel " + peer.name + "[/]")
         console.print("")
 
-        pathchannel = "/etc/hyperledger/organizations/channel-artifacts/"
+        pathchannel = Path("domains/" + self.domain.name + "/channel-artifacts")
+        block = (
+            str(Path().absolute())
+            + "/"
+            + str(pathchannel)
+            + "/"
+            + self.domain.networkname
+            + ".block"
+        )
 
-        block = pathchannel + self.domain.networkname + ".block"
+        os.environ["BLOCKFILE"] = block
 
-        command = "peer channel join -b " + block
+        config = (
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
+            + "/peerOrganizations/"
+            + org.name
+            + "/"
+            + peer.name
+            + "/peercfg"
+        )
 
-        clidocker = client.containers.get(peer.name + "." + self.domain.name)
+        PEER_CA = (
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
+            + "/peerOrganizations/"
+            + org.name
+            + "/tlsca"
+            + "/tlsca."
+            + org.name
+            + "-cert.pem"
+        )
 
-        clidocker.exec_run(command)
+        PEER_MSP = (
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
+            + "/peerOrganizations/"
+            + org.name
+            + "/users"
+            + "/Admin@"
+            + org.name
+            + "."
+            + self.domain.name
+            + "/msp"
+        )
+
+        PEER_ADDRESS = "localhost:" + str(peer.peerlistenport)
+
+        os.environ["FABRIC_CFG_PATH"] = config
+        os.environ["CORE_PEER_TLS_ENABLED"] = "true"
+        os.environ["CORE_PEER_LOCALMSPID"] = org.name + "MSP"
+        os.environ["CORE_PEER_TLS_ROOTCERT_FILE"] = PEER_CA
+        os.environ["CORE_PEER_MSPCONFIGPATH"] = PEER_MSP
+        os.environ["CORE_PEER_ADDRESS"] = PEER_ADDRESS
+
+        os.system(str(Path().absolute()) + "/bin/peer channel join -b " + block)
 
         console.print("## Waiting Peer...")
         console.print("")
@@ -491,7 +541,7 @@ class Blockchain:
         )
 
         os.system(
-            "jq .data.data[0].payload.data.config "
+            "jq '.data.data[0].payload.data.config' "
             + configupttxlocal
             + "config_block.json >"
             + configupttxlocal
