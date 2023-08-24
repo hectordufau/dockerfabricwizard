@@ -1041,7 +1041,7 @@ class Build:
                     "networks": [self.domain.networkname],
                     "depends_on": [
                         peer.database.name,
-                        self.domain.orderer.name + "." + self.domain.name,
+                        self.domain.orderer.name,
                     ],
                 }
 
@@ -1144,10 +1144,7 @@ class Build:
                 "command": "peer node start",
                 "volumes": peer.volumes,
                 "networks": [self.domain.networkname],
-                "depends_on": [
-                    peer.database.name,
-                    self.domain.orderer.name + "." + self.domain.name,
-                ],
+                "depends_on": [peer.database.name],
             }
 
             peerdata["ports"][0] = DoubleQuotedScalarString(
