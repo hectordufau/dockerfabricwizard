@@ -51,8 +51,6 @@ class Blockchain:
         with open(config + "configtx.yaml") as cftx:
             datacfg = yaml.load(cftx)
 
-        ### NEW PROFILES
-
         datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"]["Organizations"][0][
             "Policies"
         ]["Admins"]["Rule"] = (
@@ -63,6 +61,8 @@ class Blockchain:
         ]["Policies"]["Admins"]["Rule"] = (
             "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
         )
+
+        ### NEW PROFILES
 
         datacfg["Profiles"]["OrgsApplicationGenesis"] = {
             "Policies": datacfg["Channel"]["Policies"],
@@ -102,17 +102,27 @@ class Blockchain:
             + "msp"
         )
         datacfg["Organizations"][0]["Policies"]["Readers"]["Rule"] = (
-            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
+            "OR('"
+            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
+            + ".admin','"
+            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
+            + ".peer','"
+            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
+            + ".client')"
         )
         datacfg["Organizations"][0]["Policies"]["Writers"]["Rule"] = (
-            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
+            "OR('"
+            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
+            + ".admin','"
+            + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
+            + ".client')"
         )
         datacfg["Organizations"][0]["Policies"]["Admins"]["Rule"] = (
             "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".admin')"
         )
-        """ datacfg["Organizations"][0]["Policies"]["Endorsement"]["Rule"] = (
-            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".peer')"
-        ) """
+        datacfg["Organizations"][0]["Policies"]["Endorsement"]["Rule"] = (
+            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
+        )
 
         datacfg["Organizations"][0]["OrdererEndpoints"] = [
             self.domain.orderer.name
@@ -192,6 +202,7 @@ class Blockchain:
                     datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"][
                         "Organizations"
                     ].append(organization)
+
                     datacfg["Profiles"]["OrgsApplicationGenesis"]["Application"][
                         "Organizations"
                     ].append(organization)
@@ -251,7 +262,7 @@ class Blockchain:
             str(Path().absolute())
             + "/bin/configtxgen -configPath "
             + config
-            + " -profile OrgsApplicationGenesis -outputBlock "
+            + " -profile SampleAppChannelEtcdRaft -outputBlock "
             + block
             + " -channelID "
             + self.domain.networkname
@@ -390,25 +401,40 @@ class Blockchain:
 
         os.system(str(Path().absolute()) + "/bin/peer channel join -b " + block)
 
+        console.print("")
         console.print("## Waiting Peer...")
         console.print("")
         time.sleep(5)
 
     def buildNewOrganization(self, org: Organization):
+        console.print("")
         console.print("[bold orange1]BLOCKCHAIN[/]")
         console.print("")
         console.print("[bold white]# Creating org configtx file[/]")
         console.print("")
-        configbuild = (
-            str(Path().absolute()) + "/domains/" + self.domain.name + "/config/build/"
-        )
+        config = str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
+
+        configbuild = config + "build/"
+
         pathconfigbuild = Path(configbuild)
         pathconfigbuild.mkdir(parents=True, exist_ok=True)
 
-        datacfg = {"Organizations": []}
+        shutil.copy(
+            config + "/configtx.yaml",
+            configbuild + "/configtx.yaml",
+        )
+
+        with open(configbuild + "configtx.yaml", encoding="utf-8") as cftx:
+            datacfg = yaml.load(cftx)
 
         for peer in org.peers:
             if peer.name.split(".")[0] == "peer1":
+                anchorpeer = {
+                    "Host": peer.name + "." + self.domain.name,
+                    "Port": peer.peerlistenport,
+                }
+                datacfg["Organizations"][0]["AnchorPeers"].append(anchorpeer)
+
                 organization = {
                     "Name": peer.CORE_PEER_LOCALMSPID,
                     "ID": peer.CORE_PEER_LOCALMSPID,
@@ -461,6 +487,10 @@ class Blockchain:
                 }
 
                 datacfg["Organizations"].append(organization)
+                datacfg["Application"]["Organizations"].append(organization)
+                datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"][
+                    "Organizations"
+                ].append(organization)
 
         with open(configbuild + "configtx.yaml", "w", encoding="utf-8") as cftx:
             yaml.dump(datacfg, cftx)
@@ -489,6 +519,25 @@ class Blockchain:
             + ".json"
         )
 
+        """ with open(config + org.name + ".json", encoding="utf-8") as f:
+            configjson = json.load(f)
+
+        configjson["values"]["AnchorPeers"] = {
+            "mod_policy": "Admins",
+            "value": {
+                "anchor_peers": [
+                    {
+                        "host": org.peers[0].name + "." + self.domain.name,
+                        "port": org.peers[0].peerlistenport,
+                    }
+                ]
+            },
+            "version": "0",
+        }
+
+        with open(config + org.name + ".json", "w", encoding="utf-8") as f:
+            json.dump(configjson, f, indent=2) """
+
     def fetchChannelConfig(self, orgnew: Organization):
         console.print("[bold white]# Fetching channel config[/]")
         console.print("")
@@ -514,14 +563,14 @@ class Blockchain:
 
         CLIORDERER_CA = (
             cliextpath
-            + "ordererOrganizations/orderer/msp/tlscacerts/tlsca."
+            + "ordererOrganizations/tlsca/tlsca."
             + self.domain.name
             + "-cert.pem"
         )
 
         ORDERER_CA = (
             clipath
-            + "ordererOrganizations/orderer/msp/tlscacerts/tlsca."
+            + "ordererOrganizations/orderer/tlsca/tlsca."
             + self.domain.name
             + "-cert.pem"
         )
@@ -623,6 +672,28 @@ class Blockchain:
         )
 
         with open(configupttxlocal + "config_update.json", encoding="utf-8") as f:
+            config_updatedict = json.load(f)
+
+        config_updatedict["read_set"]["groups"] = config_updatedict["write_set"][
+            "groups"
+        ]
+
+        version = int(config_updatedict["read_set"]["version"]) + 1
+        config_updatedict["read_set"]["version"] = str(version)
+
+        version = int(config_updatedict["write_set"]["version"]) + 1
+        config_updatedict["write_set"]["version"] = str(version)
+
+        """ if "version" in config_updatedict:
+            version = int(config_updatedict["version"]) + 1
+            config_updatedict["sequence"] = str(version)
+        else:
+            config_updatedict["sequence"] = "1" """
+
+        with open(configupttxlocal + "config_update.json", "w", encoding="utf-8") as f:
+            json.dump(config_updatedict, f, indent=2)
+
+        with open(configupttxlocal + "config_update.json", encoding="utf-8") as f:
             config_update = f.read()
 
         os.system(
@@ -655,7 +726,8 @@ class Blockchain:
             + orderer
             + ":"
             + str(self.domain.orderer.generallistenport)
-            + " --tls --cafile $ORDERER_CA"
+            + " --tls --cafile "
+            + CLIORDERER_CA
         )
 
         clidocker.exec_run(command, environment=envvar)
@@ -669,7 +741,7 @@ class Blockchain:
             + "_update_in_envelope.pb"
         )
 
-        clidocker.exec_run(command)
+        clidocker.exec_run(command, environment=envvar)
 
         console.print("[bold white]# Submitting transaction from peers[/]")
         console.print("")
@@ -695,7 +767,7 @@ class Blockchain:
                             peer.name + "." + self.domain.name
                         )
                         envvar = self.envVariables(orgnew, peer)
-                        clidocker.exec_run(command)
+                        clidocker.exec_run(command, environment=envvar)
 
         console.print("[bold white]# Fetching channel config block from orderer[/]")
         console.print("")
