@@ -916,27 +916,21 @@ class Build:
             "services": {},
         }
 
+        clidataORDERER_CA = (
+            "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/tlsca/tlsca."
+            + self.domain.name
+            + "-cert.pem"
+        )
+        clidataORDERER_ADMIN_TLS_SIGN_CERT = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/server.crt"
+        clidataORDERER_ADMIN_TLS_PRIVATE_KEY = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/server.key"
         clidataCORE_PEER_LOCALMSPID = self.domain.organizations[0].name + "MSP"
         clidataCORE_PEER_TLS_ROOTCERT_FILE = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
             + cliorg.name
             + "/"
-            + clipeer.name
-            + "/tls/ca.crt"
-        )
-        clidataCORE_PEER_TLS_CERT_FILE = (
-            "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
+            + "/tlsca/tlsca."
             + cliorg.name
-            + "/"
-            + clipeer.name
-            + "/tls/server.crt"
-        )
-        clidataCORE_PEER_TLS_KEY_FILE = (
-            "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
-            + cliorg.name
-            + "/"
-            + clipeer.name
-            + "/tls/server.key"
+            + "-cert.pem"
         )
         clidataCORE_PEER_MSPCONFIGPATH = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
@@ -947,11 +941,8 @@ class Build:
             + self.domain.name
             + "/msp"
         )
-        clidataCORE_PEER_ADDRESS = "localhost:" + str(clipeer.peerlistenport)
-        clidataORDERER_CA = (
-            "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/msp/tlscacerts/tlsca."
-            + self.domain.name
-            + "-cert.pem"
+        clidataCORE_PEER_ADDRESS = (
+            clipeer.name + "." + self.domain.name + ":" + str(clipeer.peerlistenport)
         )
         clidataCHANNEL_NAME = self.domain.networkname
 
@@ -966,13 +957,13 @@ class Build:
                 "FABRIC_LOGGING_SPEC=INFO",
                 "FABRIC_CFG_PATH=/etc/hyperledger/peercfg",
                 "CORE_PEER_TLS_ENABLED=true",
+                "ORDERER_CA=" + clidataORDERER_CA,
+                "ORDERER_ADMIN_TLS_SIGN_CERT=" + clidataORDERER_ADMIN_TLS_SIGN_CERT,
+                "ORDERER_ADMIN_TLS_PRIVATE_KEY=" + clidataORDERER_ADMIN_TLS_PRIVATE_KEY,
                 "CORE_PEER_LOCALMSPID=" + clidataCORE_PEER_LOCALMSPID,
-                "CORE_PEER_TLS_CERT_FILE=" + clidataCORE_PEER_TLS_CERT_FILE,
-                "CORE_PEER_TLS_KEY_FILE=" + clidataCORE_PEER_TLS_KEY_FILE,
                 "CORE_PEER_TLS_ROOTCERT_FILE=" + clidataCORE_PEER_TLS_ROOTCERT_FILE,
                 "CORE_PEER_MSPCONFIGPATH=" + clidataCORE_PEER_MSPCONFIGPATH,
                 "CORE_PEER_ADDRESS=" + clidataCORE_PEER_ADDRESS,
-                "ORDERER_CA=" + clidataORDERER_CA,
                 "CHANNEL_NAME=" + clidataCHANNEL_NAME,
             ],
             "working_dir": "/opt/gopath/src/github.com/hyperledger/fabric/peer",
