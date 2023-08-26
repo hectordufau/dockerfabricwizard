@@ -62,32 +62,6 @@ class Blockchain:
             "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
         )
 
-        ### NEW PROFILES
-
-        datacfg["Profiles"]["OrgsApplicationGenesis"] = {
-            "Policies": datacfg["Channel"]["Policies"],
-            "Orderer": datacfg["Orderer"],
-            "Application": datacfg["Application"],
-            "Capabilities": datacfg["Capabilities"]["Channel"],
-        }
-
-        datacfg["Profiles"]["OrgsApplicationGenesis"]["Orderer"]["Organizations"] = [
-            datacfg["Organizations"][0]
-        ]
-
-        datacfg["Profiles"]["OrgsApplicationGenesis"]["Application"][
-            "Organizations"
-        ] = []
-
-        datacfg["Profiles"]["OrgsApplicationGenesis"]["Orderer"][
-            "Capabilities"
-        ] = datacfg["Capabilities"]["Orderer"]
-        datacfg["Profiles"]["OrgsApplicationGenesis"]["Application"][
-            "Capabilities"
-        ] = datacfg["Capabilities"]["Application"]
-
-        #####
-
         datacfg["Organizations"][0][
             "Name"
         ] = self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
@@ -133,6 +107,7 @@ class Blockchain:
         ]
 
         datacfg["Organizations"][0]["AnchorPeers"] = []
+        datacfg["Application"]["Organizations"] = []
 
         for org in self.domain.organizations:
             for peer in org.peers:
@@ -199,11 +174,8 @@ class Blockchain:
                     }
 
                     datacfg["Organizations"].append(organization)
+                    datacfg["Application"]["Organizations"].append(organization)
                     datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"][
-                        "Organizations"
-                    ].append(organization)
-
-                    datacfg["Profiles"]["OrgsApplicationGenesis"]["Application"][
                         "Organizations"
                     ].append(organization)
 
@@ -519,7 +491,7 @@ class Blockchain:
             + ".json"
         )
 
-        """ with open(config + org.name + ".json", encoding="utf-8") as f:
+        with open(config + org.name + ".json", encoding="utf-8") as f:
             configjson = json.load(f)
 
         configjson["values"]["AnchorPeers"] = {
@@ -536,26 +508,17 @@ class Blockchain:
         }
 
         with open(config + org.name + ".json", "w", encoding="utf-8") as f:
-            json.dump(configjson, f, indent=2) """
+            json.dump(configjson, f, indent=2)
 
     def fetchChannelConfig(self, orgnew: Organization):
         console.print("[bold white]# Fetching channel config[/]")
         console.print("")
-        org = self.domain.organizations[0]
-        peer = org.peers[0]
-        newpeer = orgnew.peers[0]
 
         orderer = self.domain.orderer.name + "." + self.domain.name
 
-        excorg1 = org.name
-        excorg2 = orgnew.name
-
-        clipath = "/etc/hyperledger/organizations/"
-        pathchannel = clipath + "channel-artifacts/"
-        configupttx = clipath + "config/"
-
         cliextpath = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/"
         extconfigupttx = cliextpath + "config/"
+        blockpath = cliextpath + "channel-artifacts/"
 
         configupttxlocal = (
             str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
@@ -564,13 +527,6 @@ class Blockchain:
         CLIORDERER_CA = (
             cliextpath
             + "ordererOrganizations/tlsca/tlsca."
-            + self.domain.name
-            + "-cert.pem"
-        )
-
-        ORDERER_CA = (
-            clipath
-            + "ordererOrganizations/orderer/tlsca/tlsca."
             + self.domain.name
             + "-cert.pem"
         )
@@ -594,7 +550,7 @@ class Blockchain:
         )
 
         clidocker = client.containers.get("cli")
-        envvar = self.envVariables(org, peer)
+        envvar = self.envVariables()
         clidocker.exec_run(command, environment=envvar)
 
         console.print("## Waiting Peer...")
@@ -674,21 +630,10 @@ class Blockchain:
         with open(configupttxlocal + "config_update.json", encoding="utf-8") as f:
             config_updatedict = json.load(f)
 
-        config_updatedict["read_set"]["groups"] = config_updatedict["write_set"][
-            "groups"
-        ]
-
-        version = int(config_updatedict["read_set"]["version"]) + 1
-        config_updatedict["read_set"]["version"] = str(version)
-
         version = int(config_updatedict["write_set"]["version"]) + 1
         config_updatedict["write_set"]["version"] = str(version)
 
-        """ if "version" in config_updatedict:
-            version = int(config_updatedict["version"]) + 1
-            config_updatedict["sequence"] = str(version)
-        else:
-            config_updatedict["sequence"] = "1" """
+        config_updatedict["write_set"]["mod_policy"] = "Admins"
 
         with open(configupttxlocal + "config_update.json", "w", encoding="utf-8") as f:
             json.dump(config_updatedict, f, indent=2)
@@ -716,6 +661,34 @@ class Blockchain:
             + "_update_in_envelope.pb"
         )
 
+        for org in self.domain.organizations:
+            if org.name != orgnew.name:
+                #for peer in org.peers:
+                    #if peer.name.split(".")[0] == "peer1":
+                ### SIGN AS OTHER ORG ADMINS
+                console.print(
+                    "[bold white]# Signing config transaction by org "
+                    + org.name
+                    + "[/]"
+                )
+                console.print("")
+                command = (
+                    "peer channel signconfigtx -f "
+                    + extconfigupttx
+                    + orgnew.name
+                    + "_update_in_envelope.pb"
+                )
+
+                envvar = self.envVariables(org, peer)
+                clidocker.exec_run(command, environment=envvar)
+
+                console.print("# Waiting Peer...")
+                console.print("")
+                time.sleep(5)
+
+        ### SEND AS ORDERER ADMIN
+        console.print("[bold white]# Updating channel[/]")
+        console.print("")
         command = (
             "peer channel update -f "
             + extconfigupttx
@@ -730,32 +703,33 @@ class Blockchain:
             + CLIORDERER_CA
         )
 
+        envvar = self.envVariables(ord=True)
         clidocker.exec_run(command, environment=envvar)
 
-        console.print("[bold white]# Signing config transaction[/]")
+        console.print("# Waiting Orderer...")
         console.print("")
-        command = (
-            "peer channel signconfigtx -f "
-            + configupttx
-            + orgnew.name
-            + "_update_in_envelope.pb"
-        )
-
-        clidocker.exec_run(command, environment=envvar)
+        time.sleep(5)
 
         console.print("[bold white]# Submitting transaction from peers[/]")
         console.print("")
         for org in self.domain.organizations:
-            if (org.name != excorg1) and (org.name != excorg2):
+            if org.name != orgnew.name:
                 for peer in org.peers:
                     if peer.name.split(".")[0] == "peer1":
+                        ORDERER_CA = (
+                            "/etc/hyperledger/organizations/ordererOrganizations/tlsca/tlsca."
+                            + self.domain.name
+                            + "-cert.pem"
+                        )
                         command = (
                             "peer channel update -f "
-                            + configupttx
+                            + extconfigupttx
                             + orgnew.name
                             + "_update_in_envelope.pb -c "
                             + self.domain.networkname
-                            + " -o localhost:"
+                            + " -o "
+                            + orderer
+                            + ":"
                             + str(self.domain.orderer.generallistenport)
                             + " --ordererTLSHostnameOverride "
                             + orderer
@@ -769,31 +743,50 @@ class Blockchain:
                         envvar = self.envVariables(orgnew, peer)
                         clidocker.exec_run(command, environment=envvar)
 
+                        console.print("# Waiting Peer...")
+                        console.print("")
+                        time.sleep(5)
+
         console.print("[bold white]# Fetching channel config block from orderer[/]")
         console.print("")
 
-        block = pathchannel + self.domain.networkname + ".block"
+        block = blockpath + self.domain.networkname + ".block"
 
         command = (
             "peer channel fetch 0 "
             + block
-            + " -o localhost:"
+            + " -o "
+            + orderer
+            + ":"
             + str(self.domain.orderer.generallistenport)
             + " --ordererTLSHostnameOverride "
             + orderer
             + " -c "
             + self.domain.networkname
             + " --tls --cafile "
-            + ORDERER_CA
+            + CLIORDERER_CA
         )
 
-        clidocker = client.containers.get(newpeer.name + "." + self.domain.name)
-        envvar = self.envVariables(orgnew, newpeer)
+        # clidocker = client.containers.get(newpeer.name + "." + self.domain.name)
+        # envvar = self.envVariables(orgnew)
+        envvar = self.envVariables()
         clidocker.exec_run(command, environment=envvar)
+
+        console.print("# Waiting Peer...")
+        console.print("")
+        time.sleep(5)
 
         self.joinChannelOrg(orgnew)
 
-    def envVariables(self, org: Organization, peer: Peer):
+    def envVariables(
+        self, org: Organization = None, peer: Peer = None, ord: bool = None
+    ):
+        if org is None:
+            org = self.domain.organizations[0]
+
+        if peer is None:
+            peer = org.peers[0]
+
         clidataORDERER_CA = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/tlsca/tlsca."
             + self.domain.name
@@ -801,11 +794,16 @@ class Blockchain:
         )
         clidataORDERER_ADMIN_TLS_SIGN_CERT = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/server.crt"
         clidataORDERER_ADMIN_TLS_PRIVATE_KEY = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/server.key"
+
+        clidataORDERER_GENERAL_LOCALMSPDIR = (
+            "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/users/Admin@"
+            + self.domain.name
+            + "/msp"
+        )
         clidataCORE_PEER_LOCALMSPID = org.name + "MSP"
         clidataCORE_PEER_TLS_ROOTCERT_FILE = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
             + org.name
-            + "/"
             + "/tlsca/tlsca."
             + org.name
             + "-cert.pem"
@@ -832,9 +830,13 @@ class Blockchain:
             "ORDERER_CA": clidataORDERER_CA,
             "ORDERER_ADMIN_TLS_SIGN_CERT": clidataORDERER_ADMIN_TLS_SIGN_CERT,
             "ORDERER_ADMIN_TLS_PRIVATE_KEY": clidataORDERER_ADMIN_TLS_PRIVATE_KEY,
-            "CORE_PEER_LOCALMSPID": clidataCORE_PEER_LOCALMSPID,
+            "CORE_PEER_LOCALMSPID": "OrdererMSP"
+            if ord
+            else clidataCORE_PEER_LOCALMSPID,
             "CORE_PEER_TLS_ROOTCERT_FILE": clidataCORE_PEER_TLS_ROOTCERT_FILE,
-            "CORE_PEER_MSPCONFIGPATH": clidataCORE_PEER_MSPCONFIGPATH,
+            "CORE_PEER_MSPCONFIGPATH": clidataORDERER_GENERAL_LOCALMSPDIR
+            if ord
+            else clidataCORE_PEER_MSPCONFIGPATH,
             "CORE_PEER_ADDRESS": clidataCORE_PEER_ADDRESS,
             "CHANNEL_NAME": clidataCHANNEL_NAME,
         }

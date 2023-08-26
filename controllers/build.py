@@ -923,11 +923,15 @@ class Build:
         )
         clidataORDERER_ADMIN_TLS_SIGN_CERT = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/server.crt"
         clidataORDERER_ADMIN_TLS_PRIVATE_KEY = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/server.key"
+        clidataORDERER_GENERAL_LOCALMSPDIR = (
+            "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/users/Admin@"
+            + self.domain.name
+            + "/msp"
+        )
         clidataCORE_PEER_LOCALMSPID = self.domain.organizations[0].name + "MSP"
         clidataCORE_PEER_TLS_ROOTCERT_FILE = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
             + cliorg.name
-            + "/"
             + "/tlsca/tlsca."
             + cliorg.name
             + "-cert.pem"
@@ -960,9 +964,11 @@ class Build:
                 "ORDERER_CA=" + clidataORDERER_CA,
                 "ORDERER_ADMIN_TLS_SIGN_CERT=" + clidataORDERER_ADMIN_TLS_SIGN_CERT,
                 "ORDERER_ADMIN_TLS_PRIVATE_KEY=" + clidataORDERER_ADMIN_TLS_PRIVATE_KEY,
+                "ORDERER_GENERAL_LOCALMSPID=OrdererMSP",
+                "ORDERER_GENERAL_LOCALMSPDIR=" + clidataORDERER_GENERAL_LOCALMSPDIR,
                 "CORE_PEER_LOCALMSPID=" + clidataCORE_PEER_LOCALMSPID,
+                "CORE_PEER_MSPCONFIGPATH="+ clidataCORE_PEER_MSPCONFIGPATH,
                 "CORE_PEER_TLS_ROOTCERT_FILE=" + clidataCORE_PEER_TLS_ROOTCERT_FILE,
-                "CORE_PEER_MSPCONFIGPATH=" + clidataCORE_PEER_MSPCONFIGPATH,
                 "CORE_PEER_ADDRESS=" + clidataCORE_PEER_ADDRESS,
                 "CHANNEL_NAME=" + clidataCHANNEL_NAME,
             ],

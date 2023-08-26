@@ -6,7 +6,8 @@ from pydantic import BaseModel
 class Orderer(BaseModel):
     name: str = None
     FABRIC_CFG_PATH: str = "/var/hyperledger/fabric/config"
-    FABRIC_LOGGING_SPEC: str = "INFO"
+    #FABRIC_LOGGING_SPEC: str = "INFO"
+    FABRIC_LOGGING_SPEC: str = "WARN:cauthdsl=debug:policies=debug:msp=debug"
     ORDERER_ADMIN_LISTENADDRESS: str = "0.0.0.0:7053"
     ORDERER_ADMIN_TLS_CERTIFICATE: str = "/var/hyperledger/orderer/tls/server.crt"
     ORDERER_ADMIN_TLS_CLIENTROOTCAS: str = "[/var/hyperledger/orderer/tls/ca.crt]"
