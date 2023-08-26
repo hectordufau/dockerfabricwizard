@@ -679,7 +679,7 @@ class Blockchain:
                     + "_update_in_envelope.pb"
                 )
 
-                envvar = self.envVariables(org, peer)
+                envvar = self.envVariables(org)
                 clidocker.exec_run(command, environment=envvar)
 
                 console.print("# Waiting Peer...")
