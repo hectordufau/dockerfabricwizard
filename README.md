@@ -103,8 +103,10 @@ Before you begin, make sure you have the following prerequisites:
 ![New Network](/screenshots/screen2.png "New network")
 
 ![New Organization](/screenshots/screen3.png "New organization")
+Thanks to [Lazydocker](https://github.com/jesseduffield/lazydocker).
 
 ![New Organization Added](/screenshots/screen4.png "New organization added")
+Thanks to [Lazydocker](https://github.com/jesseduffield/lazydocker).
 
 ## Contributing
 
