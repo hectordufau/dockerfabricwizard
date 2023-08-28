@@ -653,11 +653,6 @@ class Blockchain:
 
                         clidocker = client.containers.get("cli")
                         envvar = self.envVariables(org)
-
-                        console.print(peer.name + "." + self.domain.name)
-                        console.print(envvar)
-                        console.print(command)
-
                         clidocker.exec_run(command, environment=envvar)
 
                         console.print("# Waiting Peer...")
@@ -684,11 +679,6 @@ class Blockchain:
 
         clidocker = client.containers.get("cli")
         envvar = self.envVariables(ord=True)
-
-        console.print("cli")
-        console.print(envvar)
-        console.print(command)
-
         clidocker.exec_run(command, environment=envvar)
 
         console.print("# Waiting Orderer...")
