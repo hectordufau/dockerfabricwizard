@@ -123,7 +123,6 @@ Would you like to contribute with a donation?
 ### In Progress
 
 - [ ] Selected network menu options
-   - [ ] Add organization
    - [ ] Add peer
 
 ### Done ✓
@@ -150,6 +149,7 @@ Would you like to contribute with a donation?
    - [x] Stop network
    - [x] Clean docker
    - [x] Delete network configs
+   - [x] Add organization
 
 ## License
 
