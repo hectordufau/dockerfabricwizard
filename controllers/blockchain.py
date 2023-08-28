@@ -48,7 +48,7 @@ class Blockchain:
             config + "configtx.yaml",
         )
 
-        with open(config + "configtx.yaml") as cftx:
+        with open(config + "configtx.yaml", encoding="utf-8") as cftx:
             datacfg = yaml.load(cftx)
 
         datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"]["Organizations"][0][
@@ -199,10 +199,10 @@ class Blockchain:
         ]
 
         out_file = config + "configtx.json"
-        with open(out_file, "w") as fpo:
+        with open(out_file, "w", encoding="utf-8") as fpo:
             json.dump(datacfg, fpo, indent=2)
 
-        with open(config + "configtx.yaml", "w") as cftx:
+        with open(config + "configtx.yaml", "w", encoding="utf-8") as cftx:
             yaml.dump(datacfg, cftx)
 
         # Creating gblock
@@ -443,12 +443,13 @@ class Blockchain:
 
         self.fetchChannelConfig(org)
 
+        self.mergeConfigtx()
+
     def generateOrgDefinition(self, org: Organization):
         console.print("[bold white]# Generating org definition[/]")
         console.print("")
-        config = str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
         configbuild = (
-            str(Path().absolute()) + "/domains/" + self.domain.name + "/config/build"
+            str(Path().absolute()) + "/domains/" + self.domain.name + "/config/build/"
         )
 
         os.environ["FABRIC_CFG_PATH"] = configbuild
@@ -458,12 +459,12 @@ class Blockchain:
             + "/bin/configtxgen -printOrg "
             + org.name
             + "MSP > "
-            + config
+            + configbuild
             + org.name
             + ".json"
         )
 
-        with open(config + org.name + ".json", encoding="utf-8") as f:
+        with open(configbuild + org.name + ".json", encoding="utf-8") as f:
             configjson = json.load(f)
 
         configjson["values"]["AnchorPeers"] = {
@@ -479,10 +480,11 @@ class Blockchain:
             "version": "0",
         }
 
-        with open(config + org.name + ".json", "w", encoding="utf-8") as f:
+        with open(configbuild + org.name + ".json", "w", encoding="utf-8") as f:
             json.dump(configjson, f, indent=2)
 
     def fetchChannelConfig(self, orgnew: Organization):
+        console.print("")
         console.print("[bold white]# Fetching channel config[/]")
         console.print("")
 
@@ -490,14 +492,14 @@ class Blockchain:
         newpeer = orgnew.peers[0]
 
         cliextpath = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/"
-        extconfigupttx = cliextpath + "config/"
+        extconfigupttx = cliextpath + "config/build/"
 
         clipath = "/etc/hyperledger/organizations/"
         # configupttx = clipath + "config/"
         blockpath = clipath + "channel-artifacts/"
 
         configupttxlocal = (
-            str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
+            str(Path().absolute()) + "/domains/" + self.domain.name + "/config/build/"
         )
 
         CLIORDERER_CA = (
@@ -789,3 +791,28 @@ class Blockchain:
         }
 
         return envvar
+
+    def mergeConfigtx(self):
+        path = str(Path().absolute()) + "/domains/" + self.domain.name
+        config = path + "/config/"
+        build = config + "build/"
+
+        with open(config + "configtx.yaml", encoding="utf-8") as cftx:
+            datacfg = yaml.load(cftx)
+
+        with open(build + "configtx.yaml", encoding="utf-8") as bcftx:
+            databuild = yaml.load(bcftx)
+
+        neworg = databuild["Organizations"][0]
+
+        datacfg["Organizations"].append(neworg)
+        datacfg["Organizations"][0]["AnchorPeers"].append(neworg["AnchorPeers"][0])
+        datacfg["Application"]["Organizations"].append(neworg)
+        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"][
+            "Organizations"
+        ].append(neworg)
+
+        with open(config + "configtx.yaml", "w", encoding="utf-8") as cftx:
+            datacfg = yaml.dump(datacfg, cftx)
+
+        os.system("rm -fR " + build)
