@@ -85,6 +85,9 @@ class Blockchain:
         datacfg["Organizations"][0]["Policies"]["Admins"]["Rule"] = (
             "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
         )
+        datacfg["Organizations"][0]["Policies"]["Endorsement"]["Rule"] = (
+            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
+        )
 
         datacfg["Organizations"][0]["OrdererEndpoints"] = [
             self.domain.orderer.name
@@ -806,13 +809,20 @@ class Blockchain:
         neworg = databuild["Organizations"][0]
 
         datacfg["Organizations"].append(neworg)
-        datacfg["Organizations"][0]["AnchorPeers"].append(neworg["AnchorPeers"][0])
+        anchorpeer = neworg["AnchorPeers"][0]
         datacfg["Application"]["Organizations"].append(neworg)
         datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"][
             "Organizations"
         ].append(neworg)
 
+        datacfg["Organizations"][0]["AnchorPeers"].append(
+            {"Host": anchorpeer["Host"], "Port": anchorpeer["Port"]}
+        )
+
         with open(config + "configtx.yaml", "w", encoding="utf-8") as cftx:
-            datacfg = yaml.dump(datacfg, cftx)
+            yaml.dump(datacfg, cftx)
+
+        with open(config + "configtx.json", "w", encoding="utf-8") as fpo:
+            json.dump(datacfg, fpo, indent=2)
 
         os.system("rm -fR " + build)

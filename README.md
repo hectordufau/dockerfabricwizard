@@ -98,9 +98,13 @@ Before you begin, make sure you have the following prerequisites:
 
 ## Screenshots
 
-![Main menu](/screenshots/screen1.png "Main menu")
+![Main Menu](/screenshots/screen1.png "Main menu")
 
-![New network](/screenshots/screen2.png "New network")
+![New Network](/screenshots/screen2.png "New network")
+
+![New Organization](/screenshots/screen3.png "New organization")
+
+![New Organization Added](/screenshots/screen4.png "New organization added")
 
 ## Contributing
 
@@ -114,6 +118,7 @@ Would you like to contribute with a donation?
 
 ### Todo
 
+- [ ] Restore network from config file
 - [ ] Chaincode as a Service installer
    - [ ] Go chaincode
    - [ ] Typescript chaincode
