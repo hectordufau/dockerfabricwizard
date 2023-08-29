@@ -115,22 +115,22 @@ New Network<br/>
 
 <tr>
 <td>
-New organization<br/>
+Adding a new organization<br/>
 <img src="./screenshots/screen3.png" alt="New organization">
 </td>
 <td>
-New organization<br/>
+New organization added<br/>
 <img src="./screenshots/screen4.png" alt="New organization">
 </td>
 </tr>
 
 <tr>
 <td>
-New peer<br/>
+Adding a new peer<br/>
 <img src="./screenshots/screen5.png" alt="New peer">
 </td>
 <td>
-New peer<br/>
+New peer added<br/>
 <img src="./screenshots/screen6.png" alt="New peer">
 </td>
 </tr>
