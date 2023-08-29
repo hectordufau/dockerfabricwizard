@@ -102,27 +102,33 @@ Before you begin, make sure you have the following prerequisites:
 
 <tr>
 <td>
+Main Menu<br/>
 <img src="./screenshots/screen1.png" alt="Main menu">
 </td>
 <td>
+New Network<br/>
 <img src="./screenshots/screen2.png" alt="New network">
 </td>
 </tr>
 
 <tr>
 <td>
+New organization<br/>
 <img src="./screenshots/screen3.png" alt="New organization">
 </td>
 <td>
+New organization<br/>
 <img src="./screenshots/screen4.png" alt="New organization">
 </td>
 </tr>
 
 <tr>
 <td>
+New peer<br/>
 <img src="./screenshots/screen5.png" alt="New peer">
 </td>
 <td>
+New peer<br/>
 <img src="./screenshots/screen6.png" alt="New peer">
 </td>
 </tr>
