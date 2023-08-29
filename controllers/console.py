@@ -1028,7 +1028,11 @@ class ConsoleOutput:
                 case "g":
                     selectoption = False
                     run = Run(domain)
+                    exists = run.checkContainer()
                     run.runAll()
+                    if not exists:
+                        blockchain = Blockchain(domain)
+                        blockchain.rebuild()
                     self.checkDockerStatus(domain)
                 case "s":
                     selectoption = False

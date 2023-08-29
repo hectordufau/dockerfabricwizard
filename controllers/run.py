@@ -131,3 +131,17 @@ class Run:
         time.sleep(5)
 
         os.remove(Path(pathnet))
+
+    def checkContainer(self) -> bool:
+        pathorderer = "".join(
+            [
+                str(Path().absolute()),
+                "/domains/",
+                self.domain.name,
+                "/compose/",
+                "compose-orderer.yaml",
+            ]
+        )
+
+        docker = DockerClient(compose_files=[pathorderer])
+        return docker.container.exists(self.domain.orderer.name)

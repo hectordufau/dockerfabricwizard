@@ -826,3 +826,11 @@ class Blockchain:
             json.dump(datacfg, fpo, indent=2)
 
         os.system("rm -fR " + build)
+        
+    def rebuild(self):
+        console.print("[bold orange1]BLOCKCHAIN[/]")
+        console.print("")
+        self.createChannel()
+        console.print("")
+        self.joinChannel()
+        console.print("")

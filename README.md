@@ -148,16 +148,15 @@ Would you like to contribute with a donation?
 
 ### Todo
 
-- [ ] Chaincode as a Service installer
-   - [ ] Go chaincode
-   - [ ] Typescript chaincode
-   - [ ] Java chaincode
 - [ ] Firefly integration (in planning)
 - [ ] Improve code (I guess it is a mess!)
 
 ### In Progress
 
-- [ ] Restore network from config file
+- [ ] Chaincode as a Service installer
+   - [ ] Go chaincode
+   - [ ] Typescript chaincode
+   - [ ] Java chaincode
 
 ### Done ✓
 
@@ -185,6 +184,7 @@ Would you like to contribute with a donation?
    - [x] Delete network configs
    - [x] Add organization
    - [x] Add peer
+- [x] Restore network from config file
 
 ## License
 
