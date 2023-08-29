@@ -105,25 +105,25 @@ Before you begin, make sure you have the following prerequisites:
 <img src="./screenshots/screen1.png" alt="Main menu">
 </td>
 <td>
-<img src="./screenshots/screen2.png" alt="Main menu">
+<img src="./screenshots/screen2.png" alt="New network">
 </td>
 </tr>
 
 <tr>
 <td>
-<img src="./screenshots/screen3.png">
+<img src="./screenshots/screen3.png" alt="New organization">
 </td>
 <td>
-<img src="./screenshots/screen4.png">
+<img src="./screenshots/screen4.png" alt="New organization">
 </td>
 </tr>
 
 <tr>
 <td>
-<img src="./screenshots/screen5.png">
+<img src="./screenshots/screen5.png" alt="New peer">
 </td>
 <td>
-<img src="./screenshots/screen6.png">
+<img src="./screenshots/screen6.png" alt="New peer">
 </td>
 </tr>
 </table>
