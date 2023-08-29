@@ -61,7 +61,7 @@ Before you begin, make sure you have the following prerequisites:
 
 5. Once the installation is complete, you will have a Hyperledger Fabric network up and running within Docker containers.
 
-6. If you only want build config files (docker composer and HLF config files), just copy all files and folders inside `domain/<domainname>` and use them for your own purposes
+6. If you only want build config files (docker composer and HLF config files), just copy all files and folders inside `domain/<domainname>` folder and use them for your own purposes
 
 ## Fixing docker permissions
 
