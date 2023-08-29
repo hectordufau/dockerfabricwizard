@@ -6,6 +6,7 @@ from rich.console import Console
 
 from models.domain import Domain
 from models.organization import Organization
+from models.peer import Peer
 
 console = Console()
 
@@ -81,6 +82,11 @@ class Run:
         docker = DockerClient(compose_files=[pathorderer, pathnet])
         docker.compose.up(detach=True)
 
+        console.print("")
+        console.print("## Waiting Network...")
+        console.print("")
+        time.sleep(5)
+
     def startingPDOrg(self, org: Organization):
         pathnet = "".join(
             [
@@ -94,3 +100,27 @@ class Run:
 
         docker = DockerClient(compose_files=[pathnet])
         docker.compose.up(detach=True)
+
+        console.print("")
+        console.print("## Waiting Organization...")
+        console.print("")
+        time.sleep(5)
+
+    def startingPD(self, peer: Peer):
+        pathnet = "".join(
+            [
+                str(Path().absolute()),
+                "/domains/",
+                self.domain.name,
+                "/compose/",
+                "compose-net-" + peer.name + ".yaml",
+            ]
+        )
+
+        docker = DockerClient(compose_files=[pathnet])
+        docker.compose.up(detach=True)
+
+        console.print("")
+        console.print("## Waiting Peer...")
+        console.print("")
+        time.sleep(5)

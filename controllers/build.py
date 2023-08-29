@@ -107,7 +107,7 @@ class Build:
         pathdomains = "domains/" + self.domain.name
 
         json_object = json.dumps(self.domain, default=lambda x: x.__dict__, indent=4)
-        with open(pathdomains + "/setup.json", "w") as outfile:
+        with open(pathdomains + "/setup.json", "w", encoding="utf-8") as outfile:
             outfile.write(json_object)
 
     def buildCa(self):
@@ -179,7 +179,7 @@ class Build:
 
             cafile["services"][org.ca.name] = caorg
 
-        with open(pathfabricca + "compose-ca.yaml", "w") as yaml_file:
+        with open(pathfabricca + "compose-ca.yaml", "w", encoding="utf-8") as yaml_file:
             yaml.dump(cafile, yaml_file)
 
         run = Run(self.domain)
@@ -252,7 +252,7 @@ class Build:
         }
 
         configpath = "".join([str(Path().absolute()), "/", str(pathorder), "/msp"])
-        with open(configpath + "/config.yaml", "w") as yaml_file:
+        with open(configpath + "/config.yaml", "w", encoding="utf-8") as yaml_file:
             yaml.dump(configfile, yaml_file)
 
         cacert = (
@@ -534,7 +534,7 @@ class Build:
         }
 
         configpath = "".join([str(Path().absolute()), "/", str(pathorg), "/msp"])
-        with open(configpath + "/config.yaml", "w") as yaml_file:
+        with open(configpath + "/config.yaml", "w", encoding="utf-8") as yaml_file:
             yaml.dump(configfile, yaml_file)
 
         cacert = str(Path().absolute()) + "/" + str(pathfabriccaorg) + "/ca-cert.pem"
@@ -896,7 +896,7 @@ class Build:
 
         ordfile["services"][self.domain.orderer.name] = orderer
 
-        with open(pathorderer + "compose-orderer.yaml", "w") as yaml_file:
+        with open(pathorderer + "compose-orderer.yaml", "w", encoding="utf-8") as yaml_file:
             yaml.dump(ordfile, yaml_file)
 
     def buildPeersDatabases(self):
@@ -967,7 +967,7 @@ class Build:
                 "ORDERER_GENERAL_LOCALMSPID=OrdererMSP",
                 "ORDERER_GENERAL_LOCALMSPDIR=" + clidataORDERER_GENERAL_LOCALMSPDIR,
                 "CORE_PEER_LOCALMSPID=" + clidataCORE_PEER_LOCALMSPID,
-                "CORE_PEER_MSPCONFIGPATH="+ clidataCORE_PEER_MSPCONFIGPATH,
+                "CORE_PEER_MSPCONFIGPATH=" + clidataCORE_PEER_MSPCONFIGPATH,
                 "CORE_PEER_TLS_ROOTCERT_FILE=" + clidataCORE_PEER_TLS_ROOTCERT_FILE,
                 "CORE_PEER_ADDRESS=" + clidataCORE_PEER_ADDRESS,
                 "CHANNEL_NAME=" + clidataCHANNEL_NAME,
@@ -1074,7 +1074,7 @@ class Build:
                 peerfile["services"][peer.database.name] = databasedata
                 peerfile["services"]["cli"] = clidata
 
-        with open(pathpeer + "compose-net.yaml", "w") as yaml_file:
+        with open(pathpeer + "compose-net.yaml", "w", encoding="utf-8") as yaml_file:
             yaml.dump(peerfile, yaml_file)
 
     def buildPeersDatabasesOrg(self, org: Organization):
@@ -1082,7 +1082,7 @@ class Build:
 
         pathpeer = "domains/" + self.domain.name + "/compose/"
 
-        with open(pathpeer + "compose-net.yaml") as yamlpeer_file:
+        with open(pathpeer + "compose-net.yaml", encoding="utf-8") as yamlpeer_file:
             datapeer = yaml.load(yamlpeer_file)
 
         peerfile = {
@@ -1179,7 +1179,109 @@ class Build:
         with open(pathpeer + "compose-net-" + org.name + ".yaml", "w") as yaml_file:
             yaml.dump(peerfile, yaml_file)
 
-        with open(pathpeer + "compose-net.yaml", "w") as yamlpeer_file:
+        with open(pathpeer + "compose-net.yaml", "w", encoding="utf-8") as yamlpeer_file:
+            yaml.dump(datapeer, yamlpeer_file)
+
+    def buildPeer(self, peer: Peer):
+        console.print("[bold white]# Building " + peer.name + " and database[/]")
+
+        pathpeer = "domains/" + self.domain.name + "/compose/"
+
+        with open(pathpeer + "compose-net.yaml") as yamlpeer_file:
+            datapeer = yaml.load(yamlpeer_file)
+
+        peerfile = {
+            "version": "3.7",
+            "networks": {self.domain.networkname: {"name": self.domain.networkname}},
+            "volumes": {},
+            "services": {},
+        }
+
+        peerdata = {
+            "container_name": peer.name + "." + self.domain.name,
+            "image": "hyperledger/fabric-peer:latest",
+            "labels": {"service": "hyperledger-fabric"},
+            # "user": str(os.geteuid()) + ":" + str(os.getgid()),
+            "environment": [
+                "FABRIC_CFG_PATH=" + peer.FABRIC_CFG_PATH,
+                "FABRIC_LOGGING_SPEC=" + peer.FABRIC_LOGGING_SPEC,
+                "CORE_PEER_TLS_ENABLED=" + str(peer.CORE_PEER_TLS_ENABLED),
+                "CORE_PEER_PROFILE_ENABLED=" + str(peer.CORE_PEER_PROFILE_ENABLED),
+                "CORE_PEER_TLS_CERT_FILE=" + peer.CORE_PEER_TLS_CERT_FILE,
+                "CORE_PEER_TLS_KEY_FILE=" + peer.CORE_PEER_TLS_KEY_FILE,
+                "CORE_PEER_TLS_ROOTCERT_FILE=" + peer.CORE_PEER_TLS_ROOTCERT_FILE,
+                "CORE_PEER_ID=" + peer.CORE_PEER_ID,
+                "CORE_PEER_ADDRESS=" + peer.CORE_PEER_ADDRESS,
+                "CORE_PEER_LISTENADDRESS=" + peer.CORE_PEER_LISTENADDRESS,
+                "CORE_PEER_CHAINCODEADDRESS=" + peer.CORE_PEER_CHAINCODEADDRESS,
+                "CORE_PEER_CHAINCODELISTENADDRESS="
+                + peer.CORE_PEER_CHAINCODELISTENADDRESS,
+                "CORE_PEER_GOSSIP_BOOTSTRAP=" + peer.CORE_PEER_GOSSIP_BOOTSTRAP,
+                "CORE_PEER_GOSSIP_EXTERNALENDPOINT="
+                + peer.CORE_PEER_GOSSIP_EXTERNALENDPOINT,
+                "CORE_PEER_LOCALMSPID=" + peer.CORE_PEER_LOCALMSPID,
+                "CORE_PEER_MSPCONFIGPATH=" + peer.CORE_PEER_MSPCONFIGPATH,
+                "CORE_OPERATIONS_LISTENADDRESS=" + peer.CORE_OPERATIONS_LISTENADDRESS,
+                "CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG="
+                + peer.CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG,
+                "CORE_CHAINCODE_EXECUTETIMEOUT=" + peer.CORE_CHAINCODE_EXECUTETIMEOUT,
+                "CORE_VM_ENDPOINT=" + peer.CORE_VM_ENDPOINT,
+                "CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE="
+                + peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE,
+                "CORE_LEDGER_STATE_STATEDATABASE="
+                + peer.CORE_LEDGER_STATE_STATEDATABASE,
+                "CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS="
+                + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS,
+                "CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME="
+                + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME,
+                "CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD="
+                + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD,
+                "CORE_METRICS_PROVIDER=prometheus",
+            ],
+            "ports": ["0", "1"],
+            "working_dir": "/root",
+            "command": "peer node start",
+            "volumes": peer.volumes,
+            "networks": [self.domain.networkname],
+            "depends_on": [peer.database.name],
+        }
+
+        peerdata["ports"][0] = DoubleQuotedScalarString(
+            f'{str(peer.peerlistenport)+":"+str(peer.peerlistenport)}'
+        )
+        peerdata["ports"][1] = DoubleQuotedScalarString(
+            f'{str(peer.operationslistenport)+":"+str(peer.operationslistenport)}'
+        )
+
+        peerfile["volumes"][peer.name + "." + self.domain.name] = {}
+        datapeer["volumes"][peer.name + "." + self.domain.name] = {}
+
+        peerfile["services"][peer.name + "." + self.domain.name] = peerdata
+        datapeer["services"][peer.name + "." + self.domain.name] = peerdata
+
+        databasedata = {
+            "image": "couchdb:3.3.2",
+            "labels": {"service": "hyperledger-fabric"},
+            "environment": [
+                "COUCHDB_USER=" + peer.database.COUCHDB_USER,
+                "COUCHDB_PASSWORD=" + peer.database.COUCHDB_PASSWORD,
+            ],
+            "ports": ["0"],
+            "container_name": peer.database.name,
+            "networks": [self.domain.networkname],
+        }
+
+        databasedata["ports"][0] = DoubleQuotedScalarString(
+            f'{str(peer.database.port)+":5984"}'
+        )
+
+        peerfile["services"][peer.database.name] = databasedata
+        datapeer["services"][peer.database.name] = databasedata
+
+        with open(pathpeer + "compose-net-" + peer.name + ".yaml", "w", encoding="utf-8") as yaml_file:
+            yaml.dump(peerfile, yaml_file)
+
+        with open(pathpeer + "compose-net.yaml", "w", encoding="utf-8") as yamlpeer_file:
             yaml.dump(datapeer, yamlpeer_file)
 
     def buildNewOrganization(self, org: Organization):
@@ -1193,7 +1295,7 @@ class Build:
 
         pathfabricca = "domains/" + self.domain.name + "/compose/"
 
-        with open(pathfabricca + "compose-ca.yaml") as yamlca_file:
+        with open(pathfabricca + "compose-ca.yaml", encoding="utf-8") as yamlca_file:
             cadata = yaml.load(yamlca_file)
 
         cafile = {
@@ -1233,17 +1335,20 @@ class Build:
         cafile["services"][org.ca.name] = caorg
         cadata["services"][org.ca.name] = caorg
 
-        with open(pathfabricca + "compose-ca-" + org.name + ".yaml", "w") as yaml_file:
+        with open(pathfabricca + "compose-ca-" + org.name + ".yaml", "w", encoding="utf-8") as yaml_file:
             yaml.dump(cafile, yaml_file)
 
-        with open(pathfabricca + "compose-ca.yaml", "w") as cayaml_file:
+        with open(pathfabricca + "compose-ca.yaml", "w", encoding="utf-8") as cayaml_file:
             yaml.dump(cadata, cayaml_file)
 
         run = Run(self.domain)
         run.startCANew(org.name)
 
-    def buildNewPeer(self):
-        pass
+    def buildNewPeer(self, org: Organization, peer: Peer):
+        self.buildFolderPeer(org, peer)
+        self.buildIdentitiesPeer(org, peer)
+        self.buildPeer(peer)
+        self.startingNewPeer(peer)
 
     def startingOPD(self):
         console.print("[bold white]# Starting orderer, peers and databases[/]")
@@ -1256,3 +1361,9 @@ class Build:
 
         run = Run(self.domain)
         run.startingPDOrg(org)
+
+    def startingNewPeer(self, peer: Peer):
+        console.print("[bold white]# Starting new peer " + peer.name + "[/]")
+
+        run = Run(self.domain)
+        run.startingPD(peer)
