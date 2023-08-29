@@ -99,43 +99,36 @@ Before you begin, make sure you have the following prerequisites:
 ## Screenshots
 
 <table border=0>
+
 <tr>
 <td>
-<img src="./screenshots/screen1.png">
+<img src="./screenshots/screen1.png" alt="Main menu">
 </td>
 <td>
-![New Network](/screenshots/screen2.png "New network")
+<img src="./screenshots/screen2.png" alt="Main menu">
 </td>
 </tr>
 
 <tr>
 <td>
-![New Organization](/screenshots/screen3.png "New organization")
-Thanks to [Lazydocker](https://github.com/jesseduffield/lazydocker).
+<img src="./screenshots/screen3.png">
 </td>
 <td>
-![New Organization Added](/screenshots/screen4.png "New organization added")
-Thanks to [Lazydocker](https://github.com/jesseduffield/lazydocker).
+<img src="./screenshots/screen4.png">
 </td>
 </tr>
 
 <tr>
 <td>
-![New Peer](/screenshots/screen3.png "New peer")
+<img src="./screenshots/screen5.png">
 </td>
 <td>
-![New Peer](/screenshots/screen3.png "New peer")
+<img src="./screenshots/screen6.png">
 </td>
 </tr>
 </table>
 
-
-
-
-
-
-
-
+Thanks to [Lazydocker](https://github.com/jesseduffield/lazydocker).
 
 ## Contributing
 
