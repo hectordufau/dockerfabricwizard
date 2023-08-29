@@ -98,15 +98,44 @@ Before you begin, make sure you have the following prerequisites:
 
 ## Screenshots
 
+<table border=0>
+<tr>
+<td>
 ![Main Menu](/screenshots/screen1.png "Main menu")
-
+</td>
+<td>
 ![New Network](/screenshots/screen2.png "New network")
+</td>
+</tr>
 
+<tr>
+<td>
 ![New Organization](/screenshots/screen3.png "New organization")
 Thanks to [Lazydocker](https://github.com/jesseduffield/lazydocker).
-
+</td>
+<td>
 ![New Organization Added](/screenshots/screen4.png "New organization added")
 Thanks to [Lazydocker](https://github.com/jesseduffield/lazydocker).
+</td>
+</tr>
+
+<tr>
+<td>
+![New Peer](/screenshots/screen3.png "New peer")
+</td>
+<td>
+![New Peer](/screenshots/screen3.png "New peer")
+</td>
+</tr>
+</table>
+
+
+
+
+
+
+
+
 
 ## Contributing
 

@@ -162,4 +162,6 @@ bin/
 build/
 config/
 domains/
+install-fabric.
 install-fabric.sh
+.vscode/
