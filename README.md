@@ -3,7 +3,7 @@
 Welcome to Docker Fabric Wizard, a tool designed to simplify the automated installation of [Hyperledger Fabric](https://www.hyperledger.org/projects/fabric) using [Docker](https://hub.docker.com/u/hyperledger/) containers. This tool is aimed at professionals and students interested in blockchain technology.
 
 > __Warning__
-This project is under development, so it is not ready for use yet. It is also not an official [Hyperledger Fabric](https://www.hyperledger.org/projects/fabric) tool.
+This project is under development, however you can use it to build your Hyperledger Fabric network from scratch. It is also not an official [Hyperledger Fabric](https://www.hyperledger.org/projects/fabric) tool.
 
 
 ## Table of Contents
@@ -60,6 +60,8 @@ Before you begin, make sure you have the following prerequisites:
 4. The Docker Fabric Wizard will generate and configure Docker containers based on your inputs.
 
 5. Once the installation is complete, you will have a Hyperledger Fabric network up and running within Docker containers.
+
+6. If you only want build config files (docker composer and HLF config files), just copy all files and folders inside `domain/<domainname>` and use them for your own purposes
 
 ## Fixing docker permissions
 
