@@ -101,7 +101,7 @@ Before you begin, make sure you have the following prerequisites:
 <table border=0>
 <tr>
 <td>
-![Main Menu](/screenshots/screen1.png "Main menu")
+<img src="./screenshots/screen1.png">
 </td>
 <td>
 ![New Network](/screenshots/screen2.png "New network")
