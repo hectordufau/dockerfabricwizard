@@ -1,3 +1,4 @@
+import os
 import time
 from pathlib import Path
 
@@ -58,6 +59,8 @@ class Run:
         console.print("[bold]# Waiting new CA...[/]")
         time.sleep(5)
 
+        os.remove(Path(pathfabricca))
+
     def startingOPD(self):
         pathorderer = "".join(
             [
@@ -106,6 +109,8 @@ class Run:
         console.print("")
         time.sleep(5)
 
+        os.remove(Path(pathnet))
+
     def startingPD(self, peer: Peer):
         pathnet = "".join(
             [
@@ -124,3 +129,5 @@ class Run:
         console.print("## Waiting Peer...")
         console.print("")
         time.sleep(5)
+
+        os.remove(Path(pathnet))
