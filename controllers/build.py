@@ -896,7 +896,9 @@ class Build:
 
         ordfile["services"][self.domain.orderer.name] = orderer
 
-        with open(pathorderer + "compose-orderer.yaml", "w", encoding="utf-8") as yaml_file:
+        with open(
+            pathorderer + "compose-orderer.yaml", "w", encoding="utf-8"
+        ) as yaml_file:
             yaml.dump(ordfile, yaml_file)
 
     def buildPeersDatabases(self):
@@ -1179,7 +1181,9 @@ class Build:
         with open(pathpeer + "compose-net-" + org.name + ".yaml", "w") as yaml_file:
             yaml.dump(peerfile, yaml_file)
 
-        with open(pathpeer + "compose-net.yaml", "w", encoding="utf-8") as yamlpeer_file:
+        with open(
+            pathpeer + "compose-net.yaml", "w", encoding="utf-8"
+        ) as yamlpeer_file:
             yaml.dump(datapeer, yamlpeer_file)
 
     def buildPeer(self, peer: Peer):
@@ -1278,10 +1282,14 @@ class Build:
         peerfile["services"][peer.database.name] = databasedata
         datapeer["services"][peer.database.name] = databasedata
 
-        with open(pathpeer + "compose-net-" + peer.name + ".yaml", "w", encoding="utf-8") as yaml_file:
+        with open(
+            pathpeer + "compose-net-" + peer.name + ".yaml", "w", encoding="utf-8"
+        ) as yaml_file:
             yaml.dump(peerfile, yaml_file)
 
-        with open(pathpeer + "compose-net.yaml", "w", encoding="utf-8") as yamlpeer_file:
+        with open(
+            pathpeer + "compose-net.yaml", "w", encoding="utf-8"
+        ) as yamlpeer_file:
             yaml.dump(datapeer, yamlpeer_file)
 
     def buildNewOrganization(self, org: Organization):
@@ -1335,10 +1343,14 @@ class Build:
         cafile["services"][org.ca.name] = caorg
         cadata["services"][org.ca.name] = caorg
 
-        with open(pathfabricca + "compose-ca-" + org.name + ".yaml", "w", encoding="utf-8") as yaml_file:
+        with open(
+            pathfabricca + "compose-ca-" + org.name + ".yaml", "w", encoding="utf-8"
+        ) as yaml_file:
             yaml.dump(cafile, yaml_file)
 
-        with open(pathfabricca + "compose-ca.yaml", "w", encoding="utf-8") as cayaml_file:
+        with open(
+            pathfabricca + "compose-ca.yaml", "w", encoding="utf-8"
+        ) as cayaml_file:
             yaml.dump(cadata, cayaml_file)
 
         run = Run(self.domain)
