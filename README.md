@@ -120,17 +120,16 @@ Would you like to contribute with a donation?
 
 ### Todo
 
-- [ ] Restore network from config file
 - [ ] Chaincode as a Service installer
    - [ ] Go chaincode
    - [ ] Typescript chaincode
    - [ ] Java chaincode
 - [ ] Firefly integration (in planning)
+- [ ] Improve code (I guess it is a mess!)
 
 ### In Progress
 
-- [ ] Selected network menu options
-   - [ ] Add peer
+- [ ] Restore network from config file
 
 ### Done ✓
 
@@ -150,13 +149,14 @@ Would you like to contribute with a donation?
 - [X] Genesis block
 - [X] Channel
 - [x] Orderer and Peers channel joining
-- [ ] Selected network menu options
+- [x] Selected network menu options
    - [x] Network status
    - [x] Start network
    - [x] Stop network
    - [x] Clean docker
    - [x] Delete network configs
    - [x] Add organization
+   - [x] Add peer
 
 ## License
 
