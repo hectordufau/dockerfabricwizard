@@ -104,7 +104,7 @@ class Build:
 
     def buildConfig(self):
         console.print("[bold white]# Creating domain config file[/]")
-        pathdomains = "domains/" + self.domain.name
+        pathdomains = str(Path().absolute())+"/domains/" + self.domain.name
 
         json_object = json.dumps(self.domain, default=lambda x: x.__dict__, indent=4)
         with open(pathdomains + "/setup.json", "w", encoding="utf-8") as outfile:

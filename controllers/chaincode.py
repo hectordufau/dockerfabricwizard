@@ -1,5 +1,6 @@
 import json
 import os
+import shutil
 import tarfile
 import time
 from pathlib import Path
@@ -15,7 +16,7 @@ from models.peer import Peer
 console = Console()
 from python_on_whales import DockerClient
 
-docker = DockerClient()
+whales = DockerClient()
 
 
 class ChaincodeDeploy:
@@ -49,7 +50,7 @@ class ChaincodeDeploy:
                 console.input("Press ENTER to exit.")
                 break
         else:
-            docker.buildx.build(
+            whales.buildx.build(
                 context_path=self.pathccsrc,
                 file=dockerfile,
                 tags=[tag],
@@ -61,7 +62,12 @@ class ChaincodeDeploy:
 
     def packageChaincode(self):
         console.print("[bold white]# Packaging chaincode[/]")
-        build = str(Path().absolute()) + "/chaincodes/build/"
+        build = (
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
+            + "/chaincodes/build/"
+        )
 
         pathsrc = Path(build + "src/")
         pathsrc.mkdir(parents=True, exist_ok=True)
@@ -83,7 +89,7 @@ class ChaincodeDeploy:
         connectiondata = {
             "address": peername + "_" + self.chaincodename + "_ccaas:9999",
             "dial_timeout": "10s",
-            "tls_required": "false",
+            "tls_required": False,
         }
 
         metadata = {"type": "ccaas", "label": self.chaincodename + "_" + str(ccversion)}
@@ -97,12 +103,20 @@ class ChaincodeDeploy:
         with open(metadatafile, "w", encoding="UTF-8") as metafile:
             json.dump(metadata, metafile, indent=2)
 
+        old_dir = os.getcwd()
+        os.chdir(str(pathsrc))
+        filessrc = sorted(os.listdir())
         with tarfile.open(tarcode, "w:gz") as tar:
-            tar.add(str(pathsrc), arcname="connection.json")
+            for filename in filessrc:
+                tar.add(filename)
 
+        os.chdir(str(pathpkg))
+        filespkg = sorted(os.listdir())
         with tarfile.open(tarchaincode, "w:gz") as tar:
-            tar.add(tarcode, arcname="code.tar.gz")
-            tar.add(metadatafile, arcname="metadata.json")
+            for filename in filespkg:
+                tar.add(filename)
+
+        os.chdir(old_dir)
 
         org = self.domain.organizations[0]
         peer = org.peers[0]
@@ -140,26 +154,13 @@ class ChaincodeDeploy:
 
     def installChaincode(self):
         console.print("[bold white]# Installing chaincode[/]")
-        chaincodepkg = (
-            str(Path().absolute())
-            + "/chaincodes/build/"
-            + self.chaincodename
-            + ".tar.gz"
-        )
+        domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
+        buildpath = domainpath + "/chaincodes/build/"
+        chaincodepkg = buildpath + self.chaincodename + ".tar.gz"
         for org in self.domain.organizations:
             peer = org.peers[0]
             console.print("[bold]# Installing chaincode on " + peer.name + "[/]")
             self.peerEnvVariables(org, peer)
-
-            command = (
-                str(Path().absolute())
-                + "/bin/peer lifecycle chaincode queryinstalled --output json "
-                + "| jq -r 'try (.installed_chaincodes[].package_id)' "
-                + "| grep ^$"
-                + self.packageid
-                + "$"
-            )
-            os.system(command)
 
             console.print("# Waiting Peer...")
             time.sleep(2)
@@ -183,15 +184,16 @@ class ChaincodeDeploy:
                 str(Path().absolute())
                 + "/bin/peer lifecycle chaincode queryinstalled --output json "
                 + "| jq -r 'try (.installed_chaincodes[].package_id)'"
-                + "| grep ^$"
+                + "| grep ^"
                 + self.packageid
-                + "$"
             )
 
             os.system(command)
 
             console.print("# Waiting Peer...")
             time.sleep(2)
+
+            shutil.rmtree(buildpath)
 
     def peerEnvVariables(self, org: Organization, peer: Peer):
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
@@ -245,3 +247,74 @@ class ChaincodeDeploy:
         os.environ["ORDERER_CA"] = ORDERER_CA
         os.environ["ORDERER_ADMIN_TLS_SIGN_CERT"] = ORDERER_ADMIN_TLS_SIGN_CERT
         os.environ["ORDERER_ADMIN_TLS_PRIVATE_KEY"] = ORDERER_ADMIN_TLS_PRIVATE_KEY
+
+    """ def envVariables(
+        self, org: Organization = None, peer: Peer = None, ord: bool = None
+    ):
+        path = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/"
+
+        if org is None:
+            org = self.domain.organizations[0]
+
+        if peer is None:
+            peer = org.peers[0]
+        else:
+            path = "/etc/hyperledger/organizations/"
+
+        clidataORDERER_CA = (
+            path + "ordererOrganizations/tlsca/tlsca." + self.domain.name + "-cert.pem"
+        )
+        clidataORDERER_ADMIN_TLS_SIGN_CERT = (
+            path + "ordererOrganizations/orderer/tls/server.crt"
+        )
+        clidataORDERER_ADMIN_TLS_PRIVATE_KEY = (
+            path + "ordererOrganizations/orderer/tls/server.key"
+        )
+
+        clidataORDERER_GENERAL_LOCALMSPDIR = (
+            path + "ordererOrganizations/users/Admin@" + self.domain.name + "/msp"
+        )
+        clidataCORE_PEER_LOCALMSPID = org.name + "MSP"
+        clidataCORE_PEER_TLS_ROOTCERT_FILE = (
+            path
+            + "organizations/peerOrganizations/"
+            + org.name
+            + "/tlsca/tlsca."
+            + org.name
+            + "-cert.pem"
+        )
+        clidataCORE_PEER_MSPCONFIGPATH = (
+            path
+            + "peerOrganizations/"
+            + org.name
+            + "/users/Admin@"
+            + org.name
+            + "."
+            + self.domain.name
+            + "/msp"
+        )
+        clidataCORE_PEER_ADDRESS = (
+            peer.name + "." + self.domain.name + ":" + str(peer.peerlistenport)
+        )
+        clidataCHANNEL_NAME = self.domain.networkname
+
+        envvar = {
+            "GOPATH": "/opt/gopath",
+            "FABRIC_LOGGING_SPEC": "INFO",
+            "FABRIC_CFG_PATH": "/etc/hyperledger/peercfg",
+            "CORE_PEER_TLS_ENABLED": "true",
+            "ORDERER_CA": clidataORDERER_CA,
+            "ORDERER_ADMIN_TLS_SIGN_CERT": clidataORDERER_ADMIN_TLS_SIGN_CERT,
+            "ORDERER_ADMIN_TLS_PRIVATE_KEY": clidataORDERER_ADMIN_TLS_PRIVATE_KEY,
+            "CORE_PEER_LOCALMSPID": "OrdererMSP"
+            if ord
+            else clidataCORE_PEER_LOCALMSPID,
+            "CORE_PEER_TLS_ROOTCERT_FILE": clidataCORE_PEER_TLS_ROOTCERT_FILE,
+            "CORE_PEER_MSPCONFIGPATH": clidataORDERER_GENERAL_LOCALMSPDIR
+            if ord
+            else clidataCORE_PEER_MSPCONFIGPATH,
+            "CORE_PEER_ADDRESS": clidataCORE_PEER_ADDRESS,
+            "CHANNEL_NAME": clidataCHANNEL_NAME,
+        }
+
+        return envvar """
