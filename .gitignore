@@ -165,3 +165,4 @@ domains/
 install-fabric.
 install-fabric.sh
 .vscode/
+chaincodes/*

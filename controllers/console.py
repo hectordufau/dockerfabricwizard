@@ -9,6 +9,7 @@ from rich.console import Console
 
 from controllers.blockchain import Blockchain
 from controllers.build import Build
+from controllers.chaincode import ChaincodeDeploy
 from controllers.requirements import Requirements
 from controllers.run import Run
 from models.ca import Ca
@@ -1024,6 +1025,7 @@ class ConsoleOutput:
                     self.networkSelected(domain.name)
                 case "a":
                     selectoption = False
+                    self.selectChaincode(domain)
                     self.networkSelected(domain.name)
                 case "g":
                     selectoption = False
@@ -1068,3 +1070,51 @@ class ConsoleOutput:
                         "[bold]Select an option (N,O,P,A,G,S,C,D,R,M or Q):[/] "
                     )
                     console.print("")
+
+    def selectChaincode(self, domain: Domain):
+        os.system("clear")
+        self.header()
+        console.print("[bold orange1]SELECT A CHAINCODE[/]")
+        console.print("")
+        dirchaincodes = "".join(
+            [
+                str(Path().absolute()),
+                "/chaincodes/",
+            ]
+        )
+        listccsrc = [
+            name
+            for name in os.listdir(dirchaincodes)
+            if os.path.isdir(os.path.join(dirchaincodes, name))
+        ]
+        for i, folder in enumerate(listccsrc):
+            console.print("[bold]" + str(i) + " : " + folder)
+        console.print("[bold]P - Return to previous menu[/]")
+        console.print("[bold]Q - Quit[/]")
+        console.print("")
+
+        option = console.input("[bold]Select a chaincode:[/] ")
+        selected = True
+        while selected:
+            if option.lower() == "p":
+                selected = False
+                console.print("")
+                self.mainMenu()
+            elif option.lower() == "q":
+                selected = False
+                console.print("")
+                exit(0)
+            elif option.isdigit() and (int(option) <= (len(listccsrc) - 1)):
+                selected = False
+                console.print("")
+                self.chaincodeSelected(domain, listccsrc[int(option)])
+            else:
+                option = console.input(
+                    "[bold red]Wrong option.[/] [bold white]Select a chaincode:[/] "
+                )
+                console.print("")
+
+    def chaincodeSelected(self, domain: Domain, ccname: str):
+        dirchaincode = "".join([str(Path().absolute()), "/chaincodes/", ccname])
+        chaincode = ChaincodeDeploy(domain, dirchaincode)
+        chaincode.buildAll()
