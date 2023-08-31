@@ -96,8 +96,10 @@ class Blockchain:
             + ":"
             + str(self.domain.orderer.generallistenport)
         ]
-        
-        datacfg["Application"]["Policies"]["LifecycleEndorsement"]["Rule"] = "ANY Endorsement"
+
+        datacfg["Application"]["Policies"]["LifecycleEndorsement"][
+            "Rule"
+        ] = "ANY Endorsement"
 
         datacfg["Organizations"][0]["AnchorPeers"] = []
         datacfg["Application"]["Organizations"] = []
