@@ -371,7 +371,7 @@ class ChaincodeDeploy:
                 )
 
                 console.print("# Waiting Container...")
-                time.sleep(5)
+                time.sleep(7)
 
     def chaincodeInvokeInit(self):
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
