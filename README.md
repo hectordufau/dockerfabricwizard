@@ -66,7 +66,7 @@ Before you begin, make sure you have the following prerequisites:
 
 ## How to deploy a chaincode (Chaincode as a Service - CCAAS)
 
-1. Put your whole chaincode code folder inside **chaincodes** folder (dockerfilewizard/chaincodes). You can use [Asset Transfer Basic chaincode-typescript folder](https://github.com/hyperledger/fabric-samples/tree/main/asset-transfer-basic/chaincode-typescript) for testing.
+1. Put your whole chaincode code folder inside **chaincodes** folder (dockerfilewizard/chaincodes). You can use Asset Transfer Basic [Typescript](https://github.com/hyperledger/fabric-samples/tree/main/asset-transfer-basic/chaincode-typescript) or [Java](https://github.com/hyperledger/fabric-samples/tree/main/asset-transfer-basic/chaincode-java) for testing.
 
 2. Your chaincode folder **must to have** a Dockerfile file inside.
 
@@ -180,13 +180,11 @@ Would you like to contribute with a donation?
 
 ### Todo
 
-- [ ] Firefly integration
 - [ ] Improve code (I guess it is a mess!)
 
 ### In Progress
 
-- [ ] Chaincode as a Service installer
-   - [ ] Go chaincode
+- [ ] Firefly integration
 
 ### Done ✓
 
@@ -215,7 +213,7 @@ Would you like to contribute with a donation?
    - [x] Add organization
    - [x] Add peer
 - [x] Restore network from config file
-- [ ] Chaincode as a Service installer
+- [x] Chaincode as a Service installer
    - [x] Typescript chaincode
    - [x] Java chaincode
 
