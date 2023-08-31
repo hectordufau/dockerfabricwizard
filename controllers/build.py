@@ -228,9 +228,9 @@ class Build:
                     "Certificate": "cacerts/localhost-"
                     + str(self.domain.ca.serverport)
                     + "-"
-                    + self.domain.ca.name
+                    + self.domain.ca.name.replace(".", "-")
                     + "-"
-                    + self.domain.name
+                    + self.domain.name.replace(".", "-")
                     + ".pem",
                     "OrganizationalUnitIdentifier": "client",
                 },
@@ -238,9 +238,9 @@ class Build:
                     "Certificate": "cacerts/localhost-"
                     + str(self.domain.ca.serverport)
                     + "-"
-                    + self.domain.ca.name
+                    + self.domain.ca.name.replace(".", "-")
                     + "-"
-                    + self.domain.name
+                    + self.domain.name.replace(".", "-")
                     + ".pem",
                     "OrganizationalUnitIdentifier": "peer",
                 },
@@ -248,9 +248,9 @@ class Build:
                     "Certificate": "cacerts/localhost-"
                     + str(self.domain.ca.serverport)
                     + "-"
-                    + self.domain.ca.name
+                    + self.domain.ca.name.replace(".", "-")
                     + "-"
-                    + self.domain.name
+                    + self.domain.name.replace(".", "-")
                     + ".pem",
                     "OrganizationalUnitIdentifier": "admin",
                 },
@@ -258,9 +258,9 @@ class Build:
                     "Certificate": "cacerts/localhost-"
                     + str(self.domain.ca.serverport)
                     + "-"
-                    + self.domain.ca.name
+                    + self.domain.ca.name.replace(".", "-")
                     + "-"
-                    + self.domain.name
+                    + self.domain.name.replace(".", "-")
                     + ".pem",
                     "OrganizationalUnitIdentifier": "orderer",
                 },
