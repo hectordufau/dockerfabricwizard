@@ -1,5 +1,7 @@
 import os
 import subprocess
+import tarfile
+from pathlib import Path
 
 import docker
 from rich.console import Console
@@ -17,6 +19,7 @@ class Requirements:
         self.checkJq()
         self.checkDocker()
         self.checkHLFBinaries()
+        self.checkFireflyBinary()
         self.checkDomainFolder()
 
     def checkCurl(self):
@@ -74,8 +77,27 @@ class Requirements:
             )
             os.system("./install-fabric.sh binary")
 
-        console.print("[bold green]All requirements gathered.[/]")
-        console.print("")
+    def checkFireflyBinary(self):
+        console.print("[bold white]# Checking Firefly binary[/]")
+        fireflyfile = str(Path().absolute()) + "/bin/ff"
+        isFireflyExist = os.path.exists(Path(fireflyfile))
+        if not isFireflyExist:
+            console.print(
+                "[bold yellow]> Please wait for Firefly downloading and installing.[/]"
+            )
+            old_dir = os.getcwd()
+            os.chdir(Path(str(Path().absolute()) + "/bin"))
+            os.system(
+                'curl -s https://api.github.com/repos/hyperledger/firefly-cli/releases/latest | grep -wo "https.*$(uname)_x86_64.*gz" | wget -qi -'
+            )
+            for file in os.listdir(Path().absolute()):
+                if file.endswith(".tar.gz"):
+                    with tarfile.open(
+                        str(Path().absolute()) + "/" + file, "r:gz"
+                    ) as tar:
+                        tar.extract("ff")
+                    os.remove(str(Path().absolute()) + "/" + file)
+            os.chdir(old_dir)
 
     def checkDomainFolder(self):
         pathdomains = "domains"
@@ -83,3 +105,6 @@ class Requirements:
 
         if not isFolderDomainsExist:
             os.mkdir(pathdomains)
+
+        console.print("[bold green]All requirements gathered.[/]")
+        console.print("")
