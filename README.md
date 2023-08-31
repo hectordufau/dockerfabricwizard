@@ -66,7 +66,7 @@ Before you begin, make sure you have the following prerequisites:
 
 ## How to deploy a chaincode (Chaincode as a Service - CCAAS)
 
-1. Put whole chaincode folder inside **chaincodes** folder (dockerfilewizard/chaincodes).
+1. Put your whole chaincode code folder inside **chaincodes** folder (dockerfilewizard/chaincodes). You can use [Asset Transfer Basic chaincode-typescript folder](https://github.com/hyperledger/fabric-samples/tree/main/asset-transfer-basic/chaincode-typescript) for testing.
 
 2. Your chaincode folder **must to have** a Dockerfile file inside.
 
