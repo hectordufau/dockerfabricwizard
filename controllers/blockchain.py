@@ -101,6 +101,8 @@ class Blockchain:
             "Rule"
         ] = "ANY Endorsement"
 
+        datacfg["Application"]["Policies"]["Endorsement"]["Rule"] = "ANY Endorsement"
+
         datacfg["Organizations"][0]["AnchorPeers"] = []
         datacfg["Application"]["Organizations"] = []
 

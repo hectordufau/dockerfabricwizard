@@ -104,7 +104,7 @@ class Build:
 
     def buildConfig(self):
         console.print("[bold white]# Creating domain config file[/]")
-        pathdomains = str(Path().absolute())+"/domains/" + self.domain.name
+        pathdomains = str(Path().absolute()) + "/domains/" + self.domain.name
 
         json_object = json.dumps(self.domain, default=lambda x: x.__dict__, indent=4)
         with open(pathdomains + "/setup.json", "w", encoding="utf-8") as outfile:
@@ -126,7 +126,10 @@ class Build:
             "labels": {"service": "hyperledger-fabric"},
             "environment": [
                 "FABRIC_CA_HOME=" + self.domain.ca.FABRIC_CA_HOME,
-                "FABRIC_CA_SERVER_CA_NAME=" + self.domain.ca.FABRIC_CA_SERVER_CA_NAME,
+                "FABRIC_CA_SERVER_CA_NAME="
+                + self.domain.ca.FABRIC_CA_SERVER_CA_NAME
+                + "."
+                + self.domain.name,
                 "FABRIC_CA_SERVER_TLS_ENABLED="
                 + str(self.domain.ca.FABRIC_CA_SERVER_TLS_ENABLED).lower(),
                 "FABRIC_CA_SERVER_PORT=" + str(self.domain.ca.FABRIC_CA_SERVER_PORT),
@@ -136,7 +139,7 @@ class Build:
             "ports": ["0", "1"],
             "command": "sh -c 'fabric-ca-server start -b admin:adminpw -d'",
             "volumes": [self.domain.ca.volumes],
-            "container_name": self.domain.ca.name,
+            "container_name": self.domain.ca.name + "." + self.domain.name,
             "networks": [self.domain.networkname],
         }
 
@@ -147,7 +150,7 @@ class Build:
             f'{str(self.domain.ca.operationslistenport)+":"+str(self.domain.ca.operationslistenport)}'
         )
 
-        cafile["services"][self.domain.ca.name] = caorderer
+        cafile["services"][self.domain.ca.name + "." + self.domain.name] = caorderer
 
         for org in self.domain.organizations:
             caorg = {
@@ -156,7 +159,10 @@ class Build:
                 "labels": {"service": "hyperledger-fabric"},
                 "environment": [
                     "FABRIC_CA_HOME=" + org.ca.FABRIC_CA_HOME,
-                    "FABRIC_CA_SERVER_CA_NAME=" + org.ca.FABRIC_CA_SERVER_CA_NAME,
+                    "FABRIC_CA_SERVER_CA_NAME="
+                    + org.ca.FABRIC_CA_SERVER_CA_NAME
+                    + "."
+                    + self.domain.name,
                     "FABRIC_CA_SERVER_TLS_ENABLED="
                     + str(org.ca.FABRIC_CA_SERVER_TLS_ENABLED).lower(),
                     "FABRIC_CA_SERVER_PORT=" + str(org.ca.FABRIC_CA_SERVER_PORT),
@@ -166,7 +172,7 @@ class Build:
                 "ports": ["0", "1"],
                 "command": "sh -c 'fabric-ca-server start -b admin:adminpw -d'",
                 "volumes": [org.ca.volumes],
-                "container_name": org.ca.name,
+                "container_name": org.ca.name + "." + self.domain.name,
                 "networks": [self.domain.networkname],
             }
 
@@ -177,7 +183,7 @@ class Build:
                 f'{str(org.ca.operationslistenport)+":"+str(org.ca.operationslistenport)}'
             )
 
-            cafile["services"][org.ca.name] = caorg
+            cafile["services"][org.ca.name + "." + self.domain.name] = caorg
 
         with open(pathfabricca + "compose-ca.yaml", "w", encoding="utf-8") as yaml_file:
             yaml.dump(cafile, yaml_file)
@@ -207,6 +213,8 @@ class Build:
             + str(self.domain.ca.serverport)
             + " --caname "
             + self.domain.ca.name
+            + "."
+            + self.domain.name
             + " --tls.certfiles "
             + str(Path().absolute())
             + "/"
@@ -221,6 +229,8 @@ class Build:
                     + str(self.domain.ca.serverport)
                     + "-"
                     + self.domain.ca.name
+                    + "-"
+                    + self.domain.name
                     + ".pem",
                     "OrganizationalUnitIdentifier": "client",
                 },
@@ -229,6 +239,8 @@ class Build:
                     + str(self.domain.ca.serverport)
                     + "-"
                     + self.domain.ca.name
+                    + "-"
+                    + self.domain.name
                     + ".pem",
                     "OrganizationalUnitIdentifier": "peer",
                 },
@@ -237,6 +249,8 @@ class Build:
                     + str(self.domain.ca.serverport)
                     + "-"
                     + self.domain.ca.name
+                    + "-"
+                    + self.domain.name
                     + ".pem",
                     "OrganizationalUnitIdentifier": "admin",
                 },
@@ -245,6 +259,8 @@ class Build:
                     + str(self.domain.ca.serverport)
                     + "-"
                     + self.domain.ca.name
+                    + "-"
+                    + self.domain.name
                     + ".pem",
                     "OrganizationalUnitIdentifier": "orderer",
                 },
@@ -291,6 +307,8 @@ class Build:
             + "/bin/fabric-ca-client register "
             + " --caname "
             + self.domain.ca.name
+            + "."
+            + self.domain.name
             + " --id.name orderer"
             + " --id.secret ordererpw"
             + " --id.type orderer "
@@ -307,6 +325,8 @@ class Build:
             + "/bin/fabric-ca-client register "
             + " --caname "
             + self.domain.ca.name
+            + "."
+            + self.domain.name
             + " --id.name ordererAdmin"
             + " --id.secret ordererAdminpw"
             + " --id.type admin "
@@ -332,6 +352,8 @@ class Build:
             + str(self.domain.ca.serverport)
             + " --caname "
             + self.domain.ca.name
+            + "."
+            + self.domain.name
             + " -M "
             + str(Path().absolute())
             + "/"
@@ -362,6 +384,8 @@ class Build:
             + str(self.domain.ca.serverport)
             + " --caname "
             + self.domain.ca.name
+            + "."
+            + self.domain.name
             + " -M "
             + str(Path().absolute())
             + "/"
@@ -445,6 +469,8 @@ class Build:
             + str(self.domain.ca.serverport)
             + " --caname "
             + self.domain.ca.name
+            + "."
+            + self.domain.name
             + " -M "
             + str(Path().absolute())
             + "/"
@@ -465,7 +491,9 @@ class Build:
         console.print("[bold white]## Registering organization " + org.name + "[/]")
         while True:
             try:
-                container = docker.container.inspect(org.ca.name)
+                container = docker.container.inspect(
+                    org.ca.name + "." + self.domain.name
+                )
                 break
             except:
                 continue
@@ -488,6 +516,8 @@ class Build:
             + str(org.ca.serverport)
             + " --caname "
             + org.ca.name
+            + "."
+            + self.domain.name
             + " --tls.certfiles "
             + str(Path().absolute())
             + "/"
@@ -503,6 +533,8 @@ class Build:
                     + str(org.ca.serverport)
                     + "-"
                     + org.ca.name.replace(".", "-")
+                    + "-"
+                    + self.domain.name.replace(".", "-")
                     + ".pem",
                     "OrganizationalUnitIdentifier": "client",
                 },
@@ -511,6 +543,8 @@ class Build:
                     + str(org.ca.serverport)
                     + "-"
                     + org.ca.name.replace(".", "-")
+                    + "-"
+                    + self.domain.name.replace(".", "-")
                     + ".pem",
                     "OrganizationalUnitIdentifier": "peer",
                 },
@@ -519,6 +553,8 @@ class Build:
                     + str(org.ca.serverport)
                     + "-"
                     + org.ca.name.replace(".", "-")
+                    + "-"
+                    + self.domain.name.replace(".", "-")
                     + ".pem",
                     "OrganizationalUnitIdentifier": "admin",
                 },
@@ -527,6 +563,8 @@ class Build:
                     + str(org.ca.serverport)
                     + "-"
                     + org.ca.name.replace(".", "-")
+                    + "-"
+                    + self.domain.name.replace(".", "-")
                     + ".pem",
                     "OrganizationalUnitIdentifier": "orderer",
                 },
@@ -596,6 +634,8 @@ class Build:
             + "/bin/fabric-ca-client register "
             + " --caname "
             + org.ca.name
+            + "."
+            + self.domain.name
             + " --id.name "
             + peer.name
             + " --id.secret "
@@ -614,6 +654,8 @@ class Build:
             + "/bin/fabric-ca-client register "
             + " --caname "
             + org.ca.name
+            + "."
+            + self.domain.name
             + " --id.name user1"
             + " --id.secret user1pw"
             + " --id.type client "
@@ -629,6 +671,8 @@ class Build:
             + "/bin/fabric-ca-client register "
             + " --caname "
             + org.ca.name
+            + "."
+            + self.domain.name
             + " --id.name "
             + org.name
             + "admin"
@@ -663,6 +707,8 @@ class Build:
             + str(org.ca.serverport)
             + " --caname "
             + org.ca.name
+            + "."
+            + self.domain.name
             + " -M "
             + str(Path().absolute())
             + "/"
@@ -700,6 +746,8 @@ class Build:
             + str(org.ca.serverport)
             + " --caname "
             + org.ca.name
+            + "."
+            + self.domain.name
             + " -M "
             + str(Path().absolute())
             + "/"
@@ -761,6 +809,8 @@ class Build:
             + str(org.ca.serverport)
             + " --caname "
             + org.ca.name
+            + "."
+            + self.domain.name
             + " -M "
             + str(Path().absolute())
             + "/"
@@ -801,6 +851,8 @@ class Build:
             + str(org.ca.serverport)
             + " --caname "
             + org.ca.name
+            + "."
+            + self.domain.name
             + " -M "
             + str(Path().absolute())
             + "/"
@@ -831,7 +883,6 @@ class Build:
 
         orderer = {
             "image": "hyperledger/fabric-orderer:latest",
-            # "user": str(os.geteuid()) + ":" + str(os.getgid()),
             "labels": {"service": "hyperledger-fabric"},
             "environment": [
                 "FABRIC_LOGGING_SPEC=" + self.domain.orderer.FABRIC_LOGGING_SPEC,
@@ -894,7 +945,7 @@ class Build:
             f'{str(self.domain.orderer.generallistenport)+":"+str(self.domain.orderer.generallistenport)}'
         )
 
-        ordfile["services"][self.domain.orderer.name] = orderer
+        ordfile["services"][self.domain.orderer.name + "." + self.domain.name] = orderer
 
         with open(
             pathorderer + "compose-orderer.yaml", "w", encoding="utf-8"
@@ -953,11 +1004,11 @@ class Build:
         clidataCHANNEL_NAME = self.domain.networkname
 
         clidata = {
-            "container_name": "cli",
+            "container_name": "cli." + self.domain.name,
             "image": "hyperledger/fabric-tools:latest",
             "labels": {"service": "hyperledger-fabric"},
-            "tty": str(True).lower(),
-            "stdin_open": str(True).lower(),
+            "tty": True,
+            "stdin_open": True,
             "environment": [
                 "GOPATH=/opt/gopath",
                 "FABRIC_LOGGING_SPEC=INFO",
@@ -984,6 +1035,8 @@ class Build:
             "depends_on": [],
             "networks": [self.domain.networkname],
         }
+
+        peerfile["services"]["cli" + "." + self.domain.name] = clidata
 
         for org in self.domain.organizations:
             for peer in org.peers:
@@ -1039,8 +1092,8 @@ class Build:
                     "volumes": peer.volumes,
                     "networks": [self.domain.networkname],
                     "depends_on": [
-                        peer.database.name,
-                        self.domain.orderer.name,
+                        peer.database.name + "." + self.domain.name,
+                        self.domain.orderer.name + "." + self.domain.name,
                     ],
                 }
 
@@ -1065,7 +1118,7 @@ class Build:
                         "COUCHDB_PASSWORD=" + peer.database.COUCHDB_PASSWORD,
                     ],
                     "ports": ["0"],
-                    "container_name": peer.database.name,
+                    "container_name": peer.database.name + "." + self.domain.name,
                     "networks": [self.domain.networkname],
                 }
 
@@ -1073,8 +1126,9 @@ class Build:
                     f'{str(peer.database.port)+":5984"}'
                 )
 
-                peerfile["services"][peer.database.name] = databasedata
-                peerfile["services"]["cli"] = clidata
+                peerfile["services"][
+                    peer.database.name + "." + self.domain.name
+                ] = databasedata
 
         with open(pathpeer + "compose-net.yaml", "w", encoding="utf-8") as yaml_file:
             yaml.dump(peerfile, yaml_file)
@@ -1167,7 +1221,7 @@ class Build:
                     "COUCHDB_PASSWORD=" + peer.database.COUCHDB_PASSWORD,
                 ],
                 "ports": ["0"],
-                "container_name": peer.database.name,
+                "container_name": peer.database.name + "." + self.domain.name,
                 "networks": [self.domain.networkname],
             }
 
@@ -1175,8 +1229,12 @@ class Build:
                 f'{str(peer.database.port)+":5984"}'
             )
 
-            peerfile["services"][peer.database.name] = databasedata
-            datapeer["services"][peer.database.name] = databasedata
+            peerfile["services"][
+                peer.database.name + "." + self.domain.name
+            ] = databasedata
+            datapeer["services"][
+                peer.database.name + "." + self.domain.name
+            ] = databasedata
 
         with open(pathpeer + "compose-net-" + org.name + ".yaml", "w") as yaml_file:
             yaml.dump(peerfile, yaml_file)
@@ -1271,7 +1329,7 @@ class Build:
                 "COUCHDB_PASSWORD=" + peer.database.COUCHDB_PASSWORD,
             ],
             "ports": ["0"],
-            "container_name": peer.database.name,
+            "container_name": peer.database.name + "." + self.domain.name,
             "networks": [self.domain.networkname],
         }
 
@@ -1279,8 +1337,8 @@ class Build:
             f'{str(peer.database.port)+":5984"}'
         )
 
-        peerfile["services"][peer.database.name] = databasedata
-        datapeer["services"][peer.database.name] = databasedata
+        peerfile["services"][peer.database.name + "." + self.domain.name] = databasedata
+        datapeer["services"][peer.database.name + "." + self.domain.name] = databasedata
 
         with open(
             pathpeer + "compose-net-" + peer.name + ".yaml", "w", encoding="utf-8"
@@ -1319,7 +1377,10 @@ class Build:
             "labels": {"service": "hyperledger-fabric"},
             "environment": [
                 "FABRIC_CA_HOME=" + org.ca.FABRIC_CA_HOME,
-                "FABRIC_CA_SERVER_CA_NAME=" + org.ca.FABRIC_CA_SERVER_CA_NAME,
+                "FABRIC_CA_SERVER_CA_NAME="
+                + org.ca.FABRIC_CA_SERVER_CA_NAME
+                + "."
+                + self.domain.name,
                 "FABRIC_CA_SERVER_TLS_ENABLED="
                 + str(org.ca.FABRIC_CA_SERVER_TLS_ENABLED).lower(),
                 "FABRIC_CA_SERVER_PORT=" + str(org.ca.FABRIC_CA_SERVER_PORT),
@@ -1329,7 +1390,7 @@ class Build:
             "ports": ["0", "1"],
             "command": "sh -c 'fabric-ca-server start -b admin:adminpw -d'",
             "volumes": [org.ca.volumes],
-            "container_name": org.ca.name,
+            "container_name": org.ca.name + "." + self.domain.name,
             "networks": [self.domain.networkname],
         }
 
@@ -1340,8 +1401,8 @@ class Build:
             f'{str(org.ca.operationslistenport)+":"+str(org.ca.operationslistenport)}'
         )
 
-        cafile["services"][org.ca.name] = caorg
-        cadata["services"][org.ca.name] = caorg
+        cafile["services"][org.ca.name + "." + self.domain.name] = caorg
+        cadata["services"][org.ca.name + "." + self.domain.name] = caorg
 
         with open(
             pathfabricca + "compose-ca-" + org.name + ".yaml", "w", encoding="utf-8"

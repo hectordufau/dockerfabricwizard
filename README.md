@@ -180,6 +180,9 @@ Would you like to contribute with a donation?
 
 ### Todo
 
+- [ ] Remove chaincode
+- [ ] Reinstall chaincode
+- [ ] Chaincode invoke initial function name
 - [ ] Improve code (I guess it is a mess!)
 
 ### In Progress

@@ -125,7 +125,7 @@ class ConsoleOutput:
         self.domain.orderer = ordererdomain
 
         cadomain = Ca()
-        cadomain.name = "ca_orderer"
+        cadomain.name = "caorderer"
         cadomain.FABRIC_CA_SERVER_CA_NAME = cadomain.name
         cadomain.volumes = "".join(
             [
@@ -327,7 +327,7 @@ class ConsoleOutput:
                     database.COUCHDB_PASSWORD
                 )
                 peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS = (
-                    database.name + ":5984"
+                    database.name + "." + self.domain.name + ":5984"
                 )
                 peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE = self.domain.networkname
                 peer.CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG = (
@@ -575,7 +575,7 @@ class ConsoleOutput:
             peer.CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME = database.COUCHDB_USER
             peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD = database.COUCHDB_PASSWORD
             peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS = (
-                database.name + ":5984"
+                database.name + "." + self.domain.name + ":5984"
             )
             peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE = domain.networkname
             peer.CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG = (
@@ -734,7 +734,7 @@ class ConsoleOutput:
 
         peer.CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME = database.COUCHDB_USER
         peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD = database.COUCHDB_PASSWORD
-        peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS = database.name + ":5984"
+        peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS = database.name + "." + self.domain.name + ":5984"
         peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE = domain.networkname
         peer.CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG = (
             '{"peername":"' + "peer" + str(ipeers) + org.name + '"}'
