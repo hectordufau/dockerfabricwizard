@@ -72,7 +72,15 @@ Before you begin, make sure you have the following prerequisites:
 
 3. Your chaincode **must to have** a __InitLedger__ function to invoke, even it has nothing to execute.
 
-4. Watch the magic happens...
+4. Select an existing network (Main menu - option "S"). This network need to be started before.
+
+5. Select a network - options by numbers.
+
+6. Select "Add chaincode" (option "A")
+
+7. If your chaincode folder was inside **chaincodes**, you see its name with a number as option. Select it.
+
+8. Watch the magic happens...
 
 ## Fixing docker permissions
 
