@@ -1018,7 +1018,7 @@ class ConsoleOutput:
                 case "o":
                     selectoption = False
                     self.createOrganization(domain)
-                    # self.networkSelected(domain.name)
+                    self.networkSelected(domain.name)
                 case "p":
                     selectoption = False
                     self.selectOrganization(domain)
@@ -1104,7 +1104,7 @@ class ConsoleOutput:
             if option.lower() == "p":
                 selected = False
                 console.print("")
-                self.mainMenu()
+                self.networkSelected(domain.name)
             elif option.lower() == "q":
                 selected = False
                 console.print("")
