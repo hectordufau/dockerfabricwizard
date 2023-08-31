@@ -12,6 +12,7 @@ This project is under development, however you can use it to build your Hyperled
 - [Prerequisites](#prerequisites)
 - [Installation](#installation)
 - [Usage](#usage)
+- [Chaincode Deploy](#how-to-deploy-a-chaincode-chaincode-as-a-service---ccaas)
 - [Screenshots](#screenshots)
 - [Contributing](#contributing)
 - [Development Status](#development-status)
