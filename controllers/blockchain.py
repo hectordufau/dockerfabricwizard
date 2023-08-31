@@ -83,7 +83,7 @@ class Blockchain:
             "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
         )
         datacfg["Organizations"][0]["Policies"]["Admins"]["Rule"] = (
-            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
+            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".admin')"
         )
         datacfg["Organizations"][0]["Policies"]["Endorsement"]["Rule"] = (
             "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
@@ -96,6 +96,8 @@ class Blockchain:
             + ":"
             + str(self.domain.orderer.generallistenport)
         ]
+        
+        datacfg["Application"]["Policies"]["LifecycleEndorsement"]["Rule"] = "ANY Endorsement"
 
         datacfg["Organizations"][0]["AnchorPeers"] = []
         datacfg["Application"]["Organizations"] = []

@@ -1047,6 +1047,7 @@ class ConsoleOutput:
                     docker.compose.down(
                         remove_orphans=True, remove_images="all", volumes=True
                     )
+                    docker.system.prune(True, True)
                     self.networkSelected(domain.name)
                 case "d":
                     selectoption = False
@@ -1054,6 +1055,10 @@ class ConsoleOutput:
                     docker.compose.down(
                         remove_orphans=True, remove_images="all", volumes=True
                     )
+                    clist = docker.container.list(True)
+                    if len(clist) > 0:
+                        docker.container.stop(clist)
+                    docker.system.prune(True, True)
                     os.system("rm -fR " + netpath)
                     self.selectNetwork()
                 case "r":

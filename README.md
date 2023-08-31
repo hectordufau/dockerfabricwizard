@@ -61,7 +61,17 @@ Before you begin, make sure you have the following prerequisites:
 
 5. Once the installation is complete, you will have a Hyperledger Fabric network up and running within Docker containers.
 
-6. If you only want build config files (docker composer and HLF config files), just copy all files and folders inside `domain/<domainname>` folder and use them for your own purposes
+6. If you only want build config files (docker composer and HLF config files), just copy all files and folders inside `domain/<domainname>` folder and use them for your own
+
+## How to deploy a chaincode (Chaincode as a Service - CCAAS)
+
+1. Put whole chaincode folder inside **chaincodes** folder (dockerfilewizard/chaincodes).
+
+2. Your chaincode folder **must to have** a Dockerfile file inside.
+
+3. Your chaincode **must to have** a __InitLedger__ function to invoke, even it has nothing to execute.
+
+4. Watch the magic happens...
 
 ## Fixing docker permissions
 
@@ -134,6 +144,17 @@ New peer added<br/>
 <img src="./screenshots/screen6.png" alt="New peer">
 </td>
 </tr>
+
+<tr>
+<td>
+Select a chaincode<br/>
+<img src="./screenshots/screen7.png" alt="New peer">
+</td>
+<td>
+Chaincode deployed<br/>
+<img src="./screenshots/screen8.png" alt="New peer">
+</td>
+</tr>
 </table>
 
 Thanks to [Lazydocker](https://github.com/jesseduffield/lazydocker).
@@ -150,15 +171,13 @@ Would you like to contribute with a donation?
 
 ### Todo
 
-- [ ] Firefly integration (in planning)
+- [ ] Firefly integration
 - [ ] Improve code (I guess it is a mess!)
 
 ### In Progress
 
 - [ ] Chaincode as a Service installer
    - [ ] Go chaincode
-   - [ ] Typescript chaincode
-   - [ ] Java chaincode
 
 ### Done ✓
 
@@ -187,6 +206,9 @@ Would you like to contribute with a donation?
    - [x] Add organization
    - [x] Add peer
 - [x] Restore network from config file
+- [ ] Chaincode as a Service installer
+   - [x] Typescript chaincode
+   - [x] Java chaincode
 
 ## License
 

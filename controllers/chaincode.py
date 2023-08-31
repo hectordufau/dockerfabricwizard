@@ -5,6 +5,7 @@ import tarfile
 import time
 from pathlib import Path
 
+import docker
 from rich.console import Console
 
 from controllers.build import Build
@@ -17,6 +18,7 @@ console = Console()
 from python_on_whales import DockerClient
 
 whales = DockerClient()
+client = docker.DockerClient()
 
 
 class ChaincodeDeploy:
@@ -244,19 +246,29 @@ class ChaincodeDeploy:
                     )
 
                     os.system(command)
-
                     console.print("# Waiting Peer...")
                     time.sleep(2)
-
                     self.checkCommit(org, peer)
 
     def checkCommit(self, org: Organization, peer: Peer):
         console.print("[bold]# Checking commit[/]")
+        domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
+        ORDERER_CA = (
+            domainpath
+            + "/ordererOrganizations/tlsca/tlsca."
+            + self.domain.name
+            + "-cert.pem"
+        )
+
         self.peerEnvVariables(org, peer)
 
         command = (
             str(Path().absolute())
-            + "/bin/peer lifecycle chaincode checkcommitreadiness --channelID "
+            + "/bin/peer lifecycle chaincode checkcommitreadiness -o localhost:"
+            + str(self.domain.orderer.generallistenport)
+            + " --tls --cafile "
+            + ORDERER_CA
+            + " --channelID "
             + self.domain.networkname
             + " --name "
             + self.chaincodename
@@ -268,8 +280,6 @@ class ChaincodeDeploy:
         )
 
         os.system(command)
-
-        console.print("# Waiting Peer...")
         time.sleep(2)
 
     def commitChaincodeDefinition(self):
@@ -328,31 +338,40 @@ class ChaincodeDeploy:
                     )
 
                     os.system(command)
-
                     console.print("# Waiting Peer...")
                     time.sleep(2)
 
     def startDockerContainer(self):
         for org in self.domain.organizations:
             for peer in org.peers:
-                if peer.name.split(".")[0] == "peer1":
-                    console.print(
-                        "[bold]# Starting the Chaincode-as-a-Service docker container for "
-                        + org.name
-                        + "[/]"
-                    )
-                    whales.run(
-                        image=self.chaincodename + "_ccaas_image:latest",
-                        name=peer.name + "_" + self.chaincodename + "_ccaas",
-                        networks=[self.domain.networkname],
-                        envs={
-                            "CHAINCODE_SERVER_ADDRESS": 9999,
-                            "CHAINCODE_ID": self.packageid,
-                            "CORE_CHAINCODE_ID_NAME": self.packageid,
-                        },
-                        remove=True,
-                        detach=True,
-                    )
+                console.print(
+                    "[bold]# Starting the CCAAS container for " + org.name + "[/]"
+                )
+
+                container = whales.run(
+                    image=self.chaincodename + "_ccaas_image:latest",
+                    name=peer.name.replace(".", "")
+                    + "_"
+                    + self.chaincodename
+                    + "_ccaas",
+                    hostname=peer.name.replace(".", "")
+                    + "_"
+                    + self.chaincodename
+                    + "_ccaas",
+                    networks=[self.domain.networkname],
+                    envs={
+                        "CHAINCODE_SERVER_ADDRESS": "0.0.0.0:9999",
+                        "CHAINCODE_ID": self.packageid,
+                        "CORE_CHAINCODE_ID_NAME": self.packageid,
+                    },
+                    remove=True,
+                    detach=True,
+                    init=True,
+                    tty=True,
+                )
+
+                console.print("# Waiting Container...")
+                time.sleep(5)
 
     def chaincodeInvokeInit(self):
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
@@ -405,7 +424,9 @@ class ChaincodeDeploy:
                         + " --tlsRootCertFiles "
                         + CORE_PEER_TLS_ROOTCERT_FILE
                         + " --isInit -c "
+                        + "'"
                         + fcncall
+                        + "'"
                     )
 
                     os.system(command)
@@ -413,7 +434,7 @@ class ChaincodeDeploy:
                     console.print("# Waiting Peer...")
                     time.sleep(2)
 
-    def peerEnvVariables(self, org: Organization, peer: Peer):
+    def peerEnvVariables(self, org: Organization, peer: Peer, ord: bool = None):
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
 
         config = (
@@ -442,6 +463,13 @@ class ChaincodeDeploy:
             + "/msp"
         )
 
+        ORDERER_GENERAL_LOCALMSPDIR = (
+            domainpath
+            + "/ordererOrganizations/users/Admin@"
+            + self.domain.name
+            + "/msp"
+        )
+
         ORDERER_CA = (
             domainpath
             + "/ordererOrganizations/tlsca/tlsca."
@@ -456,12 +484,16 @@ class ChaincodeDeploy:
             domainpath + "/ordererOrganizations/orderer/tls/server.key"
         )
 
+        PORT = str(peer.peerlistenport)
+
         os.environ["FABRIC_CFG_PATH"] = config
         os.environ["CORE_PEER_TLS_ENABLED"] = "true"
-        os.environ["CORE_PEER_LOCALMSPID"] = org.name + "MSP"
+        os.environ["CORE_PEER_LOCALMSPID"] = "OrdererMSP" if ord else org.name + "MSP"
         os.environ["CORE_PEER_TLS_ROOTCERT_FILE"] = PEER_CA
-        os.environ["CORE_PEER_MSPCONFIGPATH"] = PEER_MSP
-        os.environ["CORE_PEER_ADDRESS"] = "localhost:" + str(peer.peerlistenport)
+        os.environ["CORE_PEER_MSPCONFIGPATH"] = (
+            ORDERER_GENERAL_LOCALMSPDIR if ord else PEER_MSP
+        )
+        os.environ["CORE_PEER_ADDRESS"] = "localhost:" + PORT
         os.environ["ORDERER_CA"] = ORDERER_CA
         os.environ["ORDERER_ADMIN_TLS_SIGN_CERT"] = ORDERER_ADMIN_TLS_SIGN_CERT
         os.environ["ORDERER_ADMIN_TLS_PRIVATE_KEY"] = ORDERER_ADMIN_TLS_PRIVATE_KEY
