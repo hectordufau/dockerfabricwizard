@@ -52,6 +52,9 @@ class Build:
         pathcompose = Path("domains/" + self.domain.name + "/compose")
         pathcompose.mkdir(parents=True, exist_ok=True)
 
+        pathfirefly = Path("domains/" + self.domain.name + "/firefly")
+        pathfirefly.mkdir(parents=True, exist_ok=True)
+
         pathfabricca = Path(
             "domains/" + self.domain.name + "/fabric-ca/" + self.domain.ca.name
         )
