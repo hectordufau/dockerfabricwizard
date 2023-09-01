@@ -236,7 +236,7 @@ class Firefly:
             + " --channel "
             + self.domain.networkname
             + " --chaincode firefly-go"
-            + " --sandbox-enabled false"
+            + " --sandbox-enabled=false"
             + " -v"
         )
 
