@@ -12,10 +12,17 @@ class Firefly:
     def buildAll(self):
         console.print("[bold orange1]FIREFLY[/]")
         console.print("")
-        self.buildConnectionProfiles()
-        self.deployFFChaincode()
-        self.createStack()
-        self.startStack()
+        if self.checkInstall():
+            self.startStack()
+        else:
+            self.buildConnectionProfiles()
+            self.deployFFChaincode()
+            self.createStack()
+            self.startStack()
+
+    def checkInstall(self) -> bool:
+        console.print("[bold white]# Checking Firefly install[/]")
+        return True
 
     def buildConnectionProfiles(self):
         console.print("[bold white]# Preparing connection profiles[/]")

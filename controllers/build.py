@@ -872,6 +872,12 @@ class Build:
             str(Path().absolute()) + "/" + str(adminpath) + "/config.yaml",
         )
 
+        dir_path = str(Path().absolute()) + "/" + str(adminpath)
+        filelst = os.listdir(dir_path + "/keystore")
+        for keystore in filelst:
+            if os.path.isfile(os.path.join(dir_path, keystore)):
+                org.keystore = keystore
+
     def buildOrderer(self):
         console.print("[bold white]# Building " + self.domain.name + " orderer[/]")
 

@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 
 from pydantic import BaseModel
 
@@ -11,3 +11,4 @@ class Organization(BaseModel):
     ca: Ca = None
     peers: List[Peer] = []
     qtypeers: int = 0
+    keystore: Optional[str] = None

@@ -220,6 +220,7 @@ Would you like to contribute with a donation?
 - [x] Chaincode as a Service installer
    - [x] Typescript chaincode
    - [x] Java chaincode
+   - [x] Go chaincode
 
 ## License
 

@@ -977,6 +977,7 @@ class ConsoleOutput:
         console.print("[bold white]O - Add organization[/]")
         console.print("[bold white]P - Add peer[/]")
         console.print("[bold white]A - Add chaincode[/]")
+        console.print("[bold white]F - Run Firefly[/]")
         console.print("[bold white]G - Start network[/]")
         console.print("[bold white]S - Stop network[/]")
         console.print("[bold white]C - Clean docker[/]")
@@ -985,7 +986,9 @@ class ConsoleOutput:
         console.print("[bold white]M - Return to main menu[/]")
         console.print("[bold white]Q - Quit[/]")
         console.print("")
-        option = console.input("[bold]Select an option (N,O,P,A,G,S,C,D,R,M or Q):[/] ")
+        option = console.input(
+            "[bold]Select an option (N,O,P,A,F,G,S,C,D,R,M or Q):[/] "
+        )
         console.print("")
 
         configfile = "".join(
@@ -1028,6 +1031,10 @@ class ConsoleOutput:
                 case "a":
                     selectoption = False
                     self.selectChaincode(domain)
+                    self.networkSelected(domain.name)
+                case "f":
+                    selectoption = False
+                    self.runFirefly(domain)
                     self.networkSelected(domain.name)
                 case "g":
                     selectoption = False
@@ -1125,3 +1132,6 @@ class ConsoleOutput:
         dirchaincode = "".join([str(Path().absolute()), "/chaincodes/", ccname])
         chaincode = ChaincodeDeploy(domain, dirchaincode)
         chaincode.buildAll()
+
+    def runFirefly(self, domain: Domain):
+        pass

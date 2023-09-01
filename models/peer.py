@@ -31,8 +31,8 @@ class Peer(BaseModel):
     CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE: Optional[str] = None
     CORE_VM_ENDPOINT: str = "unix:///host/var/run/docker.sock"
     FABRIC_CFG_PATH: str = "/etc/hyperledger/peercfg"
-    # FABRIC_LOGGING_SPEC: str = "INFO"
-    FABRIC_LOGGING_SPEC: str = "WARN:cauthdsl=debug:policies=debug:msp=debug"
+    FABRIC_LOGGING_SPEC: str = "INFO"
+    # FABRIC_LOGGING_SPEC: str = "WARN:cauthdsl=debug:policies=debug:msp=debug"
     operationslistenport: int = 0
     chaincodelistenport: int = 0
     peerlistenport: int = 0
