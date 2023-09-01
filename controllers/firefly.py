@@ -262,7 +262,7 @@ class Firefly:
     def startStack(self):
         console.print("[bold white]# Starting Firefly stack[/]")
         command = (
-            str(Path().absolute()) + "/bin/ff start " + self.domain.networkname + " -v"
+            str(Path().absolute()) + "/bin/ff start " + self.domain.networkname + " --no-rollback -v"
         )
         console.print("# Waiting Firefly start...")
 
