@@ -47,6 +47,20 @@ class ChaincodeDeploy:
             self.chaincodeInvokeInit()
             console.print("")
 
+    def buildFirefly(self):
+        if self.buildDockerImage():
+            console.print("")
+            self.packageChaincode()
+            console.print("")
+            self.installChaincode()
+            console.print("")
+            self.approveOrg()
+            console.print("")
+            self.commitChaincodeDefinition()
+            console.print("")
+            self.startDockerContainer()
+            console.print("")
+
     def buildDockerImage(self) -> bool:
         console.print("[bold white]# Building Docker Image[/]")
         console.print("")

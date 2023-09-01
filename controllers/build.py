@@ -31,6 +31,7 @@ class Build:
         self.buildIdentities()
         self.buildOrderer()
         self.buildPeersDatabases()
+        self.buildConfig()
         self.startingOPD()
         console.print("")
 
@@ -102,8 +103,6 @@ class Build:
             str(Path().absolute()) + "/" + configpeer,
             str(Path().absolute()) + "/" + str(pathpeers) + "/core.yaml",
         )
-
-        self.buildConfig()
 
     def buildConfig(self):
         console.print("[bold white]# Creating domain config file[/]")
@@ -622,6 +621,11 @@ class Build:
     def buildIdentitiesPeer(self, org: Organization, peer: Peer):
         console.print("[bold]## Registering " + peer.name + "[/]")
 
+        index = 0
+        for i, orgi in enumerate(self.domain.organizations):
+            if orgi.name == org.name:
+                index = i
+
         pathfabriccaorg = Path(
             "domains/" + self.domain.name + "/fabric-ca/" + org.ca.name
         )
@@ -872,11 +876,11 @@ class Build:
             str(Path().absolute()) + "/" + str(adminpath) + "/config.yaml",
         )
 
-        dir_path = str(Path().absolute()) + "/" + str(adminpath)
-        filelst = os.listdir(dir_path + "/keystore")
+        dir_path = str(Path().absolute()) + "/" + str(adminpath) + "/keystore/"
+        filelst = os.listdir(dir_path)
         for keystore in filelst:
-            if os.path.isfile(os.path.join(dir_path, keystore)):
-                org.keystore = keystore
+            if os.path.isfile(dir_path + keystore):
+                self.domain.organizations[index].keystore = dir_path + keystore
 
     def buildOrderer(self):
         console.print("[bold white]# Building " + self.domain.name + " orderer[/]")
@@ -1363,6 +1367,7 @@ class Build:
         self.buildNewOrgCa(org)
         self.buildIdentitiesOrg(org)
         self.buildPeersDatabasesOrg(org)
+        self.buildConfig()
         self.startingPDOrg(org)
 
     def buildNewOrgCa(self, org: Organization):
@@ -1430,6 +1435,7 @@ class Build:
         self.buildFolderPeer(org, peer)
         self.buildIdentitiesPeer(org, peer)
         self.buildPeer(peer)
+        self.buildConfig()
         self.startingNewPeer(peer)
 
     def startingOPD(self):

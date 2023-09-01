@@ -10,6 +10,7 @@ from rich.console import Console
 from controllers.blockchain import Blockchain
 from controllers.build import Build
 from controllers.chaincode import ChaincodeDeploy
+from controllers.firefly import Firefly
 from controllers.requirements import Requirements
 from controllers.run import Run
 from models.ca import Ca
@@ -978,6 +979,7 @@ class ConsoleOutput:
         console.print("[bold white]P - Add peer[/]")
         console.print("[bold white]A - Add chaincode[/]")
         console.print("[bold white]F - Run Firefly[/]")
+        console.print("[bold white]Y - Remove Firefly[/]")
         console.print("[bold white]G - Start network[/]")
         console.print("[bold white]S - Stop network[/]")
         console.print("[bold white]C - Clean docker[/]")
@@ -987,7 +989,7 @@ class ConsoleOutput:
         console.print("[bold white]Q - Quit[/]")
         console.print("")
         option = console.input(
-            "[bold]Select an option (N,O,P,A,F,G,S,C,D,R,M or Q):[/] "
+            "[bold]Select an option (N,O,P,A,F,Y,G,S,C,D,R,M or Q):[/] "
         )
         console.print("")
 
@@ -1035,6 +1037,10 @@ class ConsoleOutput:
                 case "f":
                     selectoption = False
                     self.runFirefly(domain)
+                    # self.networkSelected(domain.name)
+                case "y":
+                    selectoption = False
+                    self.removeFirefly(domain)
                     self.networkSelected(domain.name)
                 case "g":
                     selectoption = False
@@ -1061,6 +1067,19 @@ class ConsoleOutput:
                 case "d":
                     selectoption = False
                     console.print("[bold white]# Deleting...[/]")
+                    ffpath = os.environ["HOME"]+ "/.firefly/stacks/"+ domain.networkname
+                    ffdir = os.path.isdir(ffpath)
+                    if ffdir:
+                        os.system(
+                            str(Path().absolute())
+                            + "/bin/ff stop "
+                            + domain.networkname
+                        )
+                        os.system(
+                            str(Path().absolute())
+                            + "/bin/ff remove -f "
+                            + domain.networkname
+                        )
                     docker.compose.down(
                         remove_orphans=True, remove_images="all", volumes=True
                     )
@@ -1081,7 +1100,7 @@ class ConsoleOutput:
                     exit(0)
                 case _:
                     option = console.input(
-                        "[bold]Select an option (N,O,P,A,G,S,C,D,R,M or Q):[/] "
+                        "[bold]Select an option (N,O,P,A,F,Y,G,S,C,D,R,M or Q):[/] "
                     )
                     console.print("")
 
@@ -1134,4 +1153,9 @@ class ConsoleOutput:
         chaincode.buildAll()
 
     def runFirefly(self, domain: Domain):
-        pass
+        firefly = Firefly(domain)
+        firefly.buildAll()
+
+    def removeFirefly(self, domain: Domain):
+        firefly = Firefly(domain)
+        firefly.remove()
