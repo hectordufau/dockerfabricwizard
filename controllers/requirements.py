@@ -1,9 +1,11 @@
 import os
+import shutil
 import subprocess
 import tarfile
 from pathlib import Path
 
 import docker
+from git import Repo
 from rich.console import Console
 
 console = Console()
@@ -20,6 +22,7 @@ class Requirements:
         self.checkDocker()
         self.checkHLFBinaries()
         self.checkFireflyBinary()
+        self.checkFireflyChaincode()
         self.checkDomainFolder()
 
     def checkCurl(self):
@@ -98,6 +101,22 @@ class Requirements:
                         tar.extract("ff")
                     os.remove(str(Path().absolute()) + "/" + file)
             os.chdir(old_dir)
+
+    def checkFireflyChaincode(self):
+        console.print("[bold white]# Checking Firefly chaincode source[/]")
+        fireflysource = str(Path().absolute()) + "/firefly/"
+        isFireflyExist = os.path.exists(Path(fireflysource))
+        if not isFireflyExist:
+            console.print(
+                "[bold yellow]> Please wait for Firefly chaincode source downloading and installing.[/]"
+            )
+
+            Repo.clone_from("https://github.com/hyperledger/firefly", fireflysource)
+            shutil.move(
+                fireflysource + "smart_contracts/fabric/firefly-go",
+                str(Path().absolute()) + "/chaincodes/",
+            )
+        shutil.rmtree(fireflysource+".git")
 
     def checkDomainFolder(self):
         pathdomains = "domains"
