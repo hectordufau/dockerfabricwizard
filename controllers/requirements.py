@@ -117,6 +117,9 @@ class Requirements:
                 str(Path().absolute()) + "/chaincodes/",
             )
         shutil.rmtree(fireflysource+".git")
+        shutil.rmtree(fireflysource+".githooks")
+        shutil.rmtree(fireflysource+".github")
+        shutil.rmtree(fireflysource+".vscode")
 
     def checkDomainFolder(self):
         pathdomains = "domains"
