@@ -188,7 +188,7 @@ Would you like to contribute with a donation?
 
 ### In Progress
 
-- [ ] Firefly integration
+- [ ] Firefly integration (ready soon!)
 
 ### Done ✓
 

@@ -1,7 +1,5 @@
 import os
 import subprocess
-import tempfile
-import time
 import webbrowser
 from pathlib import Path
 
@@ -233,8 +231,7 @@ class Firefly:
             + self.domain.networkname
             + " 1"
             + ccpstring
-            + " --channel "
-            + self.domain.networkname
+            + " --channel stable"
             + " --chaincode firefly-go"
             + " --sandbox-enabled=false"
             + " -v"
@@ -262,7 +259,10 @@ class Firefly:
     def startStack(self):
         console.print("[bold white]# Starting Firefly stack[/]")
         command = (
-            str(Path().absolute()) + "/bin/ff start " + self.domain.networkname + " --no-rollback -v"
+            str(Path().absolute())
+            + "/bin/ff start "
+            + self.domain.networkname
+            + " --no-rollback -v"
         )
         console.print("# Waiting Firefly start...")
 

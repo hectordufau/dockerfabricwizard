@@ -1037,7 +1037,7 @@ class ConsoleOutput:
                 case "f":
                     selectoption = False
                     self.runFirefly(domain)
-                    # self.networkSelected(domain.name)
+                    self.networkSelected(domain.name)
                 case "y":
                     selectoption = False
                     self.removeFirefly(domain)
