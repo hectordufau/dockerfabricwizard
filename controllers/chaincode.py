@@ -223,7 +223,7 @@ class ChaincodeDeploy:
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
         ORDERER_CA = (
             domainpath
-            + "/ordererOrganizations/tlsca/tlsca."
+            + "/ordererOrganizations/orderer/msp/tlscacerts/tlsca."
             + self.domain.name
             + "-cert.pem"
         )
@@ -258,6 +258,29 @@ class ChaincodeDeploy:
                         + str(self.chaincodeversion)
                         + " --init-required"
                     )
+
+                    if self.chaincodename == "firefly":
+                        command = (
+                            str(Path().absolute())
+                            + "/bin/peer lifecycle chaincode approveformyorg -o localhost:"
+                            + str(self.domain.orderer.generallistenport)
+                            + " --ordererTLSHostnameOverride "
+                            + self.domain.orderer.name
+                            + "."
+                            + self.domain.name
+                            + " --tls --cafile "
+                            + ORDERER_CA
+                            + " --channelID "
+                            + self.domain.networkname
+                            + " --name "
+                            + self.chaincodename
+                            + " --version "
+                            + str(self.chaincodeversion)
+                            + " --package-id "
+                            + self.packageid
+                            + " --sequence "
+                            + str(self.chaincodeversion)
+                        )
 
                     os.system(command)
                     console.print("# Waiting Peer...")
@@ -300,7 +323,7 @@ class ChaincodeDeploy:
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
         ORDERER_CA = (
             domainpath
-            + "/ordererOrganizations/tlsca/tlsca."
+            + "/ordererOrganizations/orderer/msp/tlscacerts/tlsca."
             + self.domain.name
             + "-cert.pem"
         )
@@ -321,9 +344,9 @@ class ChaincodeDeploy:
                         domainpath
                         + "/peerOrganizations/"
                         + org.name
-                        + "/tlsca/tlsca."
-                        + org.name
-                        + "-cert.pem"
+                        + "/"
+                        + peer.name
+                        + "/tls/ca.crt"
                     )
 
                     command = (
@@ -351,6 +374,31 @@ class ChaincodeDeploy:
                         + " --init-required"
                     )
 
+                    if self.chaincodename == "firefly":
+                        command = (
+                            str(Path().absolute())
+                            + "/bin/peer lifecycle chaincode commit -o localhost:"
+                            + str(self.domain.orderer.generallistenport)
+                            + " --ordererTLSHostnameOverride "
+                            + self.domain.orderer.name
+                            + "."
+                            + self.domain.name
+                            + " --tls --cafile "
+                            + ORDERER_CA
+                            + " --channelID "
+                            + self.domain.networkname
+                            + " --name "
+                            + self.chaincodename
+                            + " --peerAddresses localhost:"
+                            + str(peer.peerlistenport)
+                            + " --tlsRootCertFiles "
+                            + CORE_PEER_TLS_ROOTCERT_FILE
+                            + " --version "
+                            + str(self.chaincodeversion)
+                            + " --sequence "
+                            + str(self.chaincodeversion)
+                        )
+
                     os.system(command)
                     console.print("# Waiting Peer...")
                     time.sleep(2)
@@ -377,7 +425,11 @@ class ChaincodeDeploy:
                         "CHAINCODE_SERVER_ADDRESS": "0.0.0.0:9999",
                         "CHAINCODE_ID": self.packageid,
                         "CORE_CHAINCODE_ID_NAME": self.packageid,
+                        "CC_SERVER_PORT":9999,
+                        "CHAINCODE_TLS_DISABLED":False
                     },
+                    expose=[9999],
+                    publish=[(9999,9999)],
                     remove=True,
                     detach=True,
                     init=True,
@@ -391,62 +443,63 @@ class ChaincodeDeploy:
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
         ORDERER_CA = (
             domainpath
-            + "/ordererOrganizations/tlsca/tlsca."
+            + "/ordererOrganizations/orderer/msp/tlscacerts/tlsca."
             + self.domain.name
             + "-cert.pem"
         )
 
-        for org in self.domain.organizations:
-            for peer in org.peers:
-                if peer.name.split(".")[0] == "peer1":
-                    console.print(
-                        "[bold]# Commiting chaincode definition for "
-                        + self.domain.networkname
-                        + " by "
-                        + peer.name
-                        + "[/]"
-                    )
-                    self.peerEnvVariables(org, peer)
+        if self.chaincodename != "firefly":
+            for org in self.domain.organizations:
+                for peer in org.peers:
+                    if peer.name.split(".")[0] == "peer1":
+                        console.print(
+                            "[bold]# Commiting chaincode definition for "
+                            + self.domain.networkname
+                            + " by "
+                            + peer.name
+                            + "[/]"
+                        )
+                        self.peerEnvVariables(org, peer)
 
-                    CORE_PEER_TLS_ROOTCERT_FILE = (
-                        domainpath
-                        + "/peerOrganizations/"
-                        + org.name
-                        + "/tlsca/tlsca."
-                        + org.name
-                        + "-cert.pem"
-                    )
+                        CORE_PEER_TLS_ROOTCERT_FILE = (
+                            domainpath
+                            + "/peerOrganizations/"
+                            + org.name
+                            + "/tlsca/tlsca."
+                            + org.name
+                            + "-cert.pem"
+                        )
 
-                    fcncall = '{"function":"InitLedger","Args":[]}'
+                        fcncall = '{"function":"InitLedger","Args":[]}'
 
-                    command = (
-                        str(Path().absolute())
-                        + "/bin/peer chaincode invoke -o localhost:"
-                        + str(self.domain.orderer.generallistenport)
-                        + " --ordererTLSHostnameOverride "
-                        + self.domain.orderer.name
-                        + "."
-                        + self.domain.name
-                        + " --tls --cafile "
-                        + ORDERER_CA
-                        + " --channelID "
-                        + self.domain.networkname
-                        + " --name "
-                        + self.chaincodename
-                        + " --peerAddresses localhost:"
-                        + str(peer.peerlistenport)
-                        + " --tlsRootCertFiles "
-                        + CORE_PEER_TLS_ROOTCERT_FILE
-                        + " --isInit -c "
-                        + "'"
-                        + fcncall
-                        + "'"
-                    )
+                        command = (
+                            str(Path().absolute())
+                            + "/bin/peer chaincode invoke -o localhost:"
+                            + str(self.domain.orderer.generallistenport)
+                            + " --ordererTLSHostnameOverride "
+                            + self.domain.orderer.name
+                            + "."
+                            + self.domain.name
+                            + " --tls --cafile "
+                            + ORDERER_CA
+                            + " --channelID "
+                            + self.domain.networkname
+                            + " --name "
+                            + self.chaincodename
+                            + " --peerAddresses localhost:"
+                            + str(peer.peerlistenport)
+                            + " --tlsRootCertFiles "
+                            + CORE_PEER_TLS_ROOTCERT_FILE
+                            + " --isInit -c "
+                            + "'"
+                            + fcncall
+                            + "'"
+                        )
 
-                    os.system(command)
+                        os.system(command)
 
-                    console.print("# Waiting Peer...")
-                    time.sleep(2)
+                        console.print("# Waiting Peer...")
+                        time.sleep(2)
 
     def peerEnvVariables(self, org: Organization, peer: Peer, ord: bool = None):
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
@@ -486,7 +539,7 @@ class ChaincodeDeploy:
 
         ORDERER_CA = (
             domainpath
-            + "/ordererOrganizations/tlsca/tlsca."
+            + "/ordererOrganizations/orderer/msp/tlscacerts/tlsca."
             + self.domain.name
             + "-cert.pem"
         )

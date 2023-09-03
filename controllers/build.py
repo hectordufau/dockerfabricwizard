@@ -31,6 +31,7 @@ class Build:
         self.buildIdentities()
         self.buildOrderer()
         self.buildPeersDatabases()
+        self.prepareFirefly()
         self.buildConfig()
         self.startingOPD()
         console.print("")
@@ -621,11 +622,6 @@ class Build:
     def buildIdentitiesPeer(self, org: Organization, peer: Peer):
         console.print("[bold]## Registering " + peer.name + "[/]")
 
-        index = 0
-        for i, orgi in enumerate(self.domain.organizations):
-            if orgi.name == org.name:
-                index = i
-
         pathfabriccaorg = Path(
             "domains/" + self.domain.name + "/fabric-ca/" + org.ca.name
         )
@@ -875,12 +871,6 @@ class Build:
             configpath + "/config.yaml",
             str(Path().absolute()) + "/" + str(adminpath) + "/config.yaml",
         )
-
-        dir_path = str(Path().absolute()) + "/" + str(adminpath) + "/keystore/"
-        filelst = os.listdir(dir_path)
-        for keystore in filelst:
-            if os.path.isfile(dir_path + keystore):
-                self.domain.organizations[index].keystore = dir_path + keystore
 
     def buildOrderer(self):
         console.print("[bold white]# Building " + self.domain.name + " orderer[/]")
@@ -1367,6 +1357,7 @@ class Build:
         self.buildNewOrgCa(org)
         self.buildIdentitiesOrg(org)
         self.buildPeersDatabasesOrg(org)
+        self.prepareFirefly()
         self.buildConfig()
         self.startingPDOrg(org)
 
@@ -1437,6 +1428,92 @@ class Build:
         self.buildPeer(peer)
         self.buildConfig()
         self.startingNewPeer(peer)
+
+    def prepareFirefly(self):
+        for i, org in enumerate(self.domain.organizations):
+            ## Copy MSP Users
+            mspadminpath = Path(
+                "domains/"
+                + self.domain.name
+                + "/peerOrganizations/"
+                + org.name
+                + "/msp/users"
+                + "/Admin@"
+                + org.name
+                + "."
+                + self.domain.name
+                + "/msp"
+            )
+
+            shutil.copytree(
+                str(Path().absolute())
+                + str(
+                    Path(
+                        "/domains/"
+                        + self.domain.name
+                        + "/peerOrganizations/"
+                        + org.name
+                        + "/users"
+                    )
+                ),
+                str(Path().absolute())
+                + str(
+                    Path(
+                        "/domains/"
+                        + self.domain.name
+                        + "/peerOrganizations/"
+                        + org.name
+                        + "/msp/users"
+                    )
+                ),
+            )
+            ## Copy Orderer
+            orderercrypto = (
+                str(Path().absolute())
+                + "/domains/"
+                + self.domain.name
+                + "/ordererOrganizations/orderer"
+            )
+            shutil.copytree(
+                orderercrypto,
+                str(Path().absolute())
+                + "/domains/"
+                + self.domain.name
+                + "/peerOrganizations/"
+                + org.name
+                + "/msp/orderer"
+            )
+
+            dir_path = str(Path().absolute()) + "/" + str(mspadminpath) + "/keystore/"
+            filelst = os.listdir(dir_path)
+            for keystore in filelst:
+                if os.path.isfile(dir_path + keystore):
+                    self.domain.organizations[i].keystore = (
+                        "/etc/firefly/organizations/users/Admin@"
+                        + org.name
+                        + "."
+                        + self.domain.name
+                        + "/msp/keystore/"
+                        + keystore
+                    )
+
+            for peer in org.peers:
+                shutil.copytree(
+                    str(Path().absolute())
+                    + "/domains/"
+                    + self.domain.name
+                    + "/peerOrganizations/"
+                    + org.name
+                    + "/"
+                    + peer.name,
+                    str(Path().absolute())
+                    + "/domains/"
+                    + self.domain.name
+                    + "/peerOrganizations/"
+                    + org.name
+                    + "/msp/"
+                    + peer.name,
+                )
 
     def startingOPD(self):
         console.print("[bold white]# Starting orderer, peers and databases[/]")

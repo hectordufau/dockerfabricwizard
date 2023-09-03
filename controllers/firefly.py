@@ -56,10 +56,7 @@ class Firefly:
                     + "."
                     + self.domain.name: {
                         "tlsCACerts": {
-                            "path": msppath
-                            + "/peerOrganizations/"
-                            + org.name
-                            + "/msp/tlscacerts/ca.crt"
+                            "path": "/etc/firefly/organizations/tlscacerts/ca.crt"
                         },
                         "url": "https://"
                         + org.ca.name
@@ -68,9 +65,7 @@ class Firefly:
                         + ":"
                         + str(org.ca.serverport),
                         "grpcOptions": {
-                            "ssl-target-name-override": org.name
-                            + "."
-                            + self.domain.name
+                            "ssl-target-name-override": "localhost"  #  org.name + "." + self.domain.name
                         },
                         "registrar": {"enrollId": "admin", "enrollSecret": "adminpw"},
                     }
@@ -92,23 +87,16 @@ class Firefly:
                         }
                     },
                     "credentialStore": {
-                        "cryptoStore": {
-                            "path": msppath + "/peerOrganizations/" + org.name + "/msp"
-                        },
-                        "path": msppath + "/peerOrganizations/" + org.name + "/msp",
+                        "cryptoStore": {"path": "/etc/firefly/organizations"},
+                        "path": "/etc/firefly/organizations",
                     },
-                    "cryptoconfig": {
-                        "path": msppath + "/peerOrganizations/" + org.name + "/msp"
-                    },
-                    "logging": {"level": "info"},
+                    "cryptoconfig": {"path": "/etc/firefly/organizations"},
+                    "logging": {"level": "debug"},
                     "organization": org.name + "." + self.domain.name,
                     "tlsCerts": {
                         "client": {
                             "cert": {
-                                "path": msppath
-                                + "/peerOrganizations/"
-                                + org.name
-                                + "/users/Admin@"
+                                "path": "/etc/firefly/organizations/users/Admin@"
                                 + org.name
                                 + "."
                                 + self.domain.name
@@ -123,8 +111,7 @@ class Firefly:
                     + "."
                     + self.domain.name: {
                         "tlsCACerts": {
-                            "path": msppath
-                            + "/ordererOrganizations/orderer/tls/tlscacerts/tls-localhost-"
+                            "path": "/etc/firefly/organizations/orderer/tls/tlscacerts/tls-localhost-"
                             + str(self.domain.ca.serverport)
                             + "-"
                             + self.domain.ca.name
@@ -145,10 +132,7 @@ class Firefly:
                     + "."
                     + self.domain.name: {
                         "certificateAuthorities": [org.name + "." + self.domain.name],
-                        "cryptoPath": msppath
-                        + "/peerOrganizations/"
-                        + org.name
-                        + "/msp",
+                        "cryptoPath": "/etc/firefly/organizations",
                         "mspid": org.name + "MSP",
                         "peers": [],
                     }
@@ -173,10 +157,7 @@ class Firefly:
 
                 ccp["peers"][peer.name + "." + self.domain.name] = {
                     "tlsCACerts": {
-                        "path": msppath
-                        + "/peerOrganizations/"
-                        + org.name
-                        + "/"
+                        "path": "/etc/firefly/organizations/"
                         + peer.name
                         + "/tls/tlscacerts/tls-localhost-"
                         + str(org.ca.serverport)
@@ -233,7 +214,8 @@ class Firefly:
             + " "
             + str(nffmembers)
             + ccpstring
-            + " --channel stable"
+            + " --channel "
+            + self.domain.networkname
             + " --chaincode firefly"
             + " --sandbox-enabled=false"
             + " -v"
@@ -241,22 +223,21 @@ class Firefly:
 
         res = subprocess.call(command, shell=True, universal_newlines=True)
 
-        if res == 0:
-            override = {
-                "version": "2.1",
-                "networks": {
-                    "default": {"name": self.domain.networkname, "external": True}
-                },
-            }
+        override = {
+            "version": "2.1",
+            "networks": {
+                "default": {"name": self.domain.networkname, "external": True}
+            },
+        }
 
-            overridepath = (
-                os.environ["HOME"]
-                + "/.firefly/stacks/"
-                + self.domain.networkname
-                + "/docker-compose.override.yml"
-            )
-            with open(overridepath, "w", encoding="utf-8") as yaml_file:
-                yaml.dump(override, yaml_file)
+        overridepath = (
+            os.environ["HOME"]
+            + "/.firefly/stacks/"
+            + self.domain.networkname
+            + "/docker-compose.override.yml"
+        )
+        with open(overridepath, "w", encoding="utf-8") as yaml_file:
+            yaml.dump(override, yaml_file)
 
     def startStack(self):
         console.print("[bold white]# Starting Firefly stack[/]")
@@ -268,8 +249,6 @@ class Firefly:
         )
         console.print("# Waiting Firefly start...")
 
-        res = subprocess.call(command, shell=True, universal_newlines=True)
-
-        if res == 0:
-            webbrowser.open("http://127.0.0.1:5000/ui")
-            webbrowser.open_new_tab("http://127.0.0.1:5000/api")
+        subprocess.call(command, shell=True, universal_newlines=True)
+        webbrowser.open("http://127.0.0.1:5000/ui")
+        webbrowser.open("http://127.0.0.1:5000/api")

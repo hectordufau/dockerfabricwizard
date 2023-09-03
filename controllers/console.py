@@ -385,7 +385,7 @@ class ConsoleOutput:
         build.buildAll()
         blockchain = Blockchain(self.domain)
         blockchain.buildAll()
-        self.selectNetwork()
+        self.networkSelected(self.domain.name)
 
     def createOrganization(self, domain: Domain):
         os.system("clear")
