@@ -201,7 +201,7 @@ class Firefly:
 
     def deployFFChaincode(self):
         console.print("[bold white]# Deploy Firefly chaincode[/]")
-        fireflycc = str(Path().absolute()) + "/chaincodes/firefly-go"
+        fireflycc = str(Path().absolute()) + "/chaincodes/firefly"
         chaincode = ChaincodeDeploy(self.domain, fireflycc)
         chaincode.buildFirefly()
 
@@ -211,6 +211,7 @@ class Firefly:
         msppath = str(Path().absolute()) + "/domains/" + self.domain.name
         fireflypath = msppath + "/firefly/"
         ccpstring = ""
+        nffmembers = len(self.domain.organizations)
         for org in self.domain.organizations:
             ccpstring = (
                 ccpstring
@@ -229,10 +230,11 @@ class Firefly:
             str(Path().absolute())
             + "/bin/ff init fabric "
             + self.domain.networkname
-            + " 1"
+            + " "
+            + str(nffmembers)
             + ccpstring
             + " --channel stable"
-            + " --chaincode firefly-go"
+            + " --chaincode firefly"
             + " --sandbox-enabled=false"
             + " -v"
         )

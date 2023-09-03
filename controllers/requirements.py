@@ -116,6 +116,7 @@ class Requirements:
                 fireflysource + "smart_contracts/fabric/firefly-go",
                 str(Path().absolute()) + "/chaincodes/",
             )
+            os.rename(str(Path().absolute()) + "/chaincodes/firefly-go", str(Path().absolute()) + "/chaincodes/firefly")
             shutil.rmtree(fireflysource + ".git")
             shutil.rmtree(fireflysource + ".githooks")
             shutil.rmtree(fireflysource + ".github")
