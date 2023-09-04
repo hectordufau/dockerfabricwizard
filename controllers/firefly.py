@@ -7,6 +7,7 @@ import ruamel.yaml
 from rich.console import Console
 
 from controllers.chaincode import ChaincodeDeploy
+from models.chaincode import Chaincode
 from models.domain import Domain
 
 console = Console()
@@ -182,9 +183,13 @@ class Firefly:
 
     def deployFFChaincode(self):
         console.print("[bold white]# Deploy Firefly chaincode[/]")
-        fireflycc = str(Path().absolute()) + "/chaincodes/firefly"
-        chaincode = ChaincodeDeploy(self.domain, fireflycc)
-        chaincode.buildFirefly()
+        # fireflycc = str(Path().absolute()) + "/chaincodes/firefly"
+        chaincode = Chaincode()
+        chaincode.name = "firefly"
+        chaincode.ccport = 9999
+        chaincode.invoke = False
+        chaincodedeploy = ChaincodeDeploy(self.domain, chaincode)
+        chaincodedeploy.buildFirefly()
 
     def createStack(self):
         console.print("[bold white]# Creating Firefly stack[/]")

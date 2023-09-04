@@ -22,10 +22,13 @@ client = docker.DockerClient()
 
 
 class ChaincodeDeploy:
-    def __init__(self, domain: Domain, pathccsrc: str) -> None:
+    def __init__(self, domain: Domain, chaincode: Chaincode) -> None:
         self.domain: Domain = domain
-        self.pathccsrc = pathccsrc
-        self.chaincodename = pathccsrc.split("/")[-1]
+        self.chaincode = chaincode
+        self.pathccsrc = "".join(
+            [str(Path().absolute()), "/chaincodes/", chaincode.name]
+        )
+        self.chaincodename = chaincode.name
         self.chaincodeversion = 0
         self.packageid = None
 
@@ -80,7 +83,7 @@ class ChaincodeDeploy:
                 context_path=self.pathccsrc,
                 file=dockerfile,
                 tags=[tag],
-                build_args={"CC_SERVER_PORT": 9999},
+                build_args={"CC_SERVER_PORT": self.chaincode.ccport},
             )
             success = True
 
@@ -111,11 +114,17 @@ class ChaincodeDeploy:
                 ccindex = i
                 ccversion = cc.version + 1
 
+        tlsrequired = True if self.chaincode.name == "firefly" else False
+
         peername = "{{{{{peername}}}}}".format(peername=".peername")
         connectiondata = {
-            "address": peername + "_" + self.chaincodename + "_ccaas:9999",
+            "address": peername
+            + "_"
+            + self.chaincodename
+            + "_ccaas:"
+            + str(self.chaincode.ccport),
             "dial_timeout": "10s",
-            "tls_required": False,
+            "tls_required": tlsrequired,
         }
 
         metadata = {"type": "ccaas", "label": self.chaincodename + "_" + str(ccversion)}
@@ -164,17 +173,15 @@ class ChaincodeDeploy:
         with open(build + "PACKAGEID.txt", encoding="utf-8") as f:
             packageid = f.read().strip()
 
-        newcc = Chaincode()
-        newcc.name = self.chaincodename
-        newcc.version = ccversion
-        newcc.packageid = packageid
+        self.chaincode.version = ccversion
+        self.chaincode.packageid = packageid
         self.packageid = packageid
         self.chaincodeversion = ccversion
 
         if ccindex is None:
-            self.domain.chaincodes.append(newcc)
+            self.domain.chaincodes.append(self.chaincode)
         else:
-            self.domain.chaincodes[ccindex] = newcc
+            self.domain.chaincodes[ccindex] = self.chaincode
 
         build = Build(self.domain)
         build.buildConfig()
@@ -228,6 +235,10 @@ class ChaincodeDeploy:
             + "-cert.pem"
         )
 
+        initrequired = ""
+        if self.chaincode.invoke:
+            initrequired = " --init-required"
+
         for org in self.domain.organizations:
             for peer in org.peers:
                 if peer.name.split(".")[0] == "peer1":
@@ -256,31 +267,8 @@ class ChaincodeDeploy:
                         + self.packageid
                         + " --sequence "
                         + str(self.chaincodeversion)
-                        + " --init-required"
+                        + initrequired
                     )
-
-                    if self.chaincodename == "firefly":
-                        command = (
-                            str(Path().absolute())
-                            + "/bin/peer lifecycle chaincode approveformyorg -o localhost:"
-                            + str(self.domain.orderer.generallistenport)
-                            + " --ordererTLSHostnameOverride "
-                            + self.domain.orderer.name
-                            + "."
-                            + self.domain.name
-                            + " --tls --cafile "
-                            + ORDERER_CA
-                            + " --channelID "
-                            + self.domain.networkname
-                            + " --name "
-                            + self.chaincodename
-                            + " --version "
-                            + str(self.chaincodeversion)
-                            + " --package-id "
-                            + self.packageid
-                            + " --sequence "
-                            + str(self.chaincodeversion)
-                        )
 
                     os.system(command)
                     console.print("# Waiting Peer...")
@@ -299,6 +287,10 @@ class ChaincodeDeploy:
 
         self.peerEnvVariables(org, peer)
 
+        initrequired = ""
+        if self.chaincode.invoke:
+            initrequired = " --init-required"
+
         command = (
             str(Path().absolute())
             + "/bin/peer lifecycle chaincode checkcommitreadiness -o localhost:"
@@ -313,7 +305,8 @@ class ChaincodeDeploy:
             + str(self.chaincodeversion)
             + " --sequence "
             + str(self.chaincodeversion)
-            + " --init-required --output json"
+            + " --output json"
+            + initrequired
         )
 
         os.system(command)
@@ -327,6 +320,10 @@ class ChaincodeDeploy:
             + self.domain.name
             + "-cert.pem"
         )
+
+        initrequired = ""
+        if self.chaincode.invoke:
+            initrequired = " --init-required"
 
         for org in self.domain.organizations:
             for peer in org.peers:
@@ -371,33 +368,8 @@ class ChaincodeDeploy:
                         + str(self.chaincodeversion)
                         + " --sequence "
                         + str(self.chaincodeversion)
-                        + " --init-required"
+                        + initrequired
                     )
-
-                    if self.chaincodename == "firefly":
-                        command = (
-                            str(Path().absolute())
-                            + "/bin/peer lifecycle chaincode commit -o localhost:"
-                            + str(self.domain.orderer.generallistenport)
-                            + " --ordererTLSHostnameOverride "
-                            + self.domain.orderer.name
-                            + "."
-                            + self.domain.name
-                            + " --tls --cafile "
-                            + ORDERER_CA
-                            + " --channelID "
-                            + self.domain.networkname
-                            + " --name "
-                            + self.chaincodename
-                            + " --peerAddresses localhost:"
-                            + str(peer.peerlistenport)
-                            + " --tlsRootCertFiles "
-                            + CORE_PEER_TLS_ROOTCERT_FILE
-                            + " --version "
-                            + str(self.chaincodeversion)
-                            + " --sequence "
-                            + str(self.chaincodeversion)
-                        )
 
                     os.system(command)
                     console.print("# Waiting Peer...")
@@ -410,7 +382,33 @@ class ChaincodeDeploy:
                     "[bold]# Starting the CCAAS container for " + org.name + "[/]"
                 )
 
-                container = whales.run(
+                envs = {
+                    "CHAINCODE_SERVER_ADDRESS": "0.0.0.0:" + str(self.chaincode.ccport),
+                    "CHAINCODE_ID": self.packageid,
+                    "CORE_CHAINCODE_ID_NAME": self.packageid,
+                    "CC_SERVER_PORT": self.chaincode.ccport,
+                    "CHAINCODE_TLS_DISABLED": False,
+                }
+
+                if self.chaincode.name == "firefly":
+                    envs = {
+                        "CORE_CHAINCODE_ID_NAME": self.packageid,
+                        "CORE_CHAINCODE_LOGGING_LEVEL": "info",
+                        "CORE_CHAINCODE_LOGGING_SHIM": "warn",
+                        "CORE_CHAINCODE_SERVER_ADDRESS": "0.0.0.0:"
+                        + str(self.chaincode.ccport),
+                        "CORE_PEER_TLS_ENABLED": "true",
+                        "CORE_TLS_CLIENT_KEY_PATH": "/etc/hyperledger/fabric/client.key",
+                        "CORE_TLS_CLIENT_CERT_PATH": "/etc/hyperledger/fabric/client.crt",
+                        "CORE_TLS_CLIENT_KEY_FILE": "/etc/hyperledger/fabric/client_pem.key",
+                        "CORE_TLS_CLIENT_CERT_FILE": "/etc/hyperledger/fabric/client_pem.crt",
+                        "CORE_PEER_TLS_ROOTCERT_FILE": "/etc/hyperledger/fabric/peer.crt",
+                        "CORE_PEER_LOCALMSPID": org.name + "MSP",
+                        "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+                        "CC_SERVER_PORT": self.chaincode.ccport,
+                    }
+
+                whales.run(
                     image=self.chaincodename + "_ccaas_image:latest",
                     name=peer.name.replace(".", "")
                     + "_"
@@ -421,15 +419,9 @@ class ChaincodeDeploy:
                     + self.chaincodename
                     + "_ccaas",
                     networks=[self.domain.networkname],
-                    envs={
-                        "CHAINCODE_SERVER_ADDRESS": "0.0.0.0:9999",
-                        "CHAINCODE_ID": self.packageid,
-                        "CORE_CHAINCODE_ID_NAME": self.packageid,
-                        "CC_SERVER_PORT":9999,
-                        "CHAINCODE_TLS_DISABLED":False
-                    },
-                    expose=[9999],
-                    publish=[(9999,9999)],
+                    envs=envs,
+                    expose=[self.chaincode.ccport],
+                    publish=[(self.chaincode.ccport, self.chaincode.ccport)],
                     remove=True,
                     detach=True,
                     init=True,
@@ -448,7 +440,11 @@ class ChaincodeDeploy:
             + "-cert.pem"
         )
 
-        if self.chaincodename != "firefly":
+        initrequired = ""
+        if self.chaincode.invoke:
+            fcncall = '{"function":"InitLedger","Args":[]}'
+            initrequired = " --isInit -c " + "'" + fcncall + "'"
+
             for org in self.domain.organizations:
                 for peer in org.peers:
                     if peer.name.split(".")[0] == "peer1":
@@ -470,8 +466,6 @@ class ChaincodeDeploy:
                             + "-cert.pem"
                         )
 
-                        fcncall = '{"function":"InitLedger","Args":[]}'
-
                         command = (
                             str(Path().absolute())
                             + "/bin/peer chaincode invoke -o localhost:"
@@ -490,10 +484,7 @@ class ChaincodeDeploy:
                             + str(peer.peerlistenport)
                             + " --tlsRootCertFiles "
                             + CORE_PEER_TLS_ROOTCERT_FILE
-                            + " --isInit -c "
-                            + "'"
-                            + fcncall
-                            + "'"
+                            + initrequired
                         )
 
                         os.system(command)

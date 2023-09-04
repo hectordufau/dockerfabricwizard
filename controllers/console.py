@@ -14,6 +14,7 @@ from controllers.firefly import Firefly
 from controllers.requirements import Requirements
 from controllers.run import Run
 from models.ca import Ca
+from models.chaincode import Chaincode
 from models.database import Database
 from models.domain import Domain
 from models.orderer import Orderer
@@ -1067,7 +1068,9 @@ class ConsoleOutput:
                 case "d":
                     selectoption = False
                     console.print("[bold white]# Deleting...[/]")
-                    ffpath = os.environ["HOME"]+ "/.firefly/stacks/"+ domain.networkname
+                    ffpath = (
+                        os.environ["HOME"] + "/.firefly/stacks/" + domain.networkname
+                    )
                     ffdir = os.path.isdir(ffpath)
                     if ffdir:
                         os.system(
@@ -1115,6 +1118,29 @@ class ConsoleOutput:
                 "/chaincodes/",
             ]
         )
+
+        chaincode = Chaincode()
+
+        portlist: List[int] = []
+        ccport = 1999
+        portlist.append(domain.ca.serverport)
+        portlist.append(domain.ca.operationslistenport)
+        portlist.append(domain.orderer.adminlistenport)
+        portlist.append(domain.orderer.generallistenport)
+        portlist.append(domain.orderer.operationslistenport)
+        portlist.append(9999) # Exclusive for Firefly chaincode
+        for org in domain.organizations:
+            portlist.append(org.ca.serverport)
+            portlist.append(org.ca.operationslistenport)
+            for peer in org.peers:
+                portlist.append(peer.operationslistenport)
+                portlist.append(peer.chaincodelistenport)
+                portlist.append(peer.peerlistenport)
+                portlist.append(peer.database.port)
+        for cc in domain.chaincodes:
+            portlist.append(cc.ccport)
+            ccport = cc.ccport + 1000
+
         listccsrc = [
             name
             for name in os.listdir(dirchaincodes)
@@ -1140,16 +1166,96 @@ class ConsoleOutput:
             elif option.isdigit() and (int(option) <= (len(listccsrc) - 1)):
                 selected = False
                 console.print("")
-                self.chaincodeSelected(domain, listccsrc[int(option)])
+                chaincode.name = listccsrc[int(option)]
             else:
                 option = console.input(
                     "[bold red]Wrong option.[/] [bold white]Select a chaincode:[/] "
                 )
                 console.print("")
 
-    def chaincodeSelected(self, domain: Domain, ccname: str):
-        dirchaincode = "".join([str(Path().absolute()), "/chaincodes/", ccname])
-        chaincode = ChaincodeDeploy(domain, dirchaincode)
+        hasinit = console.input("[bold white]Invoke init function required (y/n):[/] ")
+        invoke = False
+        selected = True
+        while selected:
+            if hasinit.lower() == "y":
+                selected = False
+                invoke = True
+                console.print("")
+            elif hasinit.lower() == "n":
+                selected = False
+                console.print("")
+            elif hasinit.lower() == "p":
+                selected = False
+                console.print("")
+                self.networkSelected(domain.name)
+            elif hasinit.lower() == "q":
+                selected = False
+                console.print("")
+                exit(0)
+            else:
+                hasinit = console.input(
+                    "[bold red]Wrong option.[/] [bold white]Invoke init function required (y/n):[/] "
+                )
+                console.print("")
+
+        chaincode.invoke = invoke
+
+        if invoke:
+            ccfunction = console.input("[bold]Invoke function name:[/] ")
+            if ccfunction.lower() == "q":
+                self.networkSelected(domain.name)
+            while not ccfunction.isalpha():
+                ccfunction = console.input(
+                    "[bold red]Invoke function name not valid. Please retype again:[/] "
+                )
+                if ccfunction.lower() == "q":
+                    self.networkSelected(domain.name)
+            chaincode.function = ccfunction
+            console.print("")
+
+        ccportn = console.input("[bold]Chaincode Port Number (ex. 1999):[/] ")
+        if ccportn.lower() == "q":
+            self.networkSelected(domain.name)
+        valueport = 0
+        while not ccportn.isdigit():
+            ccportn = console.input(
+                "[bold red]Chaincode Port Number value not valid. Please retype again:[/] "
+            )
+            if ccportn.lower() == "q":
+                self.networkSelected(domain.name)
+        valueport = int(ccportn)
+
+        validport = True
+        while validport:
+            if valueport in portlist:
+                validport = True
+                ccportn = console.input(
+                    "[bold red]Chaincode Port Number value in use. Please retype again:[/] "
+                )
+                if ccportn.lower() == "q":
+                    self.networkSelected(domain.name)
+                valueport = int(ccportn)
+            else:
+                validport = False
+
+        while not validators.between(valueport, min=ccport, max=65535):
+            ccportn = console.input(
+                "[bold red]Chaincode Port Number value not valid, min "
+                + str(ccport)
+                + ". Please retype again:[/] "
+            )
+            if ccportn.lower() == "q":
+                self.networkSelected(domain.name)
+            while not ccportn.isdigit():
+                valueport = 0
+            valueport = int(ccportn)
+
+        chaincode.ccport = valueport
+        console.print("")
+        self.chaincodeSelected(domain, chaincode)
+
+    def chaincodeSelected(self, domain: Domain, chaincode: Chaincode):
+        chaincode = ChaincodeDeploy(domain, chaincode)
         chaincode.buildAll()
 
     def runFirefly(self, domain: Domain):

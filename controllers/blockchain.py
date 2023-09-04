@@ -51,7 +51,7 @@ class Blockchain:
         with open(config + "configtx.yaml", encoding="utf-8") as cftx:
             datacfg = yaml.load(cftx)
 
-        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"]["Organizations"][0][
+        """ datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"]["Organizations"][0][
             "Policies"
         ]["Admins"]["Rule"] = (
             "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
@@ -60,7 +60,7 @@ class Blockchain:
             0
         ]["Policies"]["Admins"]["Rule"] = (
             "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
-        )
+        ) """
 
         datacfg["Organizations"][0][
             "Name"
@@ -105,6 +105,18 @@ class Blockchain:
 
         datacfg["Organizations"][0]["AnchorPeers"] = []
         datacfg["Application"]["Organizations"] = []
+
+        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"]["Organizations"] = [datacfg["Organizations"][0]]
+        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"][
+            "Capabilities"
+        ] = datacfg["Capabilities"]["Orderer"]
+
+        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"][
+            "Organizations"
+        ] = []
+        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"][
+            "Capabilities"
+        ] = datacfg["Capabilities"]["Application"]
 
         for org in self.domain.organizations:
             for peer in org.peers:
