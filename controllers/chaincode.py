@@ -116,6 +116,32 @@ class ChaincodeDeploy:
 
         tlsrequired = True if self.chaincode.name == "firefly" else False
 
+        org = self.domain.organizations[0]
+        peer = org.peers[0]
+
+        peerpath = (
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
+            + "/peerOrganizations/"
+            + org.name
+            + "/"
+            + peer.name
+            + "/"
+        )
+        tlspath = peerpath + "tls"
+        for file_name in os.listdir(tlspath + "/keystore/"):
+            keystorechaincode = file_name
+
+        with open(tlspath + "/signcerts/cert.pem") as cert:
+            certdata = cert.read()
+
+        with open(tlspath + "/keystore/" + keystorechaincode) as key:
+            keydata = key.read()
+
+        with open(tlspath + "/ca.crt") as cacert:
+            carootdata = cacert.read()
+
         peername = "{{{{{peername}}}}}".format(peername=".peername")
         connectiondata = {
             "address": peername
@@ -125,6 +151,10 @@ class ChaincodeDeploy:
             + str(self.chaincode.ccport),
             "dial_timeout": "10s",
             "tls_required": tlsrequired,
+            "client_auth_required": tlsrequired,
+            "client_key": keydata,
+            "client_cert": certdata,
+            "root_cert": carootdata,
         }
 
         metadata = {"type": "ccaas", "label": self.chaincodename + "_" + str(ccversion)}
@@ -383,30 +413,71 @@ class ChaincodeDeploy:
                 )
 
                 envs = {
-                    "CHAINCODE_SERVER_ADDRESS": "0.0.0.0:" + str(self.chaincode.ccport),
-                    "CHAINCODE_ID": self.packageid,
+                    "CORE_CHAINCODE_SERVER_ADDRESS": "0.0.0.0:"
+                    + str(self.chaincode.ccport),
+                    "CORE_CHAINCODE_ID": self.packageid,
                     "CORE_CHAINCODE_ID_NAME": self.packageid,
                     "CC_SERVER_PORT": self.chaincode.ccport,
                     "CHAINCODE_TLS_DISABLED": False,
                 }
+                volumes = None
 
                 if self.chaincode.name == "firefly":
+                    orgcert = self.domain.organizations[0]
+                    peercert = orgcert.peers[0]
+                    peerpath = (
+                        str(Path().absolute())
+                        + "/domains/"
+                        + self.domain.name
+                        + "/peerOrganizations/"
+                        + orgcert.name
+                        + "/"
+                        + peercert.name
+                        + "/"
+                    )
+                    tlspath = peerpath + "tls"
+                    msppath = peerpath + "msp"
+                    for file_name in os.listdir(tlspath + "/keystore/"):
+                        keystorechaincode = file_name
+
+                    for file_name in os.listdir(msppath + "/keystore/"):
+                        keystoreclient = file_name
+
                     envs = {
                         "CORE_CHAINCODE_ID_NAME": self.packageid,
+                        "CORE_CHAINCODE_ID": self.packageid,
                         "CORE_CHAINCODE_LOGGING_LEVEL": "info",
                         "CORE_CHAINCODE_LOGGING_SHIM": "warn",
                         "CORE_CHAINCODE_SERVER_ADDRESS": "0.0.0.0:"
                         + str(self.chaincode.ccport),
+                        "CORE_CHAINCODE_ADDRESS": "0.0.0.0:"
+                        + str(self.chaincode.ccport),
                         "CORE_PEER_TLS_ENABLED": "true",
-                        "CORE_TLS_CLIENT_KEY_PATH": "/etc/hyperledger/fabric/client.key",
-                        "CORE_TLS_CLIENT_CERT_PATH": "/etc/hyperledger/fabric/client.crt",
-                        "CORE_TLS_CLIENT_KEY_FILE": "/etc/hyperledger/fabric/client_pem.key",
-                        "CORE_TLS_CLIENT_CERT_FILE": "/etc/hyperledger/fabric/client_pem.crt",
-                        "CORE_PEER_TLS_ROOTCERT_FILE": "/etc/hyperledger/fabric/peer.crt",
-                        "CORE_PEER_LOCALMSPID": org.name + "MSP",
+                        "CORE_CHAINCODE_TLS_CERT_FILE": "/etc/hyperledger/fabric/tls/signcerts/cert.pem",
+                        "CORE_CHAINCODE_TLS_KEY_FILE": "/etc/hyperledger/fabric/tls/keystore/"
+                        + keystorechaincode,
+                        "CORE_CHAINCODE_TLS_CLIENT_CACERT_FILE": "/etc/hyperledger/fabric/tls/tlscacerts/tls-localhost-"
+                        + str(orgcert.ca.serverport)
+                        + "-"
+                        + orgcert.ca.name.replace(".", "-")
+                        + "-"
+                        + self.domain.name.replace(".", "-")
+                        + ".pem",
+                        "CORE_TLS_CLIENT_KEY_FILE": "/etc/hyperledger/fabric/msp/msp/keystore/"
+                        + keystoreclient,
+                        "CORE_TLS_CLIENT_CERT_FILE": "/etc/hyperledger/fabric/msp/signcert/cert.pem",
+                        "CORE_TLS_CLIENT_KEY_PATH": "/etc/hyperledger/fabric/msp/msp/keystore/"
+                        + keystoreclient,
+                        "CORE_TLS_CLIENT_CERT_PATH": "/etc/hyperledger/fabric/msp/signcert/cert.pem",
+                        "CORE_PEER_TLS_ROOTCERT_FILE": "/etc/hyperledger/fabric/tls/ca.crt",
+                        "CORE_PEER_LOCALMSPID": orgcert.name + "MSP",
                         "PATH": "/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
                         "CC_SERVER_PORT": self.chaincode.ccport,
                     }
+
+                    volumes = [
+                        (peerpath, "/etc/hyperledger/fabric/"),
+                    ]
 
                 whales.run(
                     image=self.chaincodename + "_ccaas_image:latest",
@@ -426,6 +497,7 @@ class ChaincodeDeploy:
                     detach=True,
                     init=True,
                     tty=True,
+                    volumes=volumes,
                 )
 
                 console.print("# Waiting Container...")
