@@ -81,7 +81,9 @@ Before you begin, make sure you have the following prerequisites:
 
 7. If your chaincode folder was inside **chaincodes**, you see its name with a number as option. Select it.
 
-8. Watch the magic happens...
+8. Set other chaincode definitions like if it need to invoke an initial function, name of initial function and connection port.
+
+9. Watch the magic happens...
 
 ## Fixing docker permissions
 
