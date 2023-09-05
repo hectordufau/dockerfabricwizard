@@ -48,6 +48,9 @@ class Build:
         rmfolders = str(Path("domains/" + self.domain.name + "/ordererOrganizations"))
         os.system("rm -fR " + rmfolders)
 
+        rmfolders = str(Path("domains/" + self.domain.name + "/chaincodecrypto"))
+        os.system("rm -fR " + rmfolders)
+
         rmfolders = str(Path("domains/" + self.domain.name + "/channel-artifacts"))
         os.system("rm -fR " + rmfolders)
 
@@ -69,6 +72,9 @@ class Build:
             + self.domain.orderer.name
         )
         pathorderer.mkdir(parents=True, exist_ok=True)
+
+        pathchaincode = Path("domains/" + self.domain.name + "/chaincodecrypto")
+        pathchaincode.mkdir(parents=True, exist_ok=True)
 
         for org in self.domain.organizations:
             self.buildFoldersOrg(org)
@@ -489,6 +495,79 @@ class Build:
             configpath + "/config.yaml",
             str(Path().absolute()) + "/" + str(adminpath) + "/config.yaml",
         )
+
+        console.print("[bold]## Registering chaincode user[/]")
+        os.system(
+            str(Path().absolute())
+            + "/bin/fabric-ca-client register "
+            + " --caname "
+            + self.domain.ca.name
+            + "."
+            + self.domain.name
+            + " --id.name chaincode"
+            + " --id.secret chaincodepw"
+            + " --id.type peer "
+            + " --tls.certfiles "
+            + str(Path().absolute())
+            + "/"
+            + str(pathfabriccaorderer)
+            + "/ca-cert.pem"
+        )
+
+        console.print("[bold]## Generating the chaincode-tls certificates[/]")
+        chaincodetlspath = Path("domains/" + self.domain.name + "/chaincodecrypto/tls")
+        os.system(
+            str(Path().absolute())
+            + "/bin/fabric-ca-client enroll "
+            + " -u https://chaincode:chaincodepw@localhost:"
+            + str(self.domain.ca.serverport)
+            + " --caname "
+            + self.domain.ca.name
+            + "."
+            + self.domain.name
+            + " -M "
+            + str(Path().absolute())
+            + "/"
+            + str(chaincodetlspath)
+            + " --enrollment.profile tls --csr.hosts localhost"
+            + " --tls.certfiles "
+            + str(Path().absolute())
+            + "/"
+            + str(pathfabriccaorderer)
+            + "/ca-cert.pem"
+        )
+
+        shutil.copy(
+            str(Path().absolute())
+            + "/"
+            + str(chaincodetlspath)
+            + "/signcerts/cert.pem",
+            str(Path().absolute()) + "/" + str(chaincodetlspath) + "/client.crt",
+        )
+
+        for file_name in os.listdir(
+            str(Path().absolute()) + "/" + str(chaincodetlspath) + "/tlscacerts/"
+        ):
+            shutil.copy(
+                str(Path().absolute())
+                + "/"
+                + str(tlspath)
+                + "/tlscacerts/"
+                + file_name,
+                str(Path().absolute()) + "/" + str(chaincodetlspath) + "/ca.crt",
+            )
+
+        for file_name in os.listdir(
+            str(Path().absolute()) + "/" + str(chaincodetlspath) + "/keystore/"
+        ):
+            shutil.copy(
+                str(Path().absolute())
+                + "/"
+                + str(chaincodetlspath)
+                + "/keystore/"
+                + file_name,
+                str(Path().absolute()) + "/" + str(chaincodetlspath) + "/client.key",
+            )
 
     def buildIdentitiesOrg(self, org: Organization):
         console.print("[bold white]## Registering organization " + org.name + "[/]")
@@ -1481,7 +1560,7 @@ class Build:
                 + self.domain.name
                 + "/peerOrganizations/"
                 + org.name
-                + "/msp/orderer"
+                + "/msp/orderer",
             )
 
             dir_path = str(Path().absolute()) + "/" + str(mspadminpath) + "/keystore/"

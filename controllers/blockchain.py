@@ -106,7 +106,9 @@ class Blockchain:
         datacfg["Organizations"][0]["AnchorPeers"] = []
         datacfg["Application"]["Organizations"] = []
 
-        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"]["Organizations"] = [datacfg["Organizations"][0]]
+        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"]["Organizations"] = [
+            datacfg["Organizations"][0]
+        ]
         datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"][
             "Capabilities"
         ] = datacfg["Capabilities"]["Orderer"]

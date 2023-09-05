@@ -183,11 +183,11 @@ class Firefly:
 
     def deployFFChaincode(self):
         console.print("[bold white]# Deploy Firefly chaincode[/]")
-        # fireflycc = str(Path().absolute()) + "/chaincodes/firefly"
         chaincode = Chaincode()
         chaincode.name = "firefly"
         chaincode.ccport = 9999
         chaincode.invoke = False
+        chaincode.usetls = False
         chaincodedeploy = ChaincodeDeploy(self.domain, chaincode)
         chaincodedeploy.buildFirefly()
 

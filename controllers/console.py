@@ -1128,7 +1128,7 @@ class ConsoleOutput:
         portlist.append(domain.orderer.adminlistenport)
         portlist.append(domain.orderer.generallistenport)
         portlist.append(domain.orderer.operationslistenport)
-        portlist.append(9999) # Exclusive for Firefly chaincode
+        portlist.append(9999)  # Exclusive for Firefly chaincode
         for org in domain.organizations:
             portlist.append(org.ca.serverport)
             portlist.append(org.ca.operationslistenport)
@@ -1210,10 +1210,11 @@ class ConsoleOutput:
                 )
                 if ccfunction.lower() == "q":
                     self.networkSelected(domain.name)
+                    break
             chaincode.function = ccfunction
             console.print("")
 
-        ccportn = console.input("[bold]Chaincode Port Number (ex. 1999):[/] ")
+        ccportn = console.input("[bold]Chaincode Port Number (ex. "+str(ccport)+"):[/] ")
         if ccportn.lower() == "q":
             self.networkSelected(domain.name)
         valueport = 0
@@ -1223,6 +1224,7 @@ class ConsoleOutput:
             )
             if ccportn.lower() == "q":
                 self.networkSelected(domain.name)
+                break
         valueport = int(ccportn)
 
         validport = True
@@ -1234,6 +1236,7 @@ class ConsoleOutput:
                 )
                 if ccportn.lower() == "q":
                     self.networkSelected(domain.name)
+                    break
                 valueport = int(ccportn)
             else:
                 validport = False
@@ -1246,12 +1249,41 @@ class ConsoleOutput:
             )
             if ccportn.lower() == "q":
                 self.networkSelected(domain.name)
+                break
             while not ccportn.isdigit():
                 valueport = 0
             valueport = int(ccportn)
 
         chaincode.ccport = valueport
         console.print("")
+
+        hastls = console.input("[bold white]Use TLS Connection (y/n):[/] ")
+        tls = False
+        selected = True
+        while selected:
+            if hastls.lower() == "y":
+                selected = False
+                tls = True
+                console.print("")
+            elif hastls.lower() == "n":
+                selected = False
+                console.print("")
+            elif hastls.lower() == "p":
+                selected = False
+                console.print("")
+                self.networkSelected(domain.name)
+            elif hastls.lower() == "q":
+                selected = False
+                console.print("")
+                exit(0)
+            else:
+                hastls = console.input(
+                    "[bold red]Wrong option.[/] [bold white]Use TLS Connection (y/n):[/] "
+                )
+                console.print("")
+
+        chaincode.usetls = tls
+
         self.chaincodeSelected(domain, chaincode)
 
     def chaincodeSelected(self, domain: Domain, chaincode: Chaincode):
