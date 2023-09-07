@@ -5,11 +5,13 @@ from pathlib import Path
 from python_on_whales import DockerClient
 from rich.console import Console
 
+from controllers.header import Header
 from models.domain import Domain
 from models.organization import Organization
 from models.peer import Peer
 
 console = Console()
+header = Header()
 
 
 class Run:
@@ -17,6 +19,8 @@ class Run:
         self.domain: Domain = domain
 
     def runAll(self):
+        os.system("clear")
+        header.header()
         console.print("[bold orange1]RUN[/]")
         console.print("")
         console.print("[bold green]Starting network[/]")

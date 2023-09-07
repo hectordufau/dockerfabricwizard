@@ -11,6 +11,7 @@ from controllers.blockchain import Blockchain
 from controllers.build import Build
 from controllers.chaincode import ChaincodeDeploy
 from controllers.firefly import Firefly
+from controllers.header import Header
 from controllers.requirements import Requirements
 from controllers.run import Run
 from models.ca import Ca
@@ -22,6 +23,7 @@ from models.organization import Organization
 from models.peer import Peer
 
 console = Console()
+header = Header()
 
 
 class ConsoleOutput:
@@ -34,39 +36,9 @@ class ConsoleOutput:
         requirements.checkAll()
         self.mainMenu()
 
-    def header(self):
-        console.print(
-            """[blue]
-        ██████████                     █████                        
-        ░███░░░░███                   ░░███                         
-        ░███   ░░███  ██████   ██████  ░███ █████  ██████  ████████ 
-        ░███    ░███ ███░░███ ███░░███ ░███░░███  ███░░███░░███░░███
-        ░███    ░███░███ ░███░███ ░░░  ░██████░  ░███████  ░███ ░░░ 
-        ░███    ███ ░███ ░███░███  ███ ░███░░███ ░███░░░   ░███     
-        ██████████  ░░██████ ░░██████  ████ █████░░██████  █████    
-        ░░░░░░░░░░    ░░░░░░   ░░░░░░  ░░░░ ░░░░░  ░░░░░░  ░░░░░[/]
-        [red]
-        ███████████           █████                ███              
-        ░███░░░░░░█           ░███                ░░░               
-        ░███   █ ░   ██████   ░███████  ████████  ████   ██████     
-        ░███████    ░░░░░███  ░███░░███░░███░░███░░███  ███░░███    
-        ░███░░░█     ███████  ░███ ░███ ░███ ░░░  ░███ ░███ ░░░     
-        ░███  ░     ███░░███  ░███ ░███ ░███      ░███ ░███  ███    
-        █████      ░░████████ ████████  █████     █████░░██████     
-        ░░░░░        ░░░░░░░░ ░░░░░░░░  ░░░░░     ░░░░░  ░░░░░░[/]
-        """
-        )
-        console.print("")
-        console.print("[bold]Welcome to the DockerFabric Wizard![/]")
-        console.print("")
-        console.print(
-            "You will guided during all Hyperledger Fabric deployment. Let's start..."
-        )
-        console.print("")
-
     def questions(self):
         os.system("clear")
-        self.header()
+        header.header()
         portlist: List[int] = []
 
         console.print("[bold orange1]NEW NETWORK[/]")
@@ -127,7 +99,7 @@ class ConsoleOutput:
         self.domain.orderer = ordererdomain
 
         cadomain = Ca()
-        cadomain.name = "caorderer"
+        cadomain.name = "ca.orderer"
         cadomain.FABRIC_CA_SERVER_CA_NAME = cadomain.name
         cadomain.volumes = "".join(
             [
@@ -320,7 +292,7 @@ class ConsoleOutput:
 
                 database = Database()
                 database.port = portcouchdb
-                database.name = "peer" + str(ipeers) + org.name + "db"
+                database.name = "db.peer" + str(ipeers)+"." + org.name
                 database.COUCHDB_USER = "admin"
                 database.COUCHDB_PASSWORD = "adminpw"
 
@@ -390,7 +362,7 @@ class ConsoleOutput:
 
     def createOrganization(self, domain: Domain):
         os.system("clear")
-        self.header()
+        header.header()
         portlist: List[int] = []
 
         console.print("[bold orange1]NEW ORGANIZATION[/]")
@@ -570,7 +542,7 @@ class ConsoleOutput:
 
             database = Database()
             database.port = portcouchdb
-            database.name = "peer" + str(ipeers) + org.name + "db"
+            database.name = "db.peer" + str(ipeers)+"." + org.name
             database.COUCHDB_USER = "admin"
             database.COUCHDB_PASSWORD = "adminpw"
 
@@ -730,7 +702,7 @@ class ConsoleOutput:
 
         database = Database()
         database.port = portcouchdb
-        database.name = "peer" + str(ipeers) + org.name + "db"
+        database.name = "db.peer" + str(ipeers)+"." + org.name
         database.COUCHDB_USER = "admin"
         database.COUCHDB_PASSWORD = "adminpw"
 
@@ -778,7 +750,7 @@ class ConsoleOutput:
 
     def mainMenu(self):
         os.system("clear")
-        self.header()
+        header.header()
         console.print("[bold orange1]MENU[/]")
         console.print("")
         console.print("[bold white]N - New network[/]")
@@ -814,7 +786,7 @@ class ConsoleOutput:
 
     def checkDockerStatus(self, domain: Domain = None):
         os.system("clear")
-        self.header()
+        header.header()
         console.print("[bold orange1]DOCKER STATUS[/]")
         console.print("")
         console.print("[bold]Containers[/]")
@@ -859,7 +831,7 @@ class ConsoleOutput:
 
     def cleanDockerAll(self, domain: Domain = None):
         os.system("clear")
-        self.header()
+        header.header()
         console.print("[bold orange1]DOCKER CLEANING[/]")
         console.print("")
         console.print("[bold green]Removing all Docker resources[/]")
@@ -896,7 +868,7 @@ class ConsoleOutput:
 
     def selectNetwork(self):
         os.system("clear")
-        self.header()
+        header.header()
         console.print("[bold orange1]SELECT A NETWORK[/]")
         console.print("")
         dirdomains = "".join(
@@ -939,7 +911,7 @@ class ConsoleOutput:
 
     def selectOrganization(self, domain: Domain):
         os.system("clear")
-        self.header()
+        header.header()
         console.print("[bold orange1]ADDING A PEER[/]")
         console.print("")
 
@@ -972,7 +944,7 @@ class ConsoleOutput:
 
     def networkSelected(self, network: str):
         os.system("clear")
-        self.header()
+        header.header()
         console.print("[bold orange1]NETWORK " + network + "[/]")
         console.print("")
         console.print("[bold white]N - Network status[/]")
@@ -1109,7 +1081,7 @@ class ConsoleOutput:
 
     def selectChaincode(self, domain: Domain):
         os.system("clear")
-        self.header()
+        header.header()
         console.print("[bold orange1]SELECT A CHAINCODE[/]")
         console.print("")
         dirchaincodes = "".join(
@@ -1173,118 +1145,163 @@ class ConsoleOutput:
                 )
                 console.print("")
 
-        hasinit = console.input("[bold white]Invoke init function required (y/n):[/] ")
-        invoke = False
-        selected = True
-        while selected:
-            if hasinit.lower() == "y":
-                selected = False
-                invoke = True
-                console.print("")
-            elif hasinit.lower() == "n":
-                selected = False
-                console.print("")
-            elif hasinit.lower() == "p":
-                selected = False
-                console.print("")
-                self.networkSelected(domain.name)
-            elif hasinit.lower() == "q":
-                selected = False
-                console.print("")
-                exit(0)
-            else:
-                hasinit = console.input(
-                    "[bold red]Wrong option.[/] [bold white]Invoke init function required (y/n):[/] "
-                )
-                console.print("")
+        builded = False
+        for cc in domain.chaincodes:
+            if chaincode.name == cc.name:
+                builded = True
+                chaincode = cc
 
-        chaincode.invoke = invoke
+        previous = False
+        if builded:
+            useprevious = console.input(
+                "[bold white]This chaincode was installed previously. Do you want to use same config? (y/n):[/] "
+            )
 
-        if invoke:
-            ccfunction = console.input("[bold]Invoke function name:[/] ")
-            if ccfunction.lower() == "q":
-                self.networkSelected(domain.name)
-            while not ccfunction.isalpha():
-                ccfunction = console.input(
-                    "[bold red]Invoke function name not valid. Please retype again:[/] "
-                )
+            selected = True
+            while selected:
+                if useprevious.lower() == "y":
+                    selected = False
+                    previous = True
+                    console.print("")
+                elif useprevious.lower() == "n":
+                    selected = False
+                    previous = False
+                    console.print("")
+                elif useprevious.lower() == "p":
+                    selected = False
+                    console.print("")
+                    self.networkSelected(domain.name)
+                elif useprevious.lower() == "q":
+                    selected = False
+                    console.print("")
+                    exit(0)
+                else:
+                    useprevious = console.input(
+                        "[bold red]Wrong option.[/] [bold white]Do you want to use same config? (y/n):[/] "
+                    )
+                    console.print("")
+
+        if previous:
+            self.chaincodeSelected(domain, chaincode)
+        else:
+            hasinit = console.input(
+                "[bold white]Invoke init function required (y/n):[/] "
+            )
+            invoke = False
+            selected = True
+            while selected:
+                if hasinit.lower() == "y":
+                    selected = False
+                    invoke = True
+                    console.print("")
+                elif hasinit.lower() == "n":
+                    selected = False
+                    console.print("")
+                elif hasinit.lower() == "p":
+                    selected = False
+                    console.print("")
+                    self.networkSelected(domain.name)
+                elif hasinit.lower() == "q":
+                    selected = False
+                    console.print("")
+                    exit(0)
+                else:
+                    hasinit = console.input(
+                        "[bold red]Wrong option.[/] [bold white]Invoke init function required (y/n):[/] "
+                    )
+                    console.print("")
+
+            chaincode.invoke = invoke
+
+            if invoke:
+                ccfunction = console.input("[bold]Invoke function name:[/] ")
                 if ccfunction.lower() == "q":
                     self.networkSelected(domain.name)
-                    break
-            chaincode.function = ccfunction
-            console.print("")
+                while not ccfunction.isalpha():
+                    ccfunction = console.input(
+                        "[bold red]Invoke function name not valid. Please retype again:[/] "
+                    )
+                    if ccfunction.lower() == "q":
+                        self.networkSelected(domain.name)
+                        break
+                chaincode.function = ccfunction
+                console.print("")
 
-        ccportn = console.input("[bold]Chaincode Port Number (ex. "+str(ccport)+"):[/] ")
-        if ccportn.lower() == "q":
-            self.networkSelected(domain.name)
-        valueport = 0
-        while not ccportn.isdigit():
-            ccportn = console.input(
-                "[bold red]Chaincode Port Number value not valid. Please retype again:[/] "
-            )
-            if ccportn.lower() == "q":
-                self.networkSelected(domain.name)
-                break
-        valueport = int(ccportn)
-
-        validport = True
-        while validport:
-            if valueport in portlist:
-                validport = True
+            if not builded:
                 ccportn = console.input(
-                    "[bold red]Chaincode Port Number value in use. Please retype again:[/] "
+                    "[bold]Chaincode Port Number (ex. " + str(ccport) + "):[/] "
                 )
                 if ccportn.lower() == "q":
                     self.networkSelected(domain.name)
-                    break
-                valueport = int(ccportn)
-            else:
-                validport = False
-
-        while not validators.between(valueport, min=ccport, max=65535):
-            ccportn = console.input(
-                "[bold red]Chaincode Port Number value not valid, min "
-                + str(ccport)
-                + ". Please retype again:[/] "
-            )
-            if ccportn.lower() == "q":
-                self.networkSelected(domain.name)
-                break
-            while not ccportn.isdigit():
                 valueport = 0
-            valueport = int(ccportn)
+                while not ccportn.isdigit():
+                    ccportn = console.input(
+                        "[bold red]Chaincode Port Number value not valid. Please retype again:[/] "
+                    )
+                    if ccportn.lower() == "q":
+                        self.networkSelected(domain.name)
+                        break
+                valueport = int(ccportn)
 
-        chaincode.ccport = valueport
-        console.print("")
+                validport = True
+                while validport:
+                    if valueport in portlist:
+                        validport = True
+                        ccportn = console.input(
+                            "[bold red]Chaincode Port Number value in use. Please retype again:[/] "
+                        )
+                        if ccportn.lower() == "q":
+                            self.networkSelected(domain.name)
+                            break
+                        valueport = int(ccportn)
+                    else:
+                        validport = False
 
-        hastls = console.input("[bold white]Use TLS Connection (y/n):[/] ")
-        tls = False
-        selected = True
-        while selected:
-            if hastls.lower() == "y":
-                selected = False
-                tls = True
-                console.print("")
-            elif hastls.lower() == "n":
-                selected = False
-                console.print("")
-            elif hastls.lower() == "p":
-                selected = False
-                console.print("")
-                self.networkSelected(domain.name)
-            elif hastls.lower() == "q":
-                selected = False
-                console.print("")
-                exit(0)
-            else:
-                hastls = console.input(
-                    "[bold red]Wrong option.[/] [bold white]Use TLS Connection (y/n):[/] "
-                )
+                while not validators.between(valueport, min=ccport, max=65535):
+                    ccportn = console.input(
+                        "[bold red]Chaincode Port Number value not valid, min "
+                        + str(ccport)
+                        + ". Please retype again:[/] "
+                    )
+                    if ccportn.lower() == "q":
+                        self.networkSelected(domain.name)
+                        break
+                    while not ccportn.isdigit():
+                        valueport = 0
+                    valueport = int(ccportn)
+
+                chaincode.ccport = valueport
                 console.print("")
 
-        chaincode.usetls = tls
+            """ hastls = console.input("[bold white]Use TLS Connection (y/n):[/] ")
+            tls = False
+            selected = True
+            while selected:
+                if hastls.lower() == "y":
+                    selected = False
+                    tls = True
+                    console.print("")
+                elif hastls.lower() == "n":
+                    selected = False
+                    console.print("")
+                elif hastls.lower() == "p":
+                    selected = False
+                    console.print("")
+                    self.networkSelected(domain.name)
+                elif hastls.lower() == "q":
+                    selected = False
+                    console.print("")
+                    exit(0)
+                else:
+                    hastls = console.input(
+                        "[bold red]Wrong option.[/] [bold white]Use TLS Connection (y/n):[/] "
+                    )
+                    console.print("")
 
-        self.chaincodeSelected(domain, chaincode)
+            chaincode.usetls = tls """
+            chaincode.usetls = False
+
+            self.chaincodeSelected(domain, chaincode)
 
     def chaincodeSelected(self, domain: Domain, chaincode: Chaincode):
         chaincode = ChaincodeDeploy(domain, chaincode)

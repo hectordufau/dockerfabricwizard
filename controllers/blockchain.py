@@ -8,6 +8,7 @@ import docker
 import ruamel.yaml
 from rich.console import Console
 
+from controllers.header import Header
 from models.domain import Domain
 from models.organization import Organization
 from models.peer import Peer
@@ -17,6 +18,7 @@ yaml.indent(sequence=3, offset=1)
 yaml.boolean_representation = [f"false", f"true"]
 console = Console()
 client = docker.from_env()
+header = Header()
 
 
 class Blockchain:
@@ -24,6 +26,8 @@ class Blockchain:
         self.domain: Domain = domain
 
     def buildAll(self):
+        os.system("clear")
+        header.header()
         console.print("[bold orange1]BLOCKCHAIN[/]")
         console.print("")
         self.genesisBlock()
@@ -50,17 +54,6 @@ class Blockchain:
 
         with open(config + "configtx.yaml", encoding="utf-8") as cftx:
             datacfg = yaml.load(cftx)
-
-        """ datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"]["Organizations"][0][
-            "Policies"
-        ]["Admins"]["Rule"] = (
-            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
-        )
-        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"]["Organizations"][
-            0
-        ]["Policies"]["Admins"]["Rule"] = (
-            "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
-        ) """
 
         datacfg["Organizations"][0][
             "Name"
@@ -390,7 +383,8 @@ class Blockchain:
         time.sleep(5)
 
     def buildNewOrganization(self, org: Organization):
-        console.print("")
+        os.system("clear")
+        consoleoutput.header()
         console.print("[bold orange1]BLOCKCHAIN[/]")
         console.print("")
         console.print("[bold white]# Creating org configtx file[/]")
@@ -848,6 +842,8 @@ class Blockchain:
         os.system("rm -fR " + build)
 
     def rebuild(self):
+        os.system("clear")
+        header.header()
         console.print("[bold orange1]BLOCKCHAIN[/]")
         console.print("")
         self.createChannel()

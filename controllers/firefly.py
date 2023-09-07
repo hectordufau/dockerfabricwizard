@@ -7,6 +7,7 @@ import ruamel.yaml
 from rich.console import Console
 
 from controllers.chaincode import ChaincodeDeploy
+from controllers.header import Header
 from models.chaincode import Chaincode
 from models.domain import Domain
 
@@ -14,6 +15,7 @@ console = Console()
 yaml = ruamel.yaml.YAML()
 yaml.indent(sequence=3, offset=2)
 yaml.boolean_representation = [f"false", f"true"]
+header = Header()
 
 
 class Firefly:
@@ -21,6 +23,8 @@ class Firefly:
         self.domain: Domain = domain
 
     def buildAll(self):
+        os.system("clear")
+        header.header()
         console.print("[bold orange1]FIREFLY[/]")
         console.print("")
         if self.checkInstall():

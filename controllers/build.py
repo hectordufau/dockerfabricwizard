@@ -8,6 +8,7 @@ from python_on_whales import docker
 from rich.console import Console
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 
+from controllers.header import Header
 from controllers.run import Run
 from models.domain import Domain
 from models.organization import Organization
@@ -17,6 +18,7 @@ yaml = ruamel.yaml.YAML()
 yaml.indent(sequence=3, offset=2)
 yaml.boolean_representation = [f"false", f"true"]
 console = Console()
+header = Header()
 
 
 class Build:
@@ -24,6 +26,8 @@ class Build:
         self.domain: Domain = domain
 
     def buildAll(self):
+        os.system("clear")
+        header.header()
         console.print("[bold orange1]BUILD[/]")
         console.print("")
         self.buildFolders()
@@ -130,6 +134,9 @@ class Build:
         }
 
         caorderer = {
+            "hostname": self.domain.ca.FABRIC_CA_SERVER_CA_NAME
+            + "."
+            + self.domain.name,
             "image": "hyperledger/fabric-ca:latest",
             "user": str(os.geteuid()) + ":" + str(os.getgid()),
             "labels": {"service": "hyperledger-fabric"},
@@ -146,7 +153,9 @@ class Build:
                 + self.domain.ca.FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS,
             ],
             "ports": ["0", "1"],
-            "command": "sh -c 'fabric-ca-server start -b admin:adminpw -d'",
+            "command": "sh -c 'fabric-ca-server start -b admin:adminpw --csr.cn "
+            + self.domain.ca.name
+            + " -d'",
             "volumes": [self.domain.ca.volumes],
             "container_name": self.domain.ca.name + "." + self.domain.name,
             "networks": [self.domain.networkname],
@@ -163,6 +172,7 @@ class Build:
 
         for org in self.domain.organizations:
             caorg = {
+                "hostname": org.ca.FABRIC_CA_SERVER_CA_NAME + "." + self.domain.name,
                 "image": "hyperledger/fabric-ca:latest",
                 "user": str(os.geteuid()) + ":" + str(os.getgid()),
                 "labels": {"service": "hyperledger-fabric"},
@@ -179,7 +189,9 @@ class Build:
                     + org.ca.FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS,
                 ],
                 "ports": ["0", "1"],
-                "command": "sh -c 'fabric-ca-server start -b admin:adminpw -d'",
+                "command": "sh -c 'fabric-ca-server start -b admin:adminpw --csr.cn "
+                + org.ca.name
+                + " -d'",
                 "volumes": [org.ca.volumes],
                 "container_name": org.ca.name + "." + self.domain.name,
                 "networks": [self.domain.networkname],
@@ -497,6 +509,14 @@ class Build:
         )
 
         console.print("[bold]## Registering chaincode user[/]")
+
+        cccryptopath = (
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
+            + "/chaincodecrypto/"
+        )
+
         os.system(
             str(Path().absolute())
             + "/bin/fabric-ca-client register "
@@ -515,7 +535,8 @@ class Build:
         )
 
         console.print("[bold]## Generating the chaincode-tls certificates[/]")
-        chaincodetlspath = Path("domains/" + self.domain.name + "/chaincodecrypto/tls")
+        tlspath = cccryptopath + "tls"
+
         os.system(
             str(Path().absolute())
             + "/bin/fabric-ca-client enroll "
@@ -526,9 +547,7 @@ class Build:
             + "."
             + self.domain.name
             + " -M "
-            + str(Path().absolute())
-            + "/"
-            + str(chaincodetlspath)
+            + tlspath
             + " --enrollment.profile tls --csr.hosts localhost"
             + " --tls.certfiles "
             + str(Path().absolute())
@@ -538,35 +557,20 @@ class Build:
         )
 
         shutil.copy(
-            str(Path().absolute())
-            + "/"
-            + str(chaincodetlspath)
-            + "/signcerts/cert.pem",
-            str(Path().absolute()) + "/" + str(chaincodetlspath) + "/client.crt",
+            str(tlspath) + "/signcerts/cert.pem",
+            str(tlspath) + "/server.crt",
         )
 
-        for file_name in os.listdir(
-            str(Path().absolute()) + "/" + str(chaincodetlspath) + "/tlscacerts/"
-        ):
+        for file_name in os.listdir(str(tlspath) + "/tlscacerts/"):
             shutil.copy(
-                str(Path().absolute())
-                + "/"
-                + str(tlspath)
-                + "/tlscacerts/"
-                + file_name,
-                str(Path().absolute()) + "/" + str(chaincodetlspath) + "/ca.crt",
+                str(tlspath) + "/tlscacerts/" + file_name,
+                str(tlspath) + "/ca.crt",
             )
 
-        for file_name in os.listdir(
-            str(Path().absolute()) + "/" + str(chaincodetlspath) + "/keystore/"
-        ):
+        for file_name in os.listdir(str(tlspath) + "/keystore/"):
             shutil.copy(
-                str(Path().absolute())
-                + "/"
-                + str(chaincodetlspath)
-                + "/keystore/"
-                + file_name,
-                str(Path().absolute()) + "/" + str(chaincodetlspath) + "/client.key",
+                str(tlspath) + "/keystore/" + file_name,
+                str(tlspath) + "/server.key",
             )
 
     def buildIdentitiesOrg(self, org: Organization):
@@ -1123,6 +1127,7 @@ class Build:
         for org in self.domain.organizations:
             for peer in org.peers:
                 peerdata = {
+                    "hostname":peer.name + "." + self.domain.name,
                     "container_name": peer.name + "." + self.domain.name,
                     "image": "hyperledger/fabric-peer:latest",
                     "labels": {"service": "hyperledger-fabric"},
@@ -1232,6 +1237,7 @@ class Build:
 
         for peer in org.peers:
             peerdata = {
+                "hostname":peer.name + "." + self.domain.name,
                 "container_name": peer.name + "." + self.domain.name,
                 "image": "hyperledger/fabric-peer:latest",
                 "labels": {"service": "hyperledger-fabric"},
