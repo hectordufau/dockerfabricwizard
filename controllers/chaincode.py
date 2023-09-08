@@ -638,7 +638,7 @@ class ChaincodeDeploy:
                 + self.domain.name
                 + "/fabric-ca/"
                 + org.ca.name
-                + "/tls-cert.pem"
+                + "/ca-cert.pem"
             )
 
             pathorg = (
@@ -687,14 +687,16 @@ class ChaincodeDeploy:
                 + self.domain.name
                 + " -M "
                 + str(msppath)
-                + " --csr.hosts "
+                + " --csr.cn "
                 + chaincodehost
                 + " --csr.hosts "
+                + chaincodehost
+                + ","
                 + peer.name.replace(".", "")
                 + "."
                 + chaincode.name
                 + ".ccaas"
-                + " --csr.hosts localhost"
+                + ",localhost"
                 + " --tls.certfiles "
                 + pathfabriccaorg
             )
@@ -715,14 +717,16 @@ class ChaincodeDeploy:
                 + self.domain.name
                 + " -M "
                 + str(tlspath)
+                + " --csr.cn "
+                + chaincodehost
                 + " --enrollment.profile tls --csr.hosts "
                 + chaincodehost
-                + " --csr.hosts "
+                + ","
                 + peer.name.replace(".", "")
                 + "."
                 + chaincode.name
                 + ".ccaas"
-                + " --csr.hosts localhost"
+                + ",localhost"
                 + " --tls.certfiles "
                 + pathfabriccaorg
             )
