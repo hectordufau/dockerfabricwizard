@@ -474,7 +474,7 @@ class ChaincodeDeploy:
             "CHAINCODE_SERVER_ADDRESS": "0.0.0.0:" + str(self.chaincode.ccport),
             "CORE_CHAINCODE_ID_NAME": self.packageid,
             "CORE_PEER_TLS_ENABLED": self.chaincode.usetls,
-            #"CORE_PEER_TLS_ENABLED": True,
+            # "CORE_PEER_TLS_ENABLED": True,
             "CORE_PEER_CHAINCODEADDRESS": peer.name
             + "."
             + self.domain.name
@@ -537,15 +537,15 @@ class ChaincodeDeploy:
 
         console.print("# Waiting Chaincode Container...")
         time.sleep(2)
-        whales.container.pause(container)
+        # whales.container.pause(container)
 
         # Waiting Peer Container
-        console.print("# Waiting Peer Container...")
-        peercontainer = whales.container.inspect(peer.name + "." + self.domain.name)
-        whales.container.restart(peercontainer)
-        time.sleep(1)
+        # console.print("# Waiting Peer Container...")
+        # peercontainer = whales.container.inspect(peer.name + "." + self.domain.name)
+        # whales.container.restart(peercontainer)
+        # time.sleep(1)
 
-        whales.container.unpause(container)
+        # whales.container.unpause(container)
 
     def chaincodeInvokeInit(self, org: Organization, peer: Peer):
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name

@@ -187,13 +187,12 @@ Would you like to contribute with a donation?
 ### Todo
 
 - [ ] Remove chaincode
-- [ ] Reinstall chaincode
-- [ ] Set chaincode invoke initial function name
 - [ ] Improve code (I guess it is a mess!)
+- [ ] Firefly integration (incomplete, because external chaincode TLS use is a challenge now.)
 
 ### In Progress
 
-- [ ] Firefly integration (ready soon!)
+- [ ] External chaincode TLS use
 
 ### Done ✓
 
@@ -222,10 +221,13 @@ Would you like to contribute with a donation?
    - [x] Add organization
    - [x] Add peer
 - [x] Restore network from config file
-- [x] Chaincode as a Service installer
+- [x] Chaincode as a Service installer (external chaincode)
    - [x] Typescript chaincode
    - [x] Java chaincode
    - [x] Go chaincode
+- [x] Set external chaincode invoke initial function name
+- [x] Set external chaincode port use
+- [x] Reinstall chaincode
 
 ## License
 
