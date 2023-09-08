@@ -119,7 +119,7 @@ class Firefly:
                             "path": "/etc/firefly/organizations/orderer/tls/tlscacerts/tls-localhost-"
                             + str(self.domain.ca.serverport)
                             + "-"
-                            + self.domain.ca.name
+                            + self.domain.ca.name.replace(".", "-")
                             + "-"
                             + self.domain.name.replace(".", "-")
                             + ".pem"
@@ -191,7 +191,7 @@ class Firefly:
         chaincode.name = "firefly"
         chaincode.ccport = 9999
         chaincode.invoke = False
-        chaincode.usetls = False
+        chaincode.usetls = True
         chaincodedeploy = ChaincodeDeploy(self.domain, chaincode)
         chaincodedeploy.buildFirefly()
 
@@ -235,7 +235,7 @@ class Firefly:
         override = {
             "version": "2.1",
             "networks": {
-                "default": {"name": self.domain.networkname, "external": True}
+                self.domain.networkname: {"name": self.domain.networkname}
             },
         }
 

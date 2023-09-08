@@ -146,6 +146,17 @@ class Build:
                 + self.domain.ca.FABRIC_CA_SERVER_CA_NAME
                 + "."
                 + self.domain.name,
+                "FABRIC_CA_SERVER_CSR_CN="
+                + self.domain.ca.name
+                + "."
+                + self.domain.name,
+                "FABRIC_CA_SERVER_CSR_HOSTS="
+                + self.domain.ca.name
+                + "."
+                + self.domain.name
+                + ","
+                + self.domain.ca.name
+                + ",localhost",
                 "FABRIC_CA_SERVER_TLS_ENABLED="
                 + str(self.domain.ca.FABRIC_CA_SERVER_TLS_ENABLED).lower(),
                 "FABRIC_CA_SERVER_PORT=" + str(self.domain.ca.FABRIC_CA_SERVER_PORT),
@@ -153,9 +164,7 @@ class Build:
                 + self.domain.ca.FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS,
             ],
             "ports": ["0", "1"],
-            "command": "sh -c 'fabric-ca-server start -b admin:adminpw --csr.cn "
-            + self.domain.ca.name
-            + " -d'",
+            "command": "sh -c 'fabric-ca-server start -b admin:adminpw -d'",
             "volumes": [self.domain.ca.volumes],
             "container_name": self.domain.ca.name + "." + self.domain.name,
             "networks": [self.domain.networkname],
@@ -182,6 +191,14 @@ class Build:
                     + org.ca.FABRIC_CA_SERVER_CA_NAME
                     + "."
                     + self.domain.name,
+                    "FABRIC_CA_SERVER_CSR_CN=" + org.ca.name + "." + self.domain.name,
+                    "FABRIC_CA_SERVER_CSR_HOSTS="
+                    + org.ca.name
+                    + "."
+                    + self.domain.name
+                    + ","
+                    + org.ca.name
+                    + ",localhost",
                     "FABRIC_CA_SERVER_TLS_ENABLED="
                     + str(org.ca.FABRIC_CA_SERVER_TLS_ENABLED).lower(),
                     "FABRIC_CA_SERVER_PORT=" + str(org.ca.FABRIC_CA_SERVER_PORT),
@@ -189,9 +206,7 @@ class Build:
                     + org.ca.FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS,
                 ],
                 "ports": ["0", "1"],
-                "command": "sh -c 'fabric-ca-server start -b admin:adminpw --csr.cn "
-                + org.ca.name
-                + " -d'",
+                "command": "sh -c 'fabric-ca-server start -b admin:adminpw -d'",
                 "volumes": [org.ca.volumes],
                 "container_name": org.ca.name + "." + self.domain.name,
                 "networks": [self.domain.networkname],
@@ -415,7 +430,13 @@ class Build:
             + self.domain.orderer.name
             + "."
             + self.domain.name
+            + " --csr.hosts "
+            + self.domain.orderer.name
             + " --csr.hosts localhost"
+            + " --myhost "
+            + self.domain.orderer.name
+            + "."
+            + self.domain.name
             + " --tls.certfiles "
             + str(Path().absolute())
             + "/"
@@ -526,7 +547,6 @@ class Build:
             + self.domain.name
             + " --id.name chaincode"
             + " --id.secret chaincodepw"
-            + " --id.type peer "
             + " --tls.certfiles "
             + str(Path().absolute())
             + "/"
@@ -842,7 +862,13 @@ class Build:
             + peer.name
             + "."
             + self.domain.name
+            + " --csr.hosts "
+            + peer.name
             + " --csr.hosts localhost"
+            + " --myhost "
+            + peer.name
+            + "."
+            + self.domain.name
             + " --tls.certfiles "
             + str(Path().absolute())
             + "/"
@@ -1127,7 +1153,7 @@ class Build:
         for org in self.domain.organizations:
             for peer in org.peers:
                 peerdata = {
-                    "hostname":peer.name + "." + self.domain.name,
+                    "hostname": peer.name + "." + self.domain.name,
                     "container_name": peer.name + "." + self.domain.name,
                     "image": "hyperledger/fabric-peer:latest",
                     "labels": {"service": "hyperledger-fabric"},
@@ -1173,7 +1199,7 @@ class Build:
                         + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD,
                         "CORE_METRICS_PROVIDER=prometheus",
                     ],
-                    "ports": ["0", "1"],
+                    "ports": ["0", "1", "2"],
                     "working_dir": "/opt/gopath/src/github.com/hyperledger/fabric/peer",
                     "command": "peer node start",
                     "volumes": peer.volumes,
@@ -1189,6 +1215,9 @@ class Build:
                 )
                 peerdata["ports"][1] = DoubleQuotedScalarString(
                     f'{str(peer.operationslistenport)+":"+str(peer.operationslistenport)}'
+                )
+                peerdata["ports"][2] = DoubleQuotedScalarString(
+                    f'{str(peer.chaincodelistenport)+":"+str(peer.chaincodelistenport)}'
                 )
 
                 clidata["depends_on"].append(peer.name + "." + self.domain.name)
@@ -1237,7 +1266,7 @@ class Build:
 
         for peer in org.peers:
             peerdata = {
-                "hostname":peer.name + "." + self.domain.name,
+                "hostname": peer.name + "." + self.domain.name,
                 "container_name": peer.name + "." + self.domain.name,
                 "image": "hyperledger/fabric-peer:latest",
                 "labels": {"service": "hyperledger-fabric"},
@@ -1280,7 +1309,7 @@ class Build:
                     + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD,
                     "CORE_METRICS_PROVIDER=prometheus",
                 ],
-                "ports": ["0", "1"],
+                "ports": ["0", "1", "2"],
                 "working_dir": "/root",
                 "command": "peer node start",
                 "volumes": peer.volumes,
@@ -1293,6 +1322,9 @@ class Build:
             )
             peerdata["ports"][1] = DoubleQuotedScalarString(
                 f'{str(peer.operationslistenport)+":"+str(peer.operationslistenport)}'
+            )
+            peerdata["ports"][2] = DoubleQuotedScalarString(
+                f'{str(peer.chaincodelistenport)+":"+str(peer.chaincodelistenport)}'
             )
 
             peerfile["volumes"][peer.name + "." + self.domain.name] = {}
@@ -1388,7 +1420,7 @@ class Build:
                 + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD,
                 "CORE_METRICS_PROVIDER=prometheus",
             ],
-            "ports": ["0", "1"],
+            "ports": ["0", "1", "2"],
             "working_dir": "/root",
             "command": "peer node start",
             "volumes": peer.volumes,
@@ -1401,6 +1433,9 @@ class Build:
         )
         peerdata["ports"][1] = DoubleQuotedScalarString(
             f'{str(peer.operationslistenport)+":"+str(peer.operationslistenport)}'
+        )
+        peerdata["ports"][2] = DoubleQuotedScalarString(
+            f'{str(peer.chaincodelistenport)+":"+str(peer.chaincodelistenport)}'
         )
 
         peerfile["volumes"][peer.name + "." + self.domain.name] = {}
@@ -1471,6 +1506,14 @@ class Build:
                 + org.ca.FABRIC_CA_SERVER_CA_NAME
                 + "."
                 + self.domain.name,
+                "FABRIC_CA_SERVER_CSR_CN=" + org.ca.name + "." + self.domain.name,
+                "FABRIC_CA_SERVER_CSR_HOSTS="
+                + org.ca.name
+                + "."
+                + self.domain.name
+                + ","
+                + org.ca.name
+                + ",localhost",
                 "FABRIC_CA_SERVER_TLS_ENABLED="
                 + str(org.ca.FABRIC_CA_SERVER_TLS_ENABLED).lower(),
                 "FABRIC_CA_SERVER_PORT=" + str(org.ca.FABRIC_CA_SERVER_PORT),

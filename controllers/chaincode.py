@@ -193,10 +193,10 @@ class ChaincodeDeploy:
             + str(self.chaincode.ccport),
             "dial_timeout": "30s",
             "tls_required": self.chaincode.usetls,
-            #"client_auth_required": False,
-            #"client_key": keydata,
-            #"client_cert": certdata,
-            #"root_cert": carootdata,
+            "client_auth_required": False,
+            "client_key": keydata,
+            "client_cert": certdata,
+            "root_cert": carootdata,
         }
 
         metadata = {
@@ -473,10 +473,27 @@ class ChaincodeDeploy:
             + str(peer.peerlistenport),
             "CHAINCODE_SERVER_ADDRESS": "0.0.0.0:" + str(self.chaincode.ccport),
             "CORE_CHAINCODE_ID_NAME": self.packageid,
-            #"CORE_PEER_TLS_ENABLED": self.chaincode.usetls,
-            #"CORE_PEER_TLS_ROOTCERT_FILE": "/etc/hyperledger/chaincode/tls/ca.crt",
-            #"CORE_TLS_CLIENT_KEY_FILE": "/etc/hyperledger/chaincode/tls/server.key",
-            #"CORE_TLS_CLIENT_CERT_FILE": "/etc/hyperledger/chaincode/tls/server.crt",
+            # "CORE_PEER_TLS_ENABLED": self.chaincode.usetls,
+            "CORE_PEER_TLS_ENABLED": True,
+            "CORE_PEER_CHAINCODEADDRESS": peer.name
+            + "."
+            + self.domain.name
+            + ":"
+            + str(peer.chaincodelistenport),
+            "CORE_PEER_TLS_ROOTCERT_FILE": "/etc/hyperledger/chaincode/tls/ca.crt",
+            "CORE_TLS_CLIENT_CERT_PATH": "/etc/hyperledger/chaincode/tls/server.crt",
+            "CORE_TLS_CLIENT_KEY_PATH": "/etc/hyperledger/chaincode/tls/server.key",
+            "CORE_TLS_CLIENT_CERT_FILE": "/etc/hyperledger/chaincode/msp/client_pem.crt",
+            "CORE_TLS_CLIENT_KEY_FILE": "/etc/hyperledger/chaincode/msp/client_pem.key",
+            "CORE_PEER_LOCALMSPID": org.name + "MSP",
+            "CORE_PEER_MSPCONFIGPATH": "/etc/hyperledger/chaincode/msp",
+            "CORE_CHAINCODE_LOGGING_LEVEL": "info",
+            "CORE_CHAINCODE_LOGGING_SHIM": "warn",
+            "HOSTNAME": peer.name.replace(".", "")
+            + "."
+            + self.chaincodename
+            + ".ccaas."
+            + self.domain.name,
         }
 
         pathnet = "".join(
@@ -492,6 +509,7 @@ class ChaincodeDeploy:
         clientconfig = DockerClient(compose_files=[pathnet]).client_config
         network = Network(clientconfig, self.domain.networkname)
 
+        # Waiting Chaincode Container
         container = whales.run(
             image=self.chaincodename + "_ccaas_image:latest",
             name=peer.name.replace(".", "")
@@ -513,15 +531,21 @@ class ChaincodeDeploy:
             init=True,
             tty=True,
             volumes=volumes,
+            user="root:root",
             log_driver="syslog",
         )
 
         console.print("# Waiting Chaincode Container...")
-        time.sleep(5)
+        time.sleep(2)
+        whales.container.pause(container)
+
+        # Waiting Peer Container
+        console.print("# Waiting Peer Container...")
         peercontainer = whales.container.inspect(peer.name + "." + self.domain.name)
         whales.container.restart(peercontainer)
-        console.print("# Waiting Peer Container...")
-        time.sleep(5)
+        time.sleep(1)
+
+        whales.container.unpause(container)
 
     def chaincodeInvokeInit(self, org: Organization, peer: Peer):
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
@@ -614,6 +638,7 @@ class ChaincodeDeploy:
                 + self.domain.name
                 + "/fabric-ca/"
                 + org.ca.name
+                + "/tls-cert.pem"
             )
 
             pathorg = (
@@ -633,20 +658,56 @@ class ChaincodeDeploy:
                 + org.ca.name
                 + "."
                 + self.domain.name
-                + " --id.name chaincode"
+                + " --id.name "
+                + peer.name.replace(".", "")
+                + "."
+                + chaincode.name
+                + ".ccaas"
                 + " --id.secret chaincodepw"
-                + " --id.type peer "
                 + " --tls.certfiles "
                 + pathfabriccaorg
-                + "/ca-cert.pem"
             )
 
-            console.print("[bold]## Generating the chaincode-tls certificates[/]")
+            msppath = str(pathcc) + "/msp"
             tlspath = str(pathcc) + "/tls"
+
+            console.print("[bold]## Generating the chaincode-msp certificates[/]")
             os.system(
                 str(Path().absolute())
                 + "/bin/fabric-ca-client enroll "
-                + " -u https://chaincode:chaincodepw@localhost:"
+                + " -u https://"
+                + peer.name.replace(".", "")
+                + "."
+                + chaincode.name
+                + ".ccaas:chaincodepw@localhost:"
+                + str(org.ca.serverport)
+                + " --caname "
+                + org.ca.name
+                + "."
+                + self.domain.name
+                + " -M "
+                + str(msppath)
+                + " --csr.hosts "
+                + chaincodehost
+                + " --csr.hosts "
+                + peer.name.replace(".", "")
+                + "."
+                + chaincode.name
+                + ".ccaas"
+                + " --csr.hosts localhost"
+                + " --tls.certfiles "
+                + pathfabriccaorg
+            )
+
+            console.print("[bold]## Generating the chaincode-tls certificates[/]")
+            os.system(
+                str(Path().absolute())
+                + "/bin/fabric-ca-client enroll "
+                + " -u https://"
+                + peer.name.replace(".", "")
+                + "."
+                + chaincode.name
+                + ".ccaas:chaincodepw@localhost:"
                 + str(org.ca.serverport)
                 + " --caname "
                 + org.ca.name
@@ -656,10 +717,14 @@ class ChaincodeDeploy:
                 + str(tlspath)
                 + " --enrollment.profile tls --csr.hosts "
                 + chaincodehost
+                + " --csr.hosts "
+                + peer.name.replace(".", "")
+                + "."
+                + chaincode.name
+                + ".ccaas"
                 + " --csr.hosts localhost"
                 + " --tls.certfiles "
                 + pathfabriccaorg
-                + "/ca-cert.pem"
             )
 
             shutil.copy(
@@ -677,6 +742,17 @@ class ChaincodeDeploy:
                 shutil.copy(
                     str(tlspath) + "/keystore/" + file_name,
                     str(tlspath) + "/server.key",
+                )
+
+            shutil.copy(
+                str(msppath) + "/signcerts/cert.pem",
+                str(msppath) + "/client_pem.crt",
+            )
+
+            for file_name in os.listdir(str(msppath) + "/keystore/"):
+                shutil.copy(
+                    str(msppath) + "/keystore/" + file_name,
+                    str(msppath) + "/client_pem.key",
                 )
 
     def removeccbuild(self):

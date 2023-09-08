@@ -1273,7 +1273,7 @@ class ConsoleOutput:
                 chaincode.ccport = valueport
                 console.print("")
 
-            """ hastls = console.input("[bold white]Use TLS Connection (y/n):[/] ")
+            hastls = console.input("[bold white]Use TLS Connection (y/n):[/] ")
             tls = False
             selected = True
             while selected:
@@ -1298,8 +1298,8 @@ class ConsoleOutput:
                     )
                     console.print("")
 
-            chaincode.usetls = tls """
-            chaincode.usetls = False
+            chaincode.usetls = tls
+            #chaincode.usetls = False
 
             self.chaincodeSelected(domain, chaincode)
 
