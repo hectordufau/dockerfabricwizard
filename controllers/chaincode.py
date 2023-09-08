@@ -193,10 +193,10 @@ class ChaincodeDeploy:
             + str(self.chaincode.ccport),
             "dial_timeout": "30s",
             "tls_required": self.chaincode.usetls,
-            "client_auth_required": False,
-            "client_key": keydata,
-            "client_cert": certdata,
-            "root_cert": carootdata,
+            # "client_auth_required": False,
+            # "client_key": keydata,
+            # "client_cert": certdata,
+            # "root_cert": carootdata,
         }
 
         metadata = {
@@ -473,8 +473,8 @@ class ChaincodeDeploy:
             + str(peer.peerlistenport),
             "CHAINCODE_SERVER_ADDRESS": "0.0.0.0:" + str(self.chaincode.ccport),
             "CORE_CHAINCODE_ID_NAME": self.packageid,
-            # "CORE_PEER_TLS_ENABLED": self.chaincode.usetls,
-            "CORE_PEER_TLS_ENABLED": True,
+            "CORE_PEER_TLS_ENABLED": self.chaincode.usetls,
+            #"CORE_PEER_TLS_ENABLED": True,
             "CORE_PEER_CHAINCODEADDRESS": peer.name
             + "."
             + self.domain.name

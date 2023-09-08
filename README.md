@@ -71,7 +71,10 @@ Before you begin, make sure you have the following prerequisites:
 
 2. Your chaincode folder **must to have** a Dockerfile file inside.
 
-3. Your chaincode **must to have** a __InitLedger__ function to invoke, even it has nothing to execute.
+3. Your chaincode **must to have** the following environment variables references which will receive values when external chaincode container runs:
+- CC_SERVER_PORT
+- CORE_CHAINCODE_ID_NAME
+- CHAINCODE_SERVER_ADDRESS
 
 4. Select an existing network (Main menu - option "S"). This network need to be started before.
 
