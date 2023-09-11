@@ -25,19 +25,19 @@ class Blockchain:
     def __init__(self, domain: Domain) -> None:
         self.domain: Domain = domain
 
-    def buildAll(self):
+    def build_all(self):
         os.system("clear")
         header.header()
         console.print("[bold orange1]BLOCKCHAIN[/]")
         console.print("")
-        self.genesisBlock()
+        self.genesis_block()
         console.print("")
-        self.createChannel()
+        self.create_channel()
         console.print("")
-        self.joinChannel()
+        self.join_channel()
         console.print("")
 
-    def genesisBlock(self):
+    def genesis_block(self):
         console.print("[bold white]# Creating genesis block[/]")
         console.print("")
         # Preparing configtx
@@ -244,7 +244,7 @@ class Blockchain:
             + self.domain.networkname
         )
 
-    def createChannel(self):
+    def create_channel(self):
         console.print("[bold white]# Creating channel[/]")
         console.print("")
         config = str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
@@ -305,15 +305,15 @@ class Blockchain:
             + "'"
         )
 
-    def joinChannel(self):
+    def join_channel(self):
         for org in self.domain.organizations:
-            self.joinChannelOrg(org)
+            self.join_channel_org(org)
 
-    def joinChannelOrg(self, org: Organization):
+    def join_channel_org(self, org: Organization):
         for peer in org.peers:
-            self.joinChannelPeer(org, peer)
+            self.join_channel_peer(org, peer)
 
-    def joinChannelPeer(self, org: Organization, peer: Peer):
+    def join_channel_peer(self, org: Organization, peer: Peer):
         console.print("[bold white]# Joinning channel " + peer.name + "[/]")
         console.print("")
 
@@ -382,9 +382,9 @@ class Blockchain:
         console.print("")
         time.sleep(5)
 
-    def buildNewOrganization(self, org: Organization):
+    def build_new_organization(self, org: Organization):
         os.system("clear")
-        consoleoutput.header()
+        header.header()
         console.print("[bold orange1]BLOCKCHAIN[/]")
         console.print("")
         console.print("[bold white]# Creating org configtx file[/]")
@@ -456,13 +456,13 @@ class Blockchain:
         with open(configbuild + "configtx.yaml", "w", encoding="utf-8") as cftx:
             yaml.dump(datacfg, cftx)
 
-        self.generateOrgDefinition(org)
+        self.generate_org_definition(org)
 
-        self.fetchChannelConfig(org)
+        self.fetch_channel_config(org)
 
-        self.mergeConfigtx()
+        self.merge_configtx()
 
-    def generateOrgDefinition(self, org: Organization):
+    def generate_org_definition(self, org: Organization):
         console.print("[bold white]# Generating org definition[/]")
         console.print("")
         configbuild = (
@@ -500,7 +500,7 @@ class Blockchain:
         with open(configbuild + org.name + ".json", "w", encoding="utf-8") as f:
             json.dump(configjson, f, indent=2)
 
-    def fetchChannelConfig(self, orgnew: Organization):
+    def fetch_channel_config(self, orgnew: Organization):
         console.print("")
         console.print("[bold white]# Fetching channel config[/]")
         console.print("")
@@ -552,7 +552,7 @@ class Blockchain:
         )
 
         clidocker = client.containers.get("cli")
-        envvar = self.envVariables()
+        envvar = self.env_variables()
         clidocker.exec_run(command, environment=envvar)
 
         console.print("## Waiting Peer...")
@@ -671,7 +671,7 @@ class Blockchain:
                         )
 
                         clidocker = client.containers.get("cli")
-                        envvar = self.envVariables(org)
+                        envvar = self.env_variables(org)
                         clidocker.exec_run(command, environment=envvar)
 
                         console.print("# Waiting Peer...")
@@ -697,7 +697,7 @@ class Blockchain:
         )
 
         clidocker = client.containers.get("cli")
-        envvar = self.envVariables(ord=True)
+        envvar = self.env_variables(ord=True)
         clidocker.exec_run(command, environment=envvar)
 
         console.print("# Waiting Orderer...")
@@ -729,16 +729,16 @@ class Blockchain:
         )
 
         clidocker = client.containers.get(newpeer.name + "." + self.domain.name)
-        envvar = self.envVariables(orgnew, newpeer)
+        envvar = self.env_variables(orgnew, newpeer)
         clidocker.exec_run(command, environment=envvar)
 
         console.print("# Waiting Peer...")
         console.print("")
         time.sleep(5)
 
-        self.joinChannelOrg(orgnew)
+        self.join_channel_org(orgnew)
 
-    def envVariables(
+    def env_variables(
         self, org: Organization = None, peer: Peer = None, ord: bool = None
     ):
         path = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/"
@@ -809,7 +809,7 @@ class Blockchain:
 
         return envvar
 
-    def mergeConfigtx(self):
+    def merge_configtx(self):
         path = str(Path().absolute()) + "/domains/" + self.domain.name
         config = path + "/config/"
         build = config + "build/"
@@ -846,7 +846,7 @@ class Blockchain:
         header.header()
         console.print("[bold orange1]BLOCKCHAIN[/]")
         console.print("")
-        self.createChannel()
+        self.create_channel()
         console.print("")
-        self.joinChannel()
+        self.join_channel()
         console.print("")

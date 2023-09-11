@@ -18,20 +18,20 @@ class Run:
     def __init__(self, domain: Domain) -> None:
         self.domain: Domain = domain
 
-    def runAll(self):
+    def run_all(self):
         os.system("clear")
         header.header()
         console.print("[bold orange1]RUN[/]")
         console.print("")
         console.print("[bold green]Starting network[/]")
         console.print("[bold white]# Starting CAs[/]")
-        self.startCA()
+        self.start_ca()
         console.print("")
         console.print("[bold white]# Starting orderer, peers and databases[/]")
-        self.startingOPD()
+        self.starting_opd()
         console.print("")
 
-    def startCA(self):
+    def start_ca(self):
         pathfabricca = "".join(
             [
                 str(Path().absolute()),
@@ -47,7 +47,7 @@ class Run:
         console.print("[bold]# Waiting CAs...[/]")
         time.sleep(5)
 
-    def startCANew(self, orgname: str):
+    def start_ca_new(self, orgname: str):
         pathfabricca = "".join(
             [
                 str(Path().absolute()),
@@ -65,7 +65,7 @@ class Run:
 
         os.remove(Path(pathfabricca))
 
-    def startingOPD(self):
+    def starting_opd(self):
         pathorderer = "".join(
             [
                 str(Path().absolute()),
@@ -94,7 +94,7 @@ class Run:
         console.print("")
         time.sleep(5)
 
-    def startingPDOrg(self, org: Organization):
+    def starting_pd_org(self, org: Organization):
         pathnet = "".join(
             [
                 str(Path().absolute()),
@@ -115,7 +115,7 @@ class Run:
 
         os.remove(Path(pathnet))
 
-    def startingPD(self, peer: Peer):
+    def starting_pd(self, peer: Peer):
         pathnet = "".join(
             [
                 str(Path().absolute()),
@@ -136,7 +136,7 @@ class Run:
 
         os.remove(Path(pathnet))
 
-    def checkContainer(self) -> bool:
+    def check_container(self) -> bool:
         pathorderer = "".join(
             [
                 str(Path().absolute()),

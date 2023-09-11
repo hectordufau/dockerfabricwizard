@@ -5,5 +5,5 @@ class Down:
     def __init__(self, domain: Domain) -> None:
         self.domain: Domain = domain
 
-    def runDown(self):
+    def run_down(self):
         pass

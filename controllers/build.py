@@ -10,6 +10,8 @@ from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 
 from controllers.header import Header
 from controllers.run import Run
+from helpers.commands import Commands
+from helpers.paths import Paths
 from models.domain import Domain
 from models.organization import Organization
 from models.peer import Peer
@@ -19,103 +21,29 @@ yaml.indent(sequence=3, offset=2)
 yaml.boolean_representation = [f"false", f"true"]
 console = Console()
 header = Header()
+commands = Commands()
 
 
 class Build:
-    def __init__(self, domain: Domain) -> None:
+    def __init__(self, domain: Domain, paths: Paths) -> None:
         self.domain: Domain = domain
+        self.paths = paths
 
-    def buildAll(self):
+    def build_all(self):
         os.system("clear")
         header.header()
         console.print("[bold orange1]BUILD[/]")
         console.print("")
-        self.buildFolders()
-        self.buildCa()
-        self.buildIdentities()
-        self.buildOrderer()
-        self.buildPeersDatabases()
-        self.prepareFirefly()
-        self.buildConfig()
-        self.startingOPD()
+        self.build_ca()
+        self.build_identities()
+        self.build_orderer()
+        self.build_peers_databases()
+        self.prepare_firefly()
+        self.build_config()
+        self.starting_opd()
         console.print("")
 
-    def buildFolders(self):
-        console.print("[bold white]# Preparing folders[/]")
-
-        rmfolders = str(Path("domains/" + self.domain.name + "/fabric-ca"))
-        os.system("rm -fR " + rmfolders)
-
-        rmfolders = str(Path("domains/" + self.domain.name + "/peerOrganizations"))
-        os.system("rm -fR " + rmfolders)
-
-        rmfolders = str(Path("domains/" + self.domain.name + "/ordererOrganizations"))
-        os.system("rm -fR " + rmfolders)
-
-        rmfolders = str(Path("domains/" + self.domain.name + "/chaincodecrypto"))
-        os.system("rm -fR " + rmfolders)
-
-        rmfolders = str(Path("domains/" + self.domain.name + "/channel-artifacts"))
-        os.system("rm -fR " + rmfolders)
-
-        pathcompose = Path("domains/" + self.domain.name + "/compose")
-        pathcompose.mkdir(parents=True, exist_ok=True)
-
-        pathfirefly = Path("domains/" + self.domain.name + "/firefly")
-        pathfirefly.mkdir(parents=True, exist_ok=True)
-
-        pathfabricca = Path(
-            "domains/" + self.domain.name + "/fabric-ca/" + self.domain.ca.name
-        )
-        pathfabricca.mkdir(parents=True, exist_ok=True)
-
-        pathorderer = Path(
-            "domains/"
-            + self.domain.name
-            + "/ordererOrganizations/"
-            + self.domain.orderer.name
-        )
-        pathorderer.mkdir(parents=True, exist_ok=True)
-
-        pathchaincode = Path("domains/" + self.domain.name + "/chaincodecrypto")
-        pathchaincode.mkdir(parents=True, exist_ok=True)
-
-        for org in self.domain.organizations:
-            self.buildFoldersOrg(org)
-
-    def buildFoldersOrg(self, org: Organization):
-        pathfabriccaorg = Path(
-            "domains/" + self.domain.name + "/fabric-ca/" + org.ca.name
-        )
-        pathfabriccaorg.mkdir(parents=True, exist_ok=True)
-
-        pathorgs = Path(
-            "domains/" + self.domain.name + "/peerOrganizations/" + org.name
-        )
-        pathorgs.mkdir(parents=True, exist_ok=True)
-
-        for peer in org.peers:
-            self.buildFolderPeer(org, peer)
-
-    def buildFolderPeer(self, org: Organization, peer: Peer):
-        configpeer = str(Path("config/core.yaml"))
-        pathpeers = Path(
-            "domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/"
-            + peer.name
-            + "/peercfg"
-        )
-        pathpeers.mkdir(parents=True, exist_ok=True)
-
-        shutil.copy(
-            str(Path().absolute()) + "/" + configpeer,
-            str(Path().absolute()) + "/" + str(pathpeers) + "/core.yaml",
-        )
-
-    def buildConfig(self):
+    def build_config(self):
         console.print("[bold white]# Creating domain config file[/]")
         pathdomains = str(Path().absolute()) + "/domains/" + self.domain.name
 
@@ -123,10 +51,9 @@ class Build:
         with open(pathdomains + "/setup.json", "w", encoding="utf-8") as outfile:
             outfile.write(json_object)
 
-    def buildCa(self):
+    def build_ca(self):
         console.print("[bold white]# Building and starting CAs[/]")
 
-        pathfabricca = "domains/" + self.domain.name + "/compose/"
         cafile = {
             "version": "3.7",
             "networks": {self.domain.networkname: {"name": self.domain.networkname}},
@@ -221,379 +148,142 @@ class Build:
 
             cafile["services"][org.ca.name + "." + self.domain.name] = caorg
 
-        with open(pathfabricca + "compose-ca.yaml", "w", encoding="utf-8") as yaml_file:
+        with open(
+            self.paths.COMPOSEPATH + "compose-ca.yaml", "w", encoding="utf-8"
+        ) as yaml_file:
             yaml.dump(cafile, yaml_file)
 
         run = Run(self.domain)
-        run.startCA()
+        run.start_ca()
 
-    def buildIdentities(self):
+    def build_identities(self):
         console.print("[bold white]# Creating and registering identities[/]")
-
-        for org in self.domain.organizations:
-            self.buildIdentitiesOrg(org)
 
         ## ORDERER
 
         console.print("[bold]## Enrolling the CA admin[/]")
-        pathorder = Path("domains/" + self.domain.name + "/ordererOrganizations")
-        pathfabriccaorderer = Path(
-            "domains/" + self.domain.name + "/fabric-ca/" + self.domain.ca.name
+
+        os.environ["FABRIC_CA_CLIENT_HOME"] = self.paths.ORDERERORGPATH
+
+        commands.enroll(
+            self.paths.APPPATH,
+            self.paths.ORDERERORGPATH,
+            "admin",
+            "adminpw",
+            self.domain.ca.serverport,
+            self.paths.CADOMAINNAME,
+            self.paths.TLSCERTDOMAINFILE,
         )
 
-        os.environ["FABRIC_CA_CLIENT_HOME"] = str(pathorder)
-
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client enroll -u https://admin:adminpw@localhost:"
+        CACERTPEMFILE = (
+            "cacerts/localhost-"
             + str(self.domain.ca.serverport)
-            + " --caname "
-            + self.domain.ca.name
-            + "."
-            + self.domain.name
-            + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorderer)
-            + "/ca-cert.pem"
+            + "-"
+            + self.domain.ca.name.replace(".", "-")
+            + "-"
+            + self.domain.name.replace(".", "-")
+            + ".pem"
         )
         configfile = {
             "NodeOUs": {
                 "Enable": True,
                 "ClientOUIdentifier": {
-                    "Certificate": "cacerts/localhost-"
-                    + str(self.domain.ca.serverport)
-                    + "-"
-                    + self.domain.ca.name.replace(".", "-")
-                    + "-"
-                    + self.domain.name.replace(".", "-")
-                    + ".pem",
+                    "Certificate": CACERTPEMFILE,
                     "OrganizationalUnitIdentifier": "client",
                 },
                 "PeerOUIdentifier": {
-                    "Certificate": "cacerts/localhost-"
-                    + str(self.domain.ca.serverport)
-                    + "-"
-                    + self.domain.ca.name.replace(".", "-")
-                    + "-"
-                    + self.domain.name.replace(".", "-")
-                    + ".pem",
+                    "Certificate": CACERTPEMFILE,
                     "OrganizationalUnitIdentifier": "peer",
                 },
                 "AdminOUIdentifier": {
-                    "Certificate": "cacerts/localhost-"
-                    + str(self.domain.ca.serverport)
-                    + "-"
-                    + self.domain.ca.name.replace(".", "-")
-                    + "-"
-                    + self.domain.name.replace(".", "-")
-                    + ".pem",
+                    "Certificate": CACERTPEMFILE,
                     "OrganizationalUnitIdentifier": "admin",
                 },
                 "OrdererOUIdentifier": {
-                    "Certificate": "cacerts/localhost-"
-                    + str(self.domain.ca.serverport)
-                    + "-"
-                    + self.domain.ca.name.replace(".", "-")
-                    + "-"
-                    + self.domain.name.replace(".", "-")
-                    + ".pem",
+                    "Certificate": CACERTPEMFILE,
                     "OrganizationalUnitIdentifier": "orderer",
                 },
             }
         }
 
-        configpath = "".join([str(Path().absolute()), "/", str(pathorder), "/msp"])
-        with open(configpath + "/config.yaml", "w", encoding="utf-8") as yaml_file:
+        with open(
+            self.paths.ORDERERORGMSPPATH + "config.yaml", "w", encoding="utf-8"
+        ) as yaml_file:
             yaml.dump(configfile, yaml_file)
 
-        cacert = (
-            str(Path().absolute()) + "/" + str(pathfabriccaorderer) + "/ca-cert.pem"
-        )
-
-        tlscacerts = Path(
-            "domains/" + self.domain.name + "/ordererOrganizations/msp/tlscacerts"
-        )
-        tlscacerts.mkdir(parents=True, exist_ok=True)
-        shutil.copy(
-            cacert,
-            str(Path().absolute())
-            + "/"
-            + str(tlscacerts)
-            + "/tlsca."
-            + self.domain.name
-            + "-cert.pem",
-        )
-
-        tlsca = Path("domains/" + self.domain.name + "/ordererOrganizations/tlsca")
-        tlsca.mkdir(parents=True, exist_ok=True)
-        shutil.copy(
-            cacert,
-            str(Path().absolute())
-            + "/"
-            + str(tlsca)
-            + "/tlsca."
-            + self.domain.name
-            + "-cert.pem",
-        )
-
         console.print("[bold]## Registering orderer[/]")
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client register "
-            + " --caname "
-            + self.domain.ca.name
-            + "."
-            + self.domain.name
-            + " --id.name orderer"
-            + " --id.secret ordererpw"
-            + " --id.type orderer "
-            + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorderer)
-            + "/ca-cert.pem"
+        commands.register_orderer(
+            self.paths.APPPATH,
+            self.paths.ORDERERORGPATH,
+            "orderer",
+            "ordererpw",
+            self.paths.CADOMAINNAME,
+            self.paths.TLSCERTDOMAINFILE,
         )
 
         console.print("[bold]## Registering orderer admin[/]")
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client register "
-            + " --caname "
-            + self.domain.ca.name
-            + "."
-            + self.domain.name
-            + " --id.name ordererAdmin"
-            + " --id.secret ordererAdminpw"
-            + " --id.type admin "
-            + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorderer)
-            + "/ca-cert.pem"
+        commands.register_admin(
+            self.paths.APPPATH,
+            self.paths.ORDERERORGPATH,
+            "ordererAdmin",
+            "ordererAdminpw",
+            self.paths.CADOMAINNAME,
+            self.paths.TLSCERTDOMAINFILE,
         )
 
         console.print("[bold]## Registering orderer msp[/]")
-        msppath = Path(
-            "domains/"
-            + self.domain.name
-            + "/ordererOrganizations/"
-            + self.domain.orderer.name
-            + "/msp"
+        commands.enroll_msp(
+            self.paths.APPPATH,
+            self.paths.ORDERERORGPATH,
+            "orderer",
+            "ordererpw",
+            self.domain.ca.serverport,
+            self.paths.CADOMAINNAME,
+            self.paths.ORDDOMAINMSPPATH,
+            self.paths.TLSCERTDOMAINFILE,
         )
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client enroll "
-            + " -u https://orderer:ordererpw@localhost:"
-            + str(self.domain.ca.serverport)
-            + " --caname "
-            + self.domain.ca.name
-            + "."
-            + self.domain.name
-            + " -M "
-            + str(Path().absolute())
-            + "/"
-            + str(msppath)
-            + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorderer)
-            + "/ca-cert.pem"
-        )
+
         shutil.copy(
-            configpath + "/config.yaml",
-            str(Path().absolute()) + "/" + str(msppath) + "/config.yaml",
+            self.paths.ORDERERORGMSPPATH + "config.yaml",
+            self.paths.ORDDOMAINMSPPATH + "config.yaml",
         )
 
         console.print("[bold]## Generating the orderer-tls certificates[/]")
-        tlspath = Path(
-            "domains/"
-            + self.domain.name
-            + "/ordererOrganizations/"
-            + self.domain.orderer.name
-            + "/tls"
+        hosts = [self.paths.ORDERERNAME, self.domain.orderer.name, "localhost"]
+        commands.enroll_tls(
+            self.paths.APPPATH,
+            self.paths.ORDERERORGPATH,
+            "orderer",
+            "ordererpw",
+            self.domain.ca.serverport,
+            self.paths.CADOMAINNAME,
+            self.paths.ORDDOMAINTLSPATH,
+            hosts,
+            self.paths.ORDERERNAME,
+            self.paths.TLSCERTDOMAINFILE,
         )
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client enroll "
-            + " -u https://orderer:ordererpw@localhost:"
-            + str(self.domain.ca.serverport)
-            + " --caname "
-            + self.domain.ca.name
-            + "."
-            + self.domain.name
-            + " -M "
-            + str(Path().absolute())
-            + "/"
-            + str(tlspath)
-            + " --enrollment.profile tls --csr.hosts "
-            + self.domain.orderer.name
-            + "."
-            + self.domain.name
-            + " --csr.hosts "
-            + self.domain.orderer.name
-            + " --csr.hosts localhost"
-            + " --myhost "
-            + self.domain.orderer.name
-            + "."
-            + self.domain.name
-            + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorderer)
-            + "/ca-cert.pem"
-        )
-
-        shutil.copy(
-            str(Path().absolute()) + "/" + str(tlspath) + "/signcerts/cert.pem",
-            str(Path().absolute()) + "/" + str(tlspath) + "/server.crt",
-        )
-
-        for file_name in os.listdir(
-            str(Path().absolute()) + "/" + str(tlspath) + "/tlscacerts/"
-        ):
-            shutil.copy(
-                str(Path().absolute())
-                + "/"
-                + str(tlspath)
-                + "/tlscacerts/"
-                + file_name,
-                str(Path().absolute()) + "/" + str(tlspath) + "/ca.crt",
-            )
-
-        for file_name in os.listdir(
-            str(Path().absolute()) + "/" + str(tlspath) + "/keystore/"
-        ):
-            shutil.copy(
-                str(Path().absolute()) + "/" + str(tlspath) + "/keystore/" + file_name,
-                str(Path().absolute()) + "/" + str(tlspath) + "/server.key",
-            )
-
-        msptlscacerts = Path(
-            "domains/"
-            + self.domain.name
-            + "/ordererOrganizations/"
-            + self.domain.orderer.name
-            + "/msp/tlscacerts"
-        )
-        msptlscacerts.mkdir(parents=True, exist_ok=True)
-
-        for file_name in os.listdir(
-            str(Path().absolute()) + "/" + str(tlspath) + "/tlscacerts/"
-        ):
-            shutil.copy(
-                str(Path().absolute())
-                + "/"
-                + str(tlspath)
-                + "/tlscacerts/"
-                + file_name,
-                str(Path().absolute())
-                + "/"
-                + str(msptlscacerts)
-                + "/tlsca."
-                + self.domain.name
-                + "-cert.pem",
-            )
 
         console.print("[bold]## Generating admin msp[/]")
-        adminpath = Path(
-            "domains/"
-            + self.domain.name
-            + "/ordererOrganizations/users"
-            + "/Admin@"
-            + self.domain.name
-            + "/msp"
-        )
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client enroll "
-            + " -u https://ordererAdmin:ordererAdminpw@localhost:"
-            + str(self.domain.ca.serverport)
-            + " --caname "
-            + self.domain.ca.name
-            + "."
-            + self.domain.name
-            + " -M "
-            + str(Path().absolute())
-            + "/"
-            + str(adminpath)
-            + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorderer)
-            + "/ca-cert.pem"
+        commands.enroll_msp(
+            self.paths.APPPATH,
+            self.paths.ORDERERORGPATH,
+            "ordererAdmin",
+            "ordererAdminpw",
+            self.domain.ca.serverport,
+            self.paths.CADOMAINNAME,
+            self.paths.ORDDOMAINADMINMSPPATH,
+            self.paths.TLSCERTDOMAINFILE,
         )
 
         shutil.copy(
-            configpath + "/config.yaml",
-            str(Path().absolute()) + "/" + str(adminpath) + "/config.yaml",
+            self.paths.ORDERERORGMSPPATH + "config.yaml",
+            self.paths.ORDDOMAINADMINMSPPATH + "config.yaml",
         )
 
-        console.print("[bold]## Registering chaincode user[/]")
+        for org in self.domain.organizations:
+            self.build_identities_org(org)
 
-        cccryptopath = (
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/chaincodecrypto/"
-        )
-
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client register "
-            + " --caname "
-            + self.domain.ca.name
-            + "."
-            + self.domain.name
-            + " --id.name chaincode"
-            + " --id.secret chaincodepw"
-            + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorderer)
-            + "/ca-cert.pem"
-        )
-
-        console.print("[bold]## Generating the chaincode-tls certificates[/]")
-        tlspath = cccryptopath + "tls"
-
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client enroll "
-            + " -u https://chaincode:chaincodepw@localhost:"
-            + str(self.domain.ca.serverport)
-            + " --caname "
-            + self.domain.ca.name
-            + "."
-            + self.domain.name
-            + " -M "
-            + tlspath
-            + " --enrollment.profile tls --csr.hosts localhost"
-            + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorderer)
-            + "/ca-cert.pem"
-        )
-
-        shutil.copy(
-            str(tlspath) + "/signcerts/cert.pem",
-            str(tlspath) + "/server.crt",
-        )
-
-        for file_name in os.listdir(str(tlspath) + "/tlscacerts/"):
-            shutil.copy(
-                str(tlspath) + "/tlscacerts/" + file_name,
-                str(tlspath) + "/ca.crt",
-            )
-
-        for file_name in os.listdir(str(tlspath) + "/keystore/"):
-            shutil.copy(
-                str(tlspath) + "/keystore/" + file_name,
-                str(tlspath) + "/server.key",
-            )
-
-    def buildIdentitiesOrg(self, org: Organization):
+    def build_identities_org(self, org: Organization):
         console.print("[bold white]## Registering organization " + org.name + "[/]")
         while True:
             try:
@@ -609,139 +299,69 @@ class Build:
                 break
             continue
 
-        pathfabriccaorg = Path(
-            "domains/" + self.domain.name + "/fabric-ca/" + org.ca.name
-        )
+        self.paths.set_org_paths(org)
 
-        pathorg = Path("domains/" + self.domain.name + "/peerOrganizations/" + org.name)
-
-        os.environ["FABRIC_CA_CLIENT_HOME"] = str(pathorg)
+        os.environ["FABRIC_CA_CLIENT_HOME"] = self.paths.ORGPATH
         os.system(
             str(Path().absolute())
             + "/bin/fabric-ca-client enroll -u https://admin:adminpw@localhost:"
             + str(org.ca.serverport)
             + " --caname "
-            + org.ca.name
-            + "."
-            + self.domain.name
+            + self.paths.CAORGNAME
             + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorg)
-            + "/ca-cert.pem"
+            + self.paths.TLSCERTORGFILE
+        )
+
+        CACERTPEMFILE = (
+            "cacerts/localhost-"
+            + str(org.ca.serverport)
+            + "-"
+            + org.ca.name.replace(".", "-")
+            + "-"
+            + self.domain.name.replace(".", "-")
+            + ".pem",
         )
 
         configfile = {
             "NodeOUs": {
                 "Enable": True,
                 "ClientOUIdentifier": {
-                    "Certificate": "cacerts/localhost-"
-                    + str(org.ca.serverport)
-                    + "-"
-                    + org.ca.name.replace(".", "-")
-                    + "-"
-                    + self.domain.name.replace(".", "-")
-                    + ".pem",
+                    "Certificate": CACERTPEMFILE,
                     "OrganizationalUnitIdentifier": "client",
                 },
                 "PeerOUIdentifier": {
-                    "Certificate": "cacerts/localhost-"
-                    + str(org.ca.serverport)
-                    + "-"
-                    + org.ca.name.replace(".", "-")
-                    + "-"
-                    + self.domain.name.replace(".", "-")
-                    + ".pem",
+                    "Certificate": CACERTPEMFILE,
                     "OrganizationalUnitIdentifier": "peer",
                 },
                 "AdminOUIdentifier": {
-                    "Certificate": "cacerts/localhost-"
-                    + str(org.ca.serverport)
-                    + "-"
-                    + org.ca.name.replace(".", "-")
-                    + "-"
-                    + self.domain.name.replace(".", "-")
-                    + ".pem",
+                    "Certificate": CACERTPEMFILE,
                     "OrganizationalUnitIdentifier": "admin",
                 },
                 "OrdererOUIdentifier": {
-                    "Certificate": "cacerts/localhost-"
-                    + str(org.ca.serverport)
-                    + "-"
-                    + org.ca.name.replace(".", "-")
-                    + "-"
-                    + self.domain.name.replace(".", "-")
-                    + ".pem",
+                    "Certificate": CACERTPEMFILE,
                     "OrganizationalUnitIdentifier": "orderer",
                 },
             }
         }
 
-        configpath = "".join([str(Path().absolute()), "/", str(pathorg), "/msp"])
-        with open(configpath + "/config.yaml", "w", encoding="utf-8") as yaml_file:
+        with open(Paths.ORGMSPPATH + "config.yaml", "w", encoding="utf-8") as yaml_file:
             yaml.dump(configfile, yaml_file)
 
-        cacert = str(Path().absolute()) + "/" + str(pathfabriccaorg) + "/ca-cert.pem"
-
-        tlscacerts = Path(
-            "domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/msp/tlscacerts"
-        )
-        tlscacerts.mkdir(parents=True, exist_ok=True)
-        shutil.copy(
-            cacert,
-            str(Path().absolute()) + "/" + str(tlscacerts) + "/ca.crt",
-        )
-
-        tlsca = Path(
-            "domains/" + self.domain.name + "/peerOrganizations/" + org.name + "/tlsca"
-        )
-        tlsca.mkdir(parents=True, exist_ok=True)
-        shutil.copy(
-            cacert,
-            str(Path().absolute())
-            + "/"
-            + str(tlsca)
-            + "/tlsca."
-            + org.name
-            + "-cert.pem",
-        )
-
-        ca = Path(
-            "domains/" + self.domain.name + "/peerOrganizations/" + org.name + "/ca"
-        )
-        ca.mkdir(parents=True, exist_ok=True)
-        shutil.copy(
-            cacert,
-            str(Path().absolute()) + "/" + str(ca) + "/ca." + org.name + "-cert.pem",
-        )
-
         for peer in org.peers:
-            self.buildIdentitiesPeer(org, peer)
+            self.build_identities_peer(org, peer)
 
-    def buildIdentitiesPeer(self, org: Organization, peer: Peer):
+    def build_identities_peer(self, org: Organization, peer: Peer):
         console.print("[bold]## Registering " + peer.name + "[/]")
 
-        pathfabriccaorg = Path(
-            "domains/" + self.domain.name + "/fabric-ca/" + org.ca.name
-        )
+        self.paths.set_peer_paths(org, peer)
 
-        pathorg = Path("domains/" + self.domain.name + "/peerOrganizations/" + org.name)
-
-        configpath = "".join([str(Path().absolute()), "/", str(pathorg), "/msp"])
-
-        os.environ["FABRIC_CA_CLIENT_HOME"] = str(pathorg)
+        os.environ["FABRIC_CA_CLIENT_HOME"] = self.paths.ORGPATH
 
         os.system(
             str(Path().absolute())
             + "/bin/fabric-ca-client register "
             + " --caname "
-            + org.ca.name
-            + "."
-            + self.domain.name
+            + self.paths.CAORGNAME
             + " --id.name "
             + peer.name
             + " --id.secret "
@@ -749,36 +369,26 @@ class Build:
             + "pw"
             + " --id.type peer "
             + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorg)
-            + "/ca-cert.pem"
+            + self.paths.TLSCERTORGFILE
         )
         console.print("[bold]## Registering user[/]")
         os.system(
             str(Path().absolute())
             + "/bin/fabric-ca-client register "
             + " --caname "
-            + org.ca.name
-            + "."
-            + self.domain.name
+            + self.paths.CAORGNAME
             + " --id.name user1"
             + " --id.secret user1pw"
             + " --id.type client "
             + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorg)
-            + "/ca-cert.pem"
+            + self.paths.TLSCERTORGFILE
         )
         console.print("[bold]## Registering org admin[/]")
         os.system(
             str(Path().absolute())
             + "/bin/fabric-ca-client register "
             + " --caname "
-            + org.ca.name
-            + "."
-            + self.domain.name
+            + self.paths.CAORGNAME
             + " --id.name "
             + org.name
             + "admin"
@@ -787,21 +397,9 @@ class Build:
             + "adminpw"
             + " --id.type admin "
             + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorg)
-            + "/ca-cert.pem"
+            + self.paths.TLSCERTORGFILE
         )
         console.print("[bold]## Generating peer msp[/]")
-        msppath = Path(
-            "domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/"
-            + peer.name
-            + "/msp"
-        )
         os.system(
             str(Path().absolute())
             + "/bin/fabric-ca-client enroll "
@@ -812,35 +410,19 @@ class Build:
             + "pw@localhost:"
             + str(org.ca.serverport)
             + " --caname "
-            + org.ca.name
-            + "."
-            + self.domain.name
+            + self.paths.CAORGNAME
             + " -M "
-            + str(Path().absolute())
-            + "/"
-            + str(msppath)
+            + self.paths.PEERMSPPATH
             + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorg)
-            + "/ca-cert.pem"
+            + self.paths.TLSCERTORGFILE
         )
 
         shutil.copy(
-            configpath + "/config.yaml",
-            str(Path().absolute()) + "/" + str(msppath) + "/config.yaml",
+            self.paths.ORGMSPPATH + "config.yaml",
+            self.paths.PEERMSPPATH + "config.yaml",
         )
 
         console.print("[bold]## Generating the peer-tls certificates[/]")
-        tlspath = Path(
-            "domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/"
-            + peer.name
-            + "/tls"
-        )
         os.system(
             str(Path().absolute())
             + "/bin/fabric-ca-client enroll "
@@ -851,107 +433,40 @@ class Build:
             + "pw@localhost:"
             + str(org.ca.serverport)
             + " --caname "
-            + org.ca.name
-            + "."
-            + self.domain.name
+            + self.paths.CAORGNAME
             + " -M "
-            + str(Path().absolute())
-            + "/"
-            + str(tlspath)
+            + self.paths.PEERTLSPATH
             + " --enrollment.profile tls --csr.hosts "
-            + peer.name
-            + "."
-            + self.domain.name
+            + self.paths.PEERNAME
             + " --csr.hosts "
             + peer.name
             + " --csr.hosts localhost"
             + " --myhost "
-            + peer.name
-            + "."
-            + self.domain.name
+            + self.paths.PEERNAME
             + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorg)
-            + "/ca-cert.pem"
+            + self.paths.TLSCERTORGFILE
         )
-
-        shutil.copy(
-            str(Path().absolute()) + "/" + str(tlspath) + "/signcerts/cert.pem",
-            str(Path().absolute()) + "/" + str(tlspath) + "/server.crt",
-        )
-
-        for file_name in os.listdir(
-            str(Path().absolute()) + "/" + str(tlspath) + "/tlscacerts/"
-        ):
-            shutil.copy(
-                str(Path().absolute())
-                + "/"
-                + str(tlspath)
-                + "/tlscacerts/"
-                + file_name,
-                str(Path().absolute()) + "/" + str(tlspath) + "/ca.crt",
-            )
-
-        for file_name in os.listdir(
-            str(Path().absolute()) + "/" + str(tlspath) + "/keystore/"
-        ):
-            shutil.copy(
-                str(Path().absolute()) + "/" + str(tlspath) + "/keystore/" + file_name,
-                str(Path().absolute()) + "/" + str(tlspath) + "/server.key",
-            )
 
         console.print("[bold]## Generating user msp[/]")
-        userpath = Path(
-            "domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/users"
-            + "/User1@"
-            + org.name
-            + "."
-            + self.domain.name
-            + "/msp"
-        )
         os.system(
             str(Path().absolute())
             + "/bin/fabric-ca-client enroll "
             + " -u https://user1:user1pw@localhost:"
             + str(org.ca.serverport)
             + " --caname "
-            + org.ca.name
-            + "."
-            + self.domain.name
+            + self.paths.CAORGNAME
             + " -M "
-            + str(Path().absolute())
-            + "/"
-            + str(userpath)
+            + self.paths.ORGUSERMSPPATH
             + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorg)
-            + "/ca-cert.pem"
+            + self.paths.TLSCERTORGFILE
         )
 
         shutil.copy(
-            configpath + "/config.yaml",
-            str(Path().absolute()) + "/" + str(userpath) + "/config.yaml",
+            self.paths.ORGMSPPATH + "config.yaml",
+            self.paths.ORGUSERMSPPATH + "config.yaml",
         )
 
         console.print("[bold]## Generating org admin msp[/]")
-        adminpath = Path(
-            "domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/users"
-            + "/Admin@"
-            + org.name
-            + "."
-            + self.domain.name
-            + "/msp"
-        )
         os.system(
             str(Path().absolute())
             + "/bin/fabric-ca-client enroll "
@@ -962,26 +477,19 @@ class Build:
             + "adminpw@localhost:"
             + str(org.ca.serverport)
             + " --caname "
-            + org.ca.name
-            + "."
-            + self.domain.name
+            + self.paths.CAORGNAME
             + " -M "
-            + str(Path().absolute())
-            + "/"
-            + str(adminpath)
+            + self.paths.ORGADMINMSPPATH
             + " --tls.certfiles "
-            + str(Path().absolute())
-            + "/"
-            + str(pathfabriccaorg)
-            + "/ca-cert.pem"
+            + self.paths.TLSCERTORGFILE
         )
 
         shutil.copy(
-            configpath + "/config.yaml",
-            str(Path().absolute()) + "/" + str(adminpath) + "/config.yaml",
+            self.paths.ORGMSPPATH + "config.yaml",
+            self.paths.ORGADMINMSPPATH + "config.yaml",
         )
 
-    def buildOrderer(self):
+    def build_orderer(self):
         console.print("[bold white]# Building " + self.domain.name + " orderer[/]")
 
         pathorderer = "domains/" + self.domain.name + "/compose/"
@@ -1064,7 +572,7 @@ class Build:
         ) as yaml_file:
             yaml.dump(ordfile, yaml_file)
 
-    def buildPeersDatabases(self):
+    def build_peers_databases(self):
         console.print("[bold white]# Building peers and databases[/]")
 
         pathdomains = str(Path().absolute()) + "/domains/" + self.domain.name
@@ -1249,7 +757,7 @@ class Build:
         with open(pathpeer + "compose-net.yaml", "w", encoding="utf-8") as yaml_file:
             yaml.dump(peerfile, yaml_file)
 
-    def buildPeersDatabasesOrg(self, org: Organization):
+    def build_peers_databases_org(self, org: Organization):
         console.print("[bold white]# Building " + org.name + " peers and databases[/]")
 
         pathpeer = "domains/" + self.domain.name + "/compose/"
@@ -1364,7 +872,7 @@ class Build:
         ) as yamlpeer_file:
             yaml.dump(datapeer, yamlpeer_file)
 
-    def buildPeer(self, peer: Peer):
+    def build_peer(self, peer: Peer):
         console.print("[bold white]# Building " + peer.name + " and database[/]")
 
         pathpeer = "domains/" + self.domain.name + "/compose/"
@@ -1473,15 +981,15 @@ class Build:
         ) as yamlpeer_file:
             yaml.dump(datapeer, yamlpeer_file)
 
-    def buildNewOrganization(self, org: Organization):
-        self.buildNewOrgCa(org)
-        self.buildIdentitiesOrg(org)
-        self.buildPeersDatabasesOrg(org)
-        self.prepareFirefly()
-        self.buildConfig()
-        self.startingPDOrg(org)
+    def build_new_organization(self, org: Organization):
+        self.build_new_org_ca(org)
+        self.build_identities_org(org)
+        self.build_peers_databases_org(org)
+        self.prepare_firefly()
+        self.build_config()
+        self.starting_pd_org(org)
 
-    def buildNewOrgCa(self, org: Organization):
+    def build_new_org_ca(self, org: Organization):
         console.print("[bold white]# Building and starting " + org.name + " CA[/]")
 
         pathfabricca = "domains/" + self.domain.name + "/compose/"
@@ -1495,7 +1003,7 @@ class Build:
             "services": {},
         }
 
-        self.buildFoldersOrg(org)
+        self.paths.set_org_paths(org)
         caorg = {
             "image": "hyperledger/fabric-ca:latest",
             "user": str(os.geteuid()) + ":" + str(os.getgid()),
@@ -1548,16 +1056,15 @@ class Build:
             yaml.dump(cadata, cayaml_file)
 
         run = Run(self.domain)
-        run.startCANew(org.name)
+        run.start_ca_new(org.name)
 
-    def buildNewPeer(self, org: Organization, peer: Peer):
-        self.buildFolderPeer(org, peer)
-        self.buildIdentitiesPeer(org, peer)
-        self.buildPeer(peer)
-        self.buildConfig()
-        self.startingNewPeer(peer)
+    def build_new_peer(self, org: Organization, peer: Peer):
+        self.build_identities_peer(org, peer)
+        self.build_peer(peer)
+        self.build_config()
+        self.starting_new_peer(peer)
 
-    def prepareFirefly(self):
+    def prepare_firefly(self):
         for i, org in enumerate(self.domain.organizations):
             ## Copy MSP Users
             mspadminpath = Path(
@@ -1643,20 +1150,20 @@ class Build:
                     + peer.name,
                 )
 
-    def startingOPD(self):
+    def starting_opd(self):
         console.print("[bold white]# Starting orderer, peers and databases[/]")
 
         run = Run(self.domain)
-        run.startingOPD()
+        run.starting_opd()
 
-    def startingPDOrg(self, org: Organization):
+    def starting_pd_org(self, org: Organization):
         console.print("[bold white]# Starting " + org.name + " peers and databases[/]")
 
         run = Run(self.domain)
-        run.startingPDOrg(org)
+        run.starting_pd_org(org)
 
-    def startingNewPeer(self, peer: Peer):
+    def starting_new_peer(self, peer: Peer):
         console.print("[bold white]# Starting new peer " + peer.name + "[/]")
 
         run = Run(self.domain)
-        run.startingPD(peer)
+        run.starting_pd(peer)

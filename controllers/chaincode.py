@@ -10,6 +10,7 @@ from rich.console import Console
 
 from controllers.build import Build
 from controllers.header import Header
+from helpers.paths import Paths
 from models.chaincode import Chaincode
 from models.domain import Domain
 from models.organization import Organization
@@ -36,50 +37,50 @@ class ChaincodeDeploy:
         self.chaincodeversion = 0
         self.packageid = None
 
-    def buildAll(self):
+    def build_all(self):
         os.system("clear")
         header.header()
         console.print("[bold orange1]CHAINCODE DEPLOY[/]")
         console.print("")
 
-        if self.buildDockerImage():
+        if self.build_docker_image():
             for org in self.domain.organizations:
                 for peer in org.peers:
-                    self.chaincodeCrypto(org, peer, self.chaincode)
+                    self.chaincode_crypto(org, peer, self.chaincode)
                     console.print("")
-                    self.packageChaincode(org, peer)
+                    self.package_chaincode(org, peer)
                     console.print("")
-                    self.installChaincode(org, peer)
+                    self.install_chaincode(org, peer)
                     console.print("")
-                    self.approveOrg(org, peer)
+                    self.approve_org(org, peer)
                     console.print("")
-                    self.commitChaincodeDefinition(org, peer)
+                    self.commit_chaincode_definition(org, peer)
                     console.print("")
-                    self.startDockerContainer(org, peer)
+                    self.start_docker_container(org, peer)
                     console.print("")
-                    self.chaincodeInvokeInit(org, peer)
+                    self.chaincode_invoke_init(org, peer)
                     console.print("")
             self.removeccbuild()
 
-    def buildFirefly(self):
-        if self.buildDockerImage():
+    def build_firefly(self):
+        if self.build_docker_image():
             for org in self.domain.organizations:
                 for peer in org.peers:
-                    self.chaincodeCrypto(org, peer, self.chaincode)
+                    self.chaincode_crypto(org, peer, self.chaincode)
                     console.print("")
-                    self.packageChaincode(org, peer)
+                    self.package_chaincode(org, peer)
                     console.print("")
-                    self.installChaincode(org, peer)
+                    self.install_chaincode(org, peer)
                     console.print("")
-                    self.approveOrg(org, peer)
+                    self.approve_org(org, peer)
                     console.print("")
-                    self.startDockerContainer(org, peer)
+                    self.start_docker_container(org, peer)
                     console.print("")
-                    self.commitChaincodeDefinition(org, peer)
+                    self.commit_chaincode_definition(org, peer)
                     console.print("")
-            self.removeccbuild()
+            self.remove_chaincode_build()
 
-    def buildDockerImage(self) -> bool:
+    def build_docker_image(self) -> bool:
         console.print("[bold white]# Building Docker Image[/]")
         console.print("")
 
@@ -137,7 +138,7 @@ class ChaincodeDeploy:
 
         return success
 
-    def packageChaincode(self, org: Organization, peer: Peer):
+    def package_chaincode(self, org: Organization, peer: Peer):
         console.print("[bold white]# Packaging chaincode[/]")
         build = (
             str(Path().absolute())
@@ -229,7 +230,7 @@ class ChaincodeDeploy:
 
         os.chdir(old_dir)
 
-        self.peerEnvVariables(org, peer)
+        self.peer_env_variables(org, peer)
 
         os.system(
             str(Path().absolute())
@@ -260,17 +261,18 @@ class ChaincodeDeploy:
         else:
             self.domain.chaincodes[ccindex] = self.chaincode
 
-        build = Build(self.domain)
-        build.buildConfig()
+        paths = Paths(self.domain)
+        build = Build(self.domain, paths)
+        build.build_config()
 
-    def installChaincode(self, org: Organization, peer: Peer):
+    def install_chaincode(self, org: Organization, peer: Peer):
         console.print("[bold white]# Installing chaincode[/]")
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
         buildpath = domainpath + "/chaincodes/build/"
         chaincodepkg = buildpath + self.chaincodename + ".tar.gz"
 
         console.print("[bold]# Installing chaincode on " + peer.name + "[/]")
-        self.peerEnvVariables(org, peer)
+        self.peer_env_variables(org, peer)
 
         command = (
             str(Path().absolute())
@@ -300,7 +302,7 @@ class ChaincodeDeploy:
 
         # shutil.rmtree(buildpath)
 
-    def approveOrg(self, org: Organization, peer: Peer):
+    def approve_org(self, org: Organization, peer: Peer):
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
         ORDERER_CA = (
             domainpath
@@ -317,7 +319,7 @@ class ChaincodeDeploy:
             console.print(
                 "[bold]# Approving chaincode definition for " + org.name + "[/]"
             )
-            self.peerEnvVariables(org, peer)
+            self.peer_env_variables(org, peer)
 
             command = (
                 str(Path().absolute())
@@ -345,9 +347,9 @@ class ChaincodeDeploy:
             os.system(command)
             console.print("# Waiting Peer...")
             time.sleep(2)
-            self.checkCommit(org, peer)
+            self.check_commit(org, peer)
 
-    def checkCommit(self, org: Organization, peer: Peer):
+    def check_commit(self, org: Organization, peer: Peer):
         console.print("[bold]# Checking commit[/]")
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
         ORDERER_CA = (
@@ -357,7 +359,7 @@ class ChaincodeDeploy:
             + "-cert.pem"
         )
 
-        self.peerEnvVariables(org, peer)
+        self.peer_env_variables(org, peer)
 
         initrequired = ""
         if self.chaincode.invoke:
@@ -384,7 +386,7 @@ class ChaincodeDeploy:
         os.system(command)
         time.sleep(2)
 
-    def commitChaincodeDefinition(self, org: Organization, peer: Peer):
+    def commit_chaincode_definition(self, org: Organization, peer: Peer):
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
         ORDERER_CA = (
             domainpath
@@ -405,7 +407,7 @@ class ChaincodeDeploy:
                 + peer.name
                 + "[/]"
             )
-            self.peerEnvVariables(org, peer)
+            self.peer_env_variables(org, peer)
 
             CORE_PEER_TLS_ROOTCERT_FILE = (
                 domainpath
@@ -445,7 +447,7 @@ class ChaincodeDeploy:
             console.print("# Waiting Peer...")
             time.sleep(2)
 
-    def startDockerContainer(self, org: Organization, peer: Peer):
+    def start_docker_container(self, org: Organization, peer: Peer):
         console.print("[bold]# Starting the CCAAS container[/]")
 
         pathcc = (
@@ -547,7 +549,7 @@ class ChaincodeDeploy:
 
         # whales.container.unpause(container)
 
-    def chaincodeInvokeInit(self, org: Organization, peer: Peer):
+    def chaincode_invoke_init(self, org: Organization, peer: Peer):
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
         ORDERER_CA = (
             domainpath
@@ -569,7 +571,7 @@ class ChaincodeDeploy:
                     + peer.name
                     + "[/]"
                 )
-                self.peerEnvVariables(org, peer)
+                self.peer_env_variables(org, peer)
 
                 CORE_PEER_TLS_ROOTCERT_FILE = (
                     domainpath
@@ -606,7 +608,7 @@ class ChaincodeDeploy:
                 console.print("# Waiting Peer...")
                 time.sleep(2)
 
-    def chaincodeCrypto(self, org: Organization, peer: Peer, chaincode: Chaincode):
+    def chaincode_crypto(self, org: Organization, peer: Peer, chaincode: Chaincode):
         console.print("[bold]## Registering chaincode " + chaincode.name + " crypto[/]")
 
         chaincodehost = (
@@ -759,12 +761,12 @@ class ChaincodeDeploy:
                     str(msppath) + "/client_pem.key",
                 )
 
-    def removeccbuild(self):
+    def remove_chaincode_build(self):
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
         buildpath = domainpath + "/chaincodes/build/"
         shutil.rmtree(buildpath)
 
-    def peerEnvVariables(self, org: Organization, peer: Peer, ord: bool = None):
+    def peer_env_variables(self, org: Organization, peer: Peer, ord: bool = None):
         domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
 
         config = (

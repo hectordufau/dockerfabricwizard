@@ -22,20 +22,20 @@ class Firefly:
     def __init__(self, domain: Domain) -> None:
         self.domain: Domain = domain
 
-    def buildAll(self):
+    def build_all(self):
         os.system("clear")
         header.header()
         console.print("[bold orange1]FIREFLY[/]")
         console.print("")
-        if self.checkInstall():
-            self.startStack()
+        if self.check_install():
+            self.start_stack()
         else:
-            self.buildConnectionProfiles()
-            self.deployFFChaincode()
-            self.createStack()
-            self.startStack()
+            self.build_connection_profiles()
+            self.deploy_firefly_chaincode()
+            self.create_stack()
+            self.start_stack()
 
-    def checkInstall(self) -> bool:
+    def check_install(self) -> bool:
         console.print("[bold white]# Checking Firefly install[/]")
         return os.path.isdir(
             str(Path().home()) + "/.firefly/stacks/" + self.domain.networkname
@@ -48,7 +48,7 @@ class Firefly:
             str(Path().absolute()) + "/bin/ff remove -f " + self.domain.networkname
         )
 
-    def buildConnectionProfiles(self):
+    def build_connection_profiles(self):
         console.print("[bold white]# Preparing connection profiles[/]")
 
         msppath = str(Path().absolute()) + "/domains/" + self.domain.name
@@ -185,7 +185,7 @@ class Firefly:
             ) as yaml_file:
                 yaml.dump(ccp, yaml_file)
 
-    def deployFFChaincode(self):
+    def deploy_firefly_chaincode(self):
         console.print("[bold white]# Deploy Firefly chaincode[/]")
         chaincode = Chaincode()
         chaincode.name = "firefly"
@@ -193,9 +193,9 @@ class Firefly:
         chaincode.invoke = False
         chaincode.usetls = True
         chaincodedeploy = ChaincodeDeploy(self.domain, chaincode)
-        chaincodedeploy.buildFirefly()
+        chaincodedeploy.build_firefly()
 
-    def createStack(self):
+    def create_stack(self):
         console.print("[bold white]# Creating Firefly stack[/]")
 
         msppath = str(Path().absolute()) + "/domains/" + self.domain.name
@@ -234,9 +234,7 @@ class Firefly:
 
         override = {
             "version": "2.1",
-            "networks": {
-                self.domain.networkname: {"name": self.domain.networkname}
-            },
+            "networks": {self.domain.networkname: {"name": self.domain.networkname}},
         }
 
         overridepath = (
@@ -248,7 +246,7 @@ class Firefly:
         with open(overridepath, "w", encoding="utf-8") as yaml_file:
             yaml.dump(override, yaml_file)
 
-    def startStack(self):
+    def start_stack(self):
         console.print("[bold white]# Starting Firefly stack[/]")
         command = (
             str(Path().absolute())

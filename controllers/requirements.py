@@ -15,17 +15,17 @@ class Requirements:
     def __init__(self) -> None:
         pass
 
-    def checkAll(self):
+    def check_all(self):
         console.print("[bold green]Checking Requirements[/]")
-        self.checkCurl()
-        self.checkJq()
-        self.checkDocker()
-        self.checkHLFBinaries()
-        self.checkFireflyBinary()
-        self.checkFireflyChaincode()
-        self.checkDomainFolder()
+        self.check_curl()
+        self.check_jq()
+        self.check_docker()
+        self.check_hlf_binaries()
+        self.check_firefly_binary()
+        self.check_firefly_chaincode()
+        self.check_domain_folder()
 
-    def checkCurl(self):
+    def check_curl(self):
         console.print("[bold white]# Checking cURL[/]")
         rc = subprocess.call(
             ["which", "curl"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT
@@ -34,7 +34,7 @@ class Requirements:
             console.print("[bold red]> cURL isn't installed. Please install it.[/]")
             exit(0)
 
-    def checkJq(self):
+    def check_jq(self):
         console.print("[bold white]# Checking jq[/]")
         rc = subprocess.call(
             ["which", "jq"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT
@@ -43,7 +43,7 @@ class Requirements:
             console.print("[bold red]> jq isn't installed. Please install it.[/]")
             exit(0)
 
-    def checkDocker(self):
+    def check_docker(self):
         console.print("[bold white]# Checking Docker[/]")
         try:
             client = docker.DockerClient(base_url="unix://var/run/docker.sock")
@@ -54,7 +54,7 @@ class Requirements:
             )
             exit(0)
 
-    def checkHLFBinaries(self):
+    def check_hlf_binaries(self):
         console.print("[bold white]# Checking HLF binaries[/]")
 
         pathbin = "bin"
@@ -80,7 +80,7 @@ class Requirements:
             )
             os.system("./install-fabric.sh binary")
 
-    def checkFireflyBinary(self):
+    def check_firefly_binary(self):
         console.print("[bold white]# Checking Firefly binary[/]")
         fireflyfile = str(Path().absolute()) + "/bin/ff"
         isFireflyExist = os.path.exists(Path(fireflyfile))
@@ -102,7 +102,7 @@ class Requirements:
                     os.remove(str(Path().absolute()) + "/" + file)
             os.chdir(old_dir)
 
-    def checkFireflyChaincode(self):
+    def check_firefly_chaincode(self):
         console.print("[bold white]# Checking Firefly chaincode source[/]")
         fireflysource = str(Path().absolute()) + "/firefly/"
         isFireflyExist = os.path.exists(Path(fireflysource))
@@ -116,13 +116,16 @@ class Requirements:
                 fireflysource + "smart_contracts/fabric/firefly-go",
                 str(Path().absolute()) + "/chaincodes/",
             )
-            os.rename(str(Path().absolute()) + "/chaincodes/firefly-go", str(Path().absolute()) + "/chaincodes/firefly")
+            os.rename(
+                str(Path().absolute()) + "/chaincodes/firefly-go",
+                str(Path().absolute()) + "/chaincodes/firefly",
+            )
             shutil.rmtree(fireflysource + ".git")
             shutil.rmtree(fireflysource + ".githooks")
             shutil.rmtree(fireflysource + ".github")
             shutil.rmtree(fireflysource + ".vscode")
 
-    def checkDomainFolder(self):
+    def check_domain_folder(self):
         pathdomains = "domains"
         isFolderDomainsExist = os.path.exists(pathdomains)
 

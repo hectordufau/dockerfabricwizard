@@ -186,13 +186,13 @@ Would you like to contribute with a donation?
 
 ### Todo
 
+- [ ] External chaincode TLS use
 - [ ] Remove chaincode
-- [ ] Improve code (I guess it is a mess!)
 - [ ] Firefly integration (incomplete, because external chaincode TLS use is a challenge now.)
 
 ### In Progress
 
-- [ ] External chaincode TLS use
+- [ ] Improving and Refactoring (I guess it is a mess now!)
 
 ### Done ✓
 

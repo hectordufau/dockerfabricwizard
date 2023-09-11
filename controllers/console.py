@@ -14,6 +14,7 @@ from controllers.firefly import Firefly
 from controllers.header import Header
 from controllers.requirements import Requirements
 from controllers.run import Run
+from helpers.paths import Paths
 from models.ca import Ca
 from models.chaincode import Chaincode
 from models.database import Database
@@ -33,8 +34,8 @@ class ConsoleOutput:
     def start(self):
         console.print("")
         requirements = Requirements()
-        requirements.checkAll()
-        self.mainMenu()
+        requirements.check_all()
+        self.main_menu()
 
     def questions(self):
         os.system("clear")
@@ -49,13 +50,13 @@ class ConsoleOutput:
 
         domainname = console.input("[bold]Domain name:[/] ")
         if domainname.lower() == "q":
-            self.mainMenu()
+            self.main_menu()
         while not validators.domain(domainname):
             domainname = console.input(
                 "[bold red]Domain name not valid. Please retype again:[/] "
             )
             if domainname.lower() == "q":
-                self.mainMenu()
+                self.main_menu()
         self.domain.name = domainname
         self.domain.networkname = domainname.split(".")[0]
 
@@ -106,7 +107,7 @@ class ConsoleOutput:
                 str(Path().absolute()),
                 "/domains/",
                 self.domain.name,
-                "/fabric-ca/",
+                "/fabricca/",
                 cadomain.name,
                 ":/etc/hyperledger/fabric-ca-server",
             ]
@@ -117,14 +118,14 @@ class ConsoleOutput:
 
         qtyorgs = console.input("[bold]Number of Organizations:[/] ")
         if qtyorgs.lower() == "q":
-            self.mainMenu()
+            self.main_menu()
         value = 0
         while not qtyorgs.isdigit():
             qtyorgs = console.input(
                 "[bold red]Number of Organizations value not valid. Please retype again:[/] "
             )
             if qtyorgs.lower() == "q":
-                self.mainMenu()
+                self.main_menu()
         value = int(qtyorgs)
 
         while not validators.between(value, min=1):
@@ -132,7 +133,7 @@ class ConsoleOutput:
                 "[bold red]Number of Organizations value not valid, min 1. Please retype again:[/] "
             )
             if qtyorgs.lower() == "q":
-                self.mainMenu()
+                self.main_menu()
             while not qtyorgs.isdigit():
                 value = 0
             value = int(qtyorgs)
@@ -152,7 +153,7 @@ class ConsoleOutput:
             org = Organization()
             orgname = console.input("[bold]Organization #" + str(iorgs) + " name:[/] ")
             if orgname.lower() == "q":
-                self.mainMenu()
+                self.main_menu()
             while not orgname.isalpha():
                 orgname = console.input(
                     "[bold red]Organization #"
@@ -160,7 +161,7 @@ class ConsoleOutput:
                     + " name not valid. Please retype again:[/] "
                 )
                 if orgname.lower() == "q":
-                    self.mainMenu()
+                    self.main_menu()
             org.name = orgname
 
             caorg = Ca()
@@ -175,7 +176,7 @@ class ConsoleOutput:
                     str(Path().absolute()),
                     "/domains/",
                     self.domain.name,
-                    "/fabric-ca/",
+                    "/fabricca/",
                     caorg.name,
                     ":/etc/hyperledger/fabric-ca-server",
                 ]
@@ -188,14 +189,14 @@ class ConsoleOutput:
 
             qtypeers = console.input("[bold]Number of Peers:[/] ")
             if qtypeers.lower() == "q":
-                self.mainMenu()
+                self.main_menu()
             valuepeers = 0
             while not qtypeers.isdigit():
                 qtypeers = console.input(
                     "[bold red]Number of Peers value not valid. Please retype again:[/] "
                 )
                 if qtypeers.lower() == "q":
-                    self.mainMenu()
+                    self.main_menu()
             valuepeers = int(qtypeers)
 
             while not validators.between(valuepeers, min=1):
@@ -203,7 +204,7 @@ class ConsoleOutput:
                     "[bold red]Number of Peers value not valid, min 1. Please retype again:[/] "
                 )
                 if qtypeers.lower() == "q":
-                    self.mainMenu()
+                    self.main_menu()
                 while not qtypeers.isdigit():
                     valuepeers = 0
                 valuepeers = int(qtypeers)
@@ -223,7 +224,7 @@ class ConsoleOutput:
                     + "):[/] "
                 )
                 if peerport.lower() == "q":
-                    self.mainMenu()
+                    self.main_menu()
                 valueport = 0
                 while not peerport.isdigit():
                     peerport = console.input(
@@ -232,7 +233,7 @@ class ConsoleOutput:
                         + " Port Number value not valid. Please retype again:[/] "
                     )
                     if peerport.lower() == "q":
-                        self.mainMenu()
+                        self.main_menu()
                 valueport = int(peerport)
 
                 validport = True
@@ -245,7 +246,7 @@ class ConsoleOutput:
                             + " Port Number value in use. Please retype again:[/] "
                         )
                         if peerport.lower() == "q":
-                            self.mainMenu()
+                            self.main_menu()
                         valueport = int(peerport)
                     else:
                         validport = False
@@ -259,7 +260,7 @@ class ConsoleOutput:
                         + ". Please retype again:[/] "
                     )
                     if peerport.lower() == "q":
-                        self.mainMenu()
+                        self.main_menu()
                     while not peerport.isdigit():
                         valueport = 0
                     valueport = int(peerport)
@@ -292,7 +293,7 @@ class ConsoleOutput:
 
                 database = Database()
                 database.port = portcouchdb
-                database.name = "db.peer" + str(ipeers)+"." + org.name
+                database.name = "db.peer" + str(ipeers) + "." + org.name
                 database.COUCHDB_USER = "admin"
                 database.COUCHDB_PASSWORD = "adminpw"
 
@@ -354,13 +355,15 @@ class ConsoleOutput:
             caorgoplstport += 100
             console.print("")
 
-        build = Build(self.domain)
-        build.buildAll()
+        paths = Paths(self.domain)
+        paths.build_folders()
+        build = Build(self.domain, paths)
+        build.build_all()
         blockchain = Blockchain(self.domain)
-        blockchain.buildAll()
-        self.networkSelected(self.domain.name)
+        blockchain.build_all()
+        self.network_selected(self.domain.name)
 
-    def createOrganization(self, domain: Domain):
+    def create_organization(self, domain: Domain):
         os.system("clear")
         header.header()
         portlist: List[int] = []
@@ -402,7 +405,7 @@ class ConsoleOutput:
         org = Organization()
         orgname = console.input("[bold]Organization #" + str(iorgs) + " name:[/] ")
         if orgname.lower() == "q":
-            self.networkSelected(domain.name)
+            self.network_selected(domain.name)
         while not orgname.isalpha():
             orgname = console.input(
                 "[bold red]Organization #"
@@ -410,7 +413,7 @@ class ConsoleOutput:
                 + " name not valid. Please retype again:[/] "
             )
             if orgname.lower() == "q":
-                self.networkSelected(domain.name)
+                self.network_selected(domain.name)
         org.name = orgname
 
         caorg = Ca()
@@ -425,7 +428,7 @@ class ConsoleOutput:
                 str(Path().absolute()),
                 "/domains/",
                 domain.name,
-                "/fabric-ca/",
+                "/fabricca/",
                 caorg.name,
                 ":/etc/hyperledger/fabric-ca-server",
             ]
@@ -438,14 +441,14 @@ class ConsoleOutput:
 
         qtypeers = console.input("[bold]Number of Peers:[/] ")
         if qtypeers.lower() == "q":
-            self.networkSelected(domain.name)
+            self.network_selected(domain.name)
         valuepeers = 0
         while not qtypeers.isdigit():
             qtypeers = console.input(
                 "[bold red]Number of Peers value not valid. Please retype again:[/] "
             )
             if qtypeers.lower() == "q":
-                self.networkSelected(domain.name)
+                self.network_selected(domain.name)
         valuepeers = int(qtypeers)
 
         while not validators.between(valuepeers, min=1):
@@ -453,7 +456,7 @@ class ConsoleOutput:
                 "[bold red]Number of Peers value not valid, min 1. Please retype again:[/] "
             )
             if qtypeers.lower() == "q":
-                self.networkSelected(domain.name)
+                self.network_selected(domain.name)
             while not qtypeers.isdigit():
                 valuepeers = 0
             valuepeers = int(qtypeers)
@@ -473,7 +476,7 @@ class ConsoleOutput:
                 + "):[/] "
             )
             if peerport.lower() == "q":
-                self.networkSelected(domain.name)
+                self.network_selected(domain.name)
             valueport = 0
             while not peerport.isdigit():
                 peerport = console.input(
@@ -482,7 +485,7 @@ class ConsoleOutput:
                     + " Port Number value not valid. Please retype again:[/] "
                 )
                 if peerport.lower() == "q":
-                    self.networkSelected(domain.name)
+                    self.network_selected(domain.name)
             valueport = int(peerport)
 
             validport = True
@@ -495,7 +498,7 @@ class ConsoleOutput:
                         + " Port Number value in use. Please retype again:[/] "
                     )
                     if peerport.lower() == "q":
-                        self.networkSelected(domain.name)
+                        self.network_selected(domain.name)
                     valueport = int(peerport)
                 else:
                     validport = False
@@ -509,7 +512,7 @@ class ConsoleOutput:
                     + ". Please retype again:[/] "
                 )
                 if peerport.lower() == "q":
-                    self.networkSelected(domain.name)
+                    self.network_selected(domain.name)
                 while not peerport.isdigit():
                     valueport = 0
                 valueport = int(peerport)
@@ -542,7 +545,7 @@ class ConsoleOutput:
 
             database = Database()
             database.port = portcouchdb
-            database.name = "db.peer" + str(ipeers)+"." + org.name
+            database.name = "db.peer" + str(ipeers) + "." + org.name
             database.COUCHDB_USER = "admin"
             database.COUCHDB_PASSWORD = "adminpw"
 
@@ -594,13 +597,15 @@ class ConsoleOutput:
         domain.qtyorgs += 1
         console.print("")
 
-        build = Build(domain)
-        build.buildNewOrganization(org)
+        paths = Paths(domain)
+        paths.build_folders_org(org)
+        build = Build(domain, paths)
+        build.build_new_organization(org)
         blockchain = Blockchain(domain)
-        blockchain.buildNewOrganization(org)
-        self.networkSelected(domain.name)
+        blockchain.build_new_organization(org)
+        self.network_selected(domain.name)
 
-    def createPeer(self, domain: Domain, org: Organization):
+    def create_peer(self, domain: Domain, org: Organization):
         portlist: List[int] = []
 
         portpeer = 0
@@ -633,7 +638,7 @@ class ConsoleOutput:
             "[bold]Peer " + peer.name + " Port Number (ex. " + str(portpeer) + "):[/] "
         )
         if peerport.lower() == "q":
-            self.networkSelected(domain.name)
+            self.network_selected(domain.name)
         valueport = 0
         while not peerport.isdigit():
             peerport = console.input(
@@ -642,7 +647,7 @@ class ConsoleOutput:
                 + " Port Number value not valid. Please retype again:[/] "
             )
             if peerport.lower() == "q":
-                self.networkSelected(domain.name)
+                self.network_selected(domain.name)
         valueport = int(peerport)
 
         validport = True
@@ -655,7 +660,7 @@ class ConsoleOutput:
                     + " Port Number value in use. Please retype again:[/] "
                 )
                 if peerport.lower() == "q":
-                    self.networkSelected(domain.name)
+                    self.network_selected(domain.name)
                 valueport = int(peerport)
             else:
                 validport = False
@@ -669,7 +674,7 @@ class ConsoleOutput:
                 + ". Please retype again:[/] "
             )
             if peerport.lower() == "q":
-                self.networkSelected(domain.name)
+                self.network_selected(domain.name)
             while not peerport.isdigit():
                 valueport = 0
             valueport = int(peerport)
@@ -702,7 +707,7 @@ class ConsoleOutput:
 
         database = Database()
         database.port = portcouchdb
-        database.name = "db.peer" + str(ipeers)+"." + org.name
+        database.name = "db.peer" + str(ipeers) + "." + org.name
         database.COUCHDB_USER = "admin"
         database.COUCHDB_PASSWORD = "adminpw"
 
@@ -742,13 +747,14 @@ class ConsoleOutput:
 
         org.qtypeers += 1
 
-        build = Build(domain)
-        build.buildNewPeer(org, peer)
+        path = Paths(domain)
+        build = Build(domain, path)
+        build.build_new_peer(org, peer)
         blockchain = Blockchain(domain)
-        blockchain.joinChannelPeer(org, peer)
-        self.networkSelected(domain.name)
+        blockchain.join_channel_peer(org, peer)
+        self.network_selected(domain.name)
 
-    def mainMenu(self):
+    def main_menu(self):
         os.system("clear")
         header.header()
         console.print("[bold orange1]MENU[/]")
@@ -770,13 +776,13 @@ class ConsoleOutput:
                     self.questions()
                 case "s":
                     selectoption = False
-                    self.selectNetwork()
+                    self.select_network()
                 case "d":
                     selectoption = False
-                    self.checkDockerStatus()
+                    self.check_docker_status()
                 case "c":
                     selectoption = False
-                    self.cleanDockerAll()
+                    self.clean_docker_all()
                 case "q":
                     selectoption = False
                     exit(0)
@@ -784,7 +790,7 @@ class ConsoleOutput:
                     option = console.input("[bold]Select an option (N,S,D,C or Q):[/] ")
                     console.print("")
 
-    def checkDockerStatus(self, domain: Domain = None):
+    def check_docker_status(self, domain: Domain = None):
         os.system("clear")
         header.header()
         console.print("[bold orange1]DOCKER STATUS[/]")
@@ -819,9 +825,9 @@ class ConsoleOutput:
                 case "m":
                     selectoption = False
                     if domain is None:
-                        self.mainMenu()
+                        self.main_menu()
                     else:
-                        self.networkSelected(domain.name)
+                        self.network_selected(domain.name)
                 case "q":
                     selectoption = False
                     exit(0)
@@ -829,7 +835,7 @@ class ConsoleOutput:
                     option = console.input("[bold]Select an option (M or Q):[/] ")
                     console.print("")
 
-    def cleanDockerAll(self, domain: Domain = None):
+    def clean_docker_all(self, domain: Domain = None):
         os.system("clear")
         header.header()
         console.print("[bold orange1]DOCKER CLEANING[/]")
@@ -862,11 +868,11 @@ class ConsoleOutput:
             os.system("docker system prune -a -f")
             os.system("docker volume prune -a -f")
             console.print("")
-            self.mainMenu()
+            self.main_menu()
         else:
-            self.networkSelected(domain.name)
+            self.network_selected(domain.name)
 
-    def selectNetwork(self):
+    def select_network(self):
         os.system("clear")
         header.header()
         console.print("[bold orange1]SELECT A NETWORK[/]")
@@ -894,7 +900,7 @@ class ConsoleOutput:
             if option.lower() == "p":
                 selected = False
                 console.print("")
-                self.mainMenu()
+                self.main_menu()
             elif option.lower() == "q":
                 selected = False
                 console.print("")
@@ -902,14 +908,14 @@ class ConsoleOutput:
             elif option.isdigit() and (int(option) <= (len(listnetworks) - 1)):
                 selected = False
                 console.print("")
-                self.networkSelected(listnetworks[int(option)])
+                self.network_selected(listnetworks[int(option)])
             else:
                 option = console.input(
                     "[bold red]Wrong option.[/] [bold white]Select a network:[/] "
                 )
                 console.print("")
 
-    def selectOrganization(self, domain: Domain):
+    def select_organization(self, domain: Domain):
         os.system("clear")
         header.header()
         console.print("[bold orange1]ADDING A PEER[/]")
@@ -927,7 +933,7 @@ class ConsoleOutput:
             if option.lower() == "p":
                 selected = False
                 console.print("")
-                self.mainMenu()
+                self.main_menu()
             elif option.lower() == "q":
                 selected = False
                 console.print("")
@@ -935,14 +941,14 @@ class ConsoleOutput:
             elif option.isdigit() and (int(option) <= (len(domain.organizations) - 1)):
                 selected = False
                 console.print("")
-                self.createPeer(domain, domain.organizations[int(option)])
+                self.create_peer(domain, domain.organizations[int(option)])
             else:
                 option = console.input(
                     "[bold red]Wrong option.[/] [bold white]Select an Organization:[/] "
                 )
                 console.print("")
 
-    def networkSelected(self, network: str):
+    def network_selected(self, network: str):
         os.system("clear")
         header.header()
         console.print("[bold orange1]NETWORK " + network + "[/]")
@@ -994,41 +1000,41 @@ class ConsoleOutput:
             match option.lower():
                 case "n":
                     selectoption = False
-                    self.checkDockerStatus(domain)
+                    self.check_docker_status(domain)
                 case "o":
                     selectoption = False
-                    self.createOrganization(domain)
-                    self.networkSelected(domain.name)
+                    self.create_organization(domain)
+                    self.network_selected(domain.name)
                 case "p":
                     selectoption = False
-                    self.selectOrganization(domain)
-                    self.networkSelected(domain.name)
+                    self.select_organization(domain)
+                    self.network_selected(domain.name)
                 case "a":
                     selectoption = False
-                    self.selectChaincode(domain)
-                    self.networkSelected(domain.name)
+                    self.select_chaincode(domain)
+                    self.network_selected(domain.name)
                 case "f":
                     selectoption = False
-                    self.runFirefly(domain)
-                    self.networkSelected(domain.name)
+                    self.run_firefly(domain)
+                    self.network_selected(domain.name)
                 case "y":
                     selectoption = False
-                    self.removeFirefly(domain)
-                    self.networkSelected(domain.name)
+                    self.remove_firefly(domain)
+                    self.network_selected(domain.name)
                 case "g":
                     selectoption = False
                     run = Run(domain)
-                    exists = run.checkContainer()
-                    run.runAll()
+                    exists = run.check_container()
+                    run.run_all()
                     if not exists:
                         blockchain = Blockchain(domain)
                         blockchain.rebuild()
-                    self.checkDockerStatus(domain)
+                    self.check_docker_status(domain)
                 case "s":
                     selectoption = False
                     console.print("[bold white]# Stopping network...[/]")
                     docker.compose.stop()
-                    self.checkDockerStatus(domain)
+                    self.check_docker_status(domain)
                 case "c":
                     selectoption = False
                     console.print("[bold white]# Cleaning...[/]")
@@ -1036,7 +1042,7 @@ class ConsoleOutput:
                         remove_orphans=True, remove_images="all", volumes=True
                     )
                     docker.system.prune(True, True)
-                    self.networkSelected(domain.name)
+                    self.network_selected(domain.name)
                 case "d":
                     selectoption = False
                     console.print("[bold white]# Deleting...[/]")
@@ -1063,13 +1069,13 @@ class ConsoleOutput:
                         docker.container.stop(clist)
                     docker.system.prune(True, True)
                     os.system("rm -fR " + netpath)
-                    self.selectNetwork()
+                    self.select_network()
                 case "r":
                     selectoption = False
-                    self.selectNetwork()
+                    self.select_network()
                 case "m":
                     selectoption = False
-                    self.mainMenu()
+                    self.main_menu()
                 case "q":
                     selectoption = False
                     exit(0)
@@ -1079,7 +1085,7 @@ class ConsoleOutput:
                     )
                     console.print("")
 
-    def selectChaincode(self, domain: Domain):
+    def select_chaincode(self, domain: Domain):
         os.system("clear")
         header.header()
         console.print("[bold orange1]SELECT A CHAINCODE[/]")
@@ -1130,7 +1136,7 @@ class ConsoleOutput:
             if option.lower() == "p":
                 selected = False
                 console.print("")
-                self.networkSelected(domain.name)
+                self.network_selected(domain.name)
             elif option.lower() == "q":
                 selected = False
                 console.print("")
@@ -1182,7 +1188,7 @@ class ConsoleOutput:
                     console.print("")
 
         if previous:
-            self.chaincodeSelected(domain, chaincode)
+            self.chaincode_selected(domain, chaincode)
         else:
             hasinit = console.input(
                 "[bold white]Invoke init function required (y/n):[/] "
@@ -1200,7 +1206,7 @@ class ConsoleOutput:
                 elif hasinit.lower() == "p":
                     selected = False
                     console.print("")
-                    self.networkSelected(domain.name)
+                    self.network_selected(domain.name)
                 elif hasinit.lower() == "q":
                     selected = False
                     console.print("")
@@ -1216,13 +1222,13 @@ class ConsoleOutput:
             if invoke:
                 ccfunction = console.input("[bold]Invoke function name:[/] ")
                 if ccfunction.lower() == "q":
-                    self.networkSelected(domain.name)
+                    self.network_selected(domain.name)
                 while not ccfunction.isalpha():
                     ccfunction = console.input(
                         "[bold red]Invoke function name not valid. Please retype again:[/] "
                     )
                     if ccfunction.lower() == "q":
-                        self.networkSelected(domain.name)
+                        self.network_selected(domain.name)
                         break
                 chaincode.function = ccfunction
                 console.print("")
@@ -1232,14 +1238,14 @@ class ConsoleOutput:
                     "[bold]Chaincode Port Number (ex. " + str(ccport) + "):[/] "
                 )
                 if ccportn.lower() == "q":
-                    self.networkSelected(domain.name)
+                    self.network_selected(domain.name)
                 valueport = 0
                 while not ccportn.isdigit():
                     ccportn = console.input(
                         "[bold red]Chaincode Port Number value not valid. Please retype again:[/] "
                     )
                     if ccportn.lower() == "q":
-                        self.networkSelected(domain.name)
+                        self.network_selected(domain.name)
                         break
                 valueport = int(ccportn)
 
@@ -1251,7 +1257,7 @@ class ConsoleOutput:
                             "[bold red]Chaincode Port Number value in use. Please retype again:[/] "
                         )
                         if ccportn.lower() == "q":
-                            self.networkSelected(domain.name)
+                            self.network_selected(domain.name)
                             break
                         valueport = int(ccportn)
                     else:
@@ -1264,7 +1270,7 @@ class ConsoleOutput:
                         + ". Please retype again:[/] "
                     )
                     if ccportn.lower() == "q":
-                        self.networkSelected(domain.name)
+                        self.network_selected(domain.name)
                         break
                     while not ccportn.isdigit():
                         valueport = 0
@@ -1301,16 +1307,16 @@ class ConsoleOutput:
             chaincode.usetls = tls """
             chaincode.usetls = False
 
-            self.chaincodeSelected(domain, chaincode)
+            self.chaincode_selected(domain, chaincode)
 
-    def chaincodeSelected(self, domain: Domain, chaincode: Chaincode):
+    def chaincode_selected(self, domain: Domain, chaincode: Chaincode):
         chaincode = ChaincodeDeploy(domain, chaincode)
-        chaincode.buildAll()
+        chaincode.build_all()
 
-    def runFirefly(self, domain: Domain):
+    def run_firefly(self, domain: Domain):
         firefly = Firefly(domain)
-        firefly.buildAll()
+        firefly.build_all()
 
-    def removeFirefly(self, domain: Domain):
+    def remove_firefly(self, domain: Domain):
         firefly = Firefly(domain)
         firefly.remove()
