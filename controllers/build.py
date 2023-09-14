@@ -4,7 +4,6 @@ import shutil
 from pathlib import Path
 
 import ruamel.yaml
-from python_on_whales import docker
 from rich.console import Console
 from ruamel.yaml.scalarstring import DoubleQuotedScalarString
 
@@ -12,6 +11,7 @@ from controllers.header import Header
 from controllers.run import Run
 from helpers.commands import Commands
 from helpers.paths import Paths
+from models.ca import Ca
 from models.domain import Domain
 from models.organization import Organization
 from models.peer import Peer
@@ -25,33 +25,46 @@ commands = Commands()
 
 
 class Build:
-    def __init__(self, domain: Domain, paths: Paths) -> None:
+    def __init__(self, domain: Domain) -> None:
         self.domain: Domain = domain
-        self.paths = paths
+        self.paths = Paths(domain)
+        self.configyaml = "config.yaml"
+        self.composecayaml = "compose-ca.yaml"
 
     def build_all(self):
+        """Build all config files for hosts and identities to start a Hyperledger Fabric network"""
         os.system("clear")
         header.header()
         console.print("[bold orange1]BUILD[/]")
         console.print("")
+        self.paths.build_folders()
         self.build_ca()
         self.build_identities()
         self.build_orderer()
         self.build_peers_databases()
-        self.prepare_firefly()
+        # self.prepare_firefly() TODO
         self.build_config()
         self.starting_opd()
         console.print("")
 
-    def build_config(self):
-        console.print("[bold white]# Creating domain config file[/]")
-        pathdomains = str(Path().absolute()) + "/domains/" + self.domain.name
+    def build_new_organization(self, org: Organization):
+        """Build all config files for hosts and identities of a new organization added in a running Hyperledger Fabric network"""
+        self.build_new_org_ca(org)
+        self.build_identities_org(org)
+        self.build_peers_databases_org(org)
+        self.prepare_firefly()
+        self.build_config()
+        self.starting_pd_org(org)
 
-        json_object = json.dumps(self.domain, default=lambda x: x.__dict__, indent=4)
-        with open(pathdomains + "/setup.json", "w", encoding="utf-8") as outfile:
-            outfile.write(json_object)
+    def build_new_peer(self, org: Organization, peer: Peer):
+        """Build all config files and identities for a new peer added in a organization added in a running Hyperledger Fabric network"""
+        self.build_identities_peer(org, peer)
+        self.build_peer(peer)
+        self.build_config()
+        self.starting_new_peer(peer)
 
     def build_ca(self):
+        """_summary_"""
         console.print("[bold white]# Building and starting CAs[/]")
 
         cafile = {
@@ -60,128 +73,113 @@ class Build:
             "services": {},
         }
 
-        caorderer = {
-            "hostname": self.domain.ca.FABRIC_CA_SERVER_CA_NAME
-            + "."
-            + self.domain.name,
-            "image": "hyperledger/fabric-ca:latest",
-            "user": str(os.geteuid()) + ":" + str(os.getgid()),
-            "labels": {"service": "hyperledger-fabric"},
-            "environment": [
-                "FABRIC_CA_HOME=" + self.domain.ca.FABRIC_CA_HOME,
-                "FABRIC_CA_SERVER_CA_NAME="
-                + self.domain.ca.FABRIC_CA_SERVER_CA_NAME
-                + "."
-                + self.domain.name,
-                "FABRIC_CA_SERVER_CSR_CN="
-                + self.domain.ca.name
-                + "."
-                + self.domain.name,
-                "FABRIC_CA_SERVER_CSR_HOSTS="
-                + self.domain.ca.name
-                + "."
-                + self.domain.name
-                + ","
-                + self.domain.ca.name
-                + ",localhost",
-                "FABRIC_CA_SERVER_TLS_ENABLED="
-                + str(self.domain.ca.FABRIC_CA_SERVER_TLS_ENABLED).lower(),
-                "FABRIC_CA_SERVER_PORT=" + str(self.domain.ca.FABRIC_CA_SERVER_PORT),
-                "FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS="
-                + self.domain.ca.FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS,
-            ],
-            "ports": ["0", "1"],
-            "command": "sh -c 'fabric-ca-server start -b admin:adminpw -d'",
-            "volumes": [self.domain.ca.volumes],
-            "container_name": self.domain.ca.name + "." + self.domain.name,
-            "networks": [self.domain.networkname],
-        }
+        cadomain = self.ca_org_yaml(self.domain.ca)
 
-        caorderer["ports"][0] = DoubleQuotedScalarString(
-            f'{str(self.domain.ca.serverport)+":"+str(self.domain.ca.serverport)}'
-        )
-        caorderer["ports"][1] = DoubleQuotedScalarString(
-            f'{str(self.domain.ca.operationslistenport)+":"+str(self.domain.ca.operationslistenport)}'
-        )
+        caorderer = self.ca_org_yaml(self.domain.caorderer)
 
-        cafile["services"][self.domain.ca.name + "." + self.domain.name] = caorderer
+        cafile["services"][self.domain.ca.name + "." + self.domain.name] = cadomain
+        cafile["services"][
+            self.domain.caorderer.name + "." + self.domain.name
+        ] = caorderer
 
         for org in self.domain.organizations:
-            caorg = {
-                "hostname": org.ca.FABRIC_CA_SERVER_CA_NAME + "." + self.domain.name,
-                "image": "hyperledger/fabric-ca:latest",
-                "user": str(os.geteuid()) + ":" + str(os.getgid()),
-                "labels": {"service": "hyperledger-fabric"},
-                "environment": [
-                    "FABRIC_CA_HOME=" + org.ca.FABRIC_CA_HOME,
-                    "FABRIC_CA_SERVER_CA_NAME="
-                    + org.ca.FABRIC_CA_SERVER_CA_NAME
-                    + "."
-                    + self.domain.name,
-                    "FABRIC_CA_SERVER_CSR_CN=" + org.ca.name + "." + self.domain.name,
-                    "FABRIC_CA_SERVER_CSR_HOSTS="
-                    + org.ca.name
-                    + "."
-                    + self.domain.name
-                    + ","
-                    + org.ca.name
-                    + ",localhost",
-                    "FABRIC_CA_SERVER_TLS_ENABLED="
-                    + str(org.ca.FABRIC_CA_SERVER_TLS_ENABLED).lower(),
-                    "FABRIC_CA_SERVER_PORT=" + str(org.ca.FABRIC_CA_SERVER_PORT),
-                    "FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS="
-                    + org.ca.FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS,
-                ],
-                "ports": ["0", "1"],
-                "command": "sh -c 'fabric-ca-server start -b admin:adminpw -d'",
-                "volumes": [org.ca.volumes],
-                "container_name": org.ca.name + "." + self.domain.name,
-                "networks": [self.domain.networkname],
-            }
-
-            caorg["ports"][0] = DoubleQuotedScalarString(
-                f'{str(org.ca.serverport)+":"+str(org.ca.serverport)}'
-            )
-            caorg["ports"][1] = DoubleQuotedScalarString(
-                f'{str(org.ca.operationslistenport)+":"+str(org.ca.operationslistenport)}'
-            )
-
+            caorg = self.ca_org_yaml(org.ca)
             cafile["services"][org.ca.name + "." + self.domain.name] = caorg
 
         with open(
-            self.paths.COMPOSEPATH + "compose-ca.yaml", "w", encoding="utf-8"
+            self.paths.COMPOSEPATH + self.composecayaml, "w", encoding="utf-8"
         ) as yaml_file:
             yaml.dump(cafile, yaml_file)
 
         run = Run(self.domain)
         run.start_ca()
 
-    def build_identities(self):
-        console.print("[bold white]# Creating and registering identities[/]")
+    def build_new_org_ca(self, org: Organization):
+        """_summary_"""
+        console.print("[bold white]# Building and starting " + org.name + " CA[/]")
 
-        ## ORDERER
+        with open(
+            self.paths.COMPOSEPATH + self.composecayaml, encoding="utf-8"
+        ) as yamlca_file:
+            cadata = yaml.load(yamlca_file)
 
-        console.print("[bold]## Enrolling the CA admin[/]")
+        cafile = {
+            "version": "3.7",
+            "networks": {self.domain.networkname: {"name": self.domain.networkname}},
+            "services": {},
+        }
 
-        os.environ["FABRIC_CA_CLIENT_HOME"] = self.paths.ORDERERORGPATH
+        self.paths.set_org_paths(org)
+        caorg = self.ca_org_yaml(org.ca)
 
-        commands.enroll(
-            self.paths.APPPATH,
-            self.paths.ORDERERORGPATH,
-            "admin",
-            "adminpw",
-            self.domain.ca.serverport,
-            self.paths.CADOMAINNAME,
-            self.paths.TLSCERTDOMAINFILE,
+        cafile["services"][org.ca.name + "." + self.domain.name] = caorg
+        cadata["services"][org.ca.name + "." + self.domain.name] = caorg
+
+        with open(
+            self.paths.COMPOSEPATH + "compose-ca-" + org.name + ".yaml",
+            "w",
+            encoding="utf-8",
+        ) as yaml_file:
+            yaml.dump(cafile, yaml_file)
+
+        with open(
+            self.paths.COMPOSEPATH + self.composecayaml, "w", encoding="utf-8"
+        ) as cayaml_file:
+            yaml.dump(cadata, cayaml_file)
+
+        run = Run(self.domain)
+        run.start_ca_new(org.name)
+
+    def ca_org_yaml(self, ca: Ca) -> dict:
+        """_summary_"""
+        caorg = {
+            "image": "hyperledger/fabric-ca:latest",
+            "user": str(os.geteuid()) + ":" + str(os.getgid()),
+            "labels": {"service": "hyperledger-fabric"},
+            "environment": [
+                "FABRIC_CA_HOME=" + ca.FABRIC_CA_HOME,
+                "FABRIC_CA_SERVER_CA_NAME="
+                + ca.FABRIC_CA_SERVER_CA_NAME
+                + "."
+                + self.domain.name,
+                "FABRIC_CA_SERVER_CSR_CN=" + ca.name + "." + self.domain.name,
+                "FABRIC_CA_SERVER_CSR_HOSTS="
+                + ca.name
+                + "."
+                + self.domain.name
+                + ","
+                + ca.name
+                + ",localhost",
+                "FABRIC_CA_SERVER_TLS_ENABLED="
+                + str(ca.FABRIC_CA_SERVER_TLS_ENABLED).lower(),
+                "FABRIC_CA_SERVER_PORT=" + str(ca.FABRIC_CA_SERVER_PORT),
+                "FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS="
+                + ca.FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS,
+            ],
+            "ports": ["0", "1"],
+            "command": "sh -c 'fabric-ca-server start -b admin:adminpw -d'",
+            "volumes": [ca.volumes],
+            "container_name": ca.name + "." + self.domain.name,
+            "networks": [self.domain.networkname],
+        }
+
+        caorg["ports"][0] = DoubleQuotedScalarString(
+            f'{str(ca.serverport)+":"+str(ca.serverport)}'
+        )
+        caorg["ports"][1] = DoubleQuotedScalarString(
+            f'{str(ca.operationslistenport)+":"+str(ca.operationslistenport)}'
         )
 
+        return caorg
+
+    def config_yaml(self, serverport: int, servername: str, path: str):
         CACERTPEMFILE = (
             "cacerts/localhost-"
-            + str(self.domain.ca.serverport)
-            + "-"
-            + self.domain.ca.name.replace(".", "-")
-            + "-"
-            + self.domain.name.replace(".", "-")
+            + str(serverport)
+            # + "-"
+            # + servername.replace(".", "-")
+            # + "-"
+            # + self.domain.name.replace(".", "-")
             + ".pem"
         )
         configfile = {
@@ -206,290 +204,407 @@ class Build:
             }
         }
 
-        with open(
-            self.paths.ORDERERORGMSPPATH + "config.yaml", "w", encoding="utf-8"
-        ) as yaml_file:
+        with open(path + self.configyaml, "w", encoding="utf-8") as yaml_file:
             yaml.dump(configfile, yaml_file)
 
-        console.print("[bold]## Registering orderer[/]")
+    def peer_yaml(self, peer: Peer) -> dict:
+        peerdata = {
+            "hostname": peer.name + "." + self.domain.name,
+            "container_name": peer.name + "." + self.domain.name,
+            "image": "hyperledger/fabric-peer:latest",
+            "labels": {"service": "hyperledger-fabric"},
+            # "user": str(os.geteuid()) + ":" + str(os.getgid()),
+            "environment": [
+                "FABRIC_CFG_PATH=" + peer.FABRIC_CFG_PATH,
+                "FABRIC_LOGGING_SPEC=" + peer.FABRIC_LOGGING_SPEC,
+                "CORE_PEER_TLS_ENABLED=" + str(peer.CORE_PEER_TLS_ENABLED).lower(),
+                "CORE_PEER_PROFILE_ENABLED="
+                + str(peer.CORE_PEER_PROFILE_ENABLED).lower(),
+                "CORE_PEER_TLS_CERT_FILE=" + peer.CORE_PEER_TLS_CERT_FILE,
+                "CORE_PEER_TLS_KEY_FILE=" + peer.CORE_PEER_TLS_KEY_FILE,
+                "CORE_PEER_TLS_ROOTCERT_FILE=" + peer.CORE_PEER_TLS_ROOTCERT_FILE,
+                "CORE_PEER_ID=" + peer.CORE_PEER_ID,
+                "CORE_PEER_ADDRESS=" + peer.CORE_PEER_ADDRESS,
+                "CORE_PEER_LISTENADDRESS=" + peer.CORE_PEER_LISTENADDRESS,
+                "CORE_PEER_CHAINCODEADDRESS=" + peer.CORE_PEER_CHAINCODEADDRESS,
+                "CORE_PEER_CHAINCODELISTENADDRESS="
+                + peer.CORE_PEER_CHAINCODELISTENADDRESS,
+                "CORE_PEER_GOSSIP_BOOTSTRAP=" + peer.CORE_PEER_GOSSIP_BOOTSTRAP,
+                "CORE_PEER_GOSSIP_EXTERNALENDPOINT="
+                + peer.CORE_PEER_GOSSIP_EXTERNALENDPOINT,
+                "CORE_PEER_LOCALMSPID=" + peer.CORE_PEER_LOCALMSPID,
+                "CORE_PEER_MSPCONFIGPATH=" + peer.CORE_PEER_MSPCONFIGPATH,
+                "CORE_OPERATIONS_LISTENADDRESS=" + peer.CORE_OPERATIONS_LISTENADDRESS,
+                "CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG="
+                + peer.CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG,
+                "CORE_CHAINCODE_EXECUTETIMEOUT=" + peer.CORE_CHAINCODE_EXECUTETIMEOUT,
+                "CORE_VM_ENDPOINT=" + peer.CORE_VM_ENDPOINT,
+                "CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE="
+                + peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE,
+                "CORE_LEDGER_STATE_STATEDATABASE="
+                + peer.CORE_LEDGER_STATE_STATEDATABASE,
+                "CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS="
+                + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS,
+                "CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME="
+                + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME,
+                "CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD="
+                + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD,
+                "CORE_METRICS_PROVIDER=prometheus",
+            ],
+            "ports": ["0", "1", "2"],
+            "working_dir": "/opt/gopath/src/github.com/hyperledger/fabric/peer",
+            "command": "peer node start",
+            "volumes": peer.volumes,
+            "networks": [self.domain.networkname],
+            "depends_on": [
+                peer.database.name + "." + self.domain.name,
+                self.domain.orderer.name + "." + self.domain.name,
+            ],
+        }
+
+        peerdata["ports"][0] = DoubleQuotedScalarString(
+            f'{str(peer.peerlistenport)+":"+str(peer.peerlistenport)}'
+        )
+        peerdata["ports"][1] = DoubleQuotedScalarString(
+            f'{str(peer.operationslistenport)+":"+str(peer.operationslistenport)}'
+        )
+        peerdata["ports"][2] = DoubleQuotedScalarString(
+            f'{str(peer.chaincodelistenport)+":"+str(peer.chaincodelistenport)}'
+        )
+
+        return peerdata
+
+    def database_yaml(self, peer: Peer) -> dict:
+        databasedata = {
+            "image": "couchdb:3.3.2",
+            "labels": {"service": "hyperledger-fabric"},
+            "environment": [
+                "COUCHDB_USER=" + peer.database.COUCHDB_USER,
+                "COUCHDB_PASSWORD=" + peer.database.COUCHDB_PASSWORD,
+            ],
+            "ports": ["0"],
+            "container_name": peer.database.name + "." + self.domain.name,
+            "networks": [self.domain.networkname],
+        }
+
+        databasedata["ports"][0] = DoubleQuotedScalarString(
+            f'{str(peer.database.port)+":5984"}'
+        )
+
+        return databasedata
+
+    def build_config(self):
+        """_summary_"""
+        console.print("[bold white]# Creating domain config file[/]")
+
+        json_object = json.dumps(self.domain, default=lambda x: x.__dict__, indent=4)
+        with open(
+            self.paths.DOMAINPATH + "setup.json", "w", encoding="utf-8"
+        ) as outfile:
+            outfile.write(json_object)
+
+    def build_identities(self):
+        """_summary_"""
+        console.print("[bold white]# Creating and registering identities[/]")
+
+        console.print("[bold]## Enroll TLS CA Admin[/]")
+
+        self.config_yaml(
+            self.domain.ca.serverport,
+            self.domain.ca.name,
+            self.paths.CACLIENTDOMAINMSPPATH,
+        )
+
+        self.config_yaml(
+            self.domain.caorderer.serverport,
+            self.domain.caorderer.name,
+            self.paths.CAORDERERCACLIENTMSPPATH,
+        )
+
+        commands.enroll(
+            self.paths.APPPATH,
+            self.paths.CACLIENTDOMAINPATH,
+            "admin",
+            "adminpw",
+            self.domain.ca.serverport,
+            self.paths.CACERTDOMAINFILE,
+        )
+
+        console.print("[bold]## Registering TLS CA Admin Orderer[/]")
         commands.register_orderer(
             self.paths.APPPATH,
-            self.paths.ORDERERORGPATH,
-            "orderer",
-            "ordererpw",
-            self.paths.CADOMAINNAME,
-            self.paths.TLSCERTDOMAINFILE,
-        )
-
-        console.print("[bold]## Registering orderer admin[/]")
-        commands.register_admin(
-            self.paths.APPPATH,
-            self.paths.ORDERERORGPATH,
-            "ordererAdmin",
-            "ordererAdminpw",
-            self.paths.CADOMAINNAME,
-            self.paths.TLSCERTDOMAINFILE,
-        )
-
-        console.print("[bold]## Registering orderer msp[/]")
-        commands.enroll_msp(
-            self.paths.APPPATH,
-            self.paths.ORDERERORGPATH,
+            self.paths.CACLIENTDOMAINPATH,
             "orderer",
             "ordererpw",
             self.domain.ca.serverport,
-            self.paths.CADOMAINNAME,
-            self.paths.ORDDOMAINMSPPATH,
-            self.paths.TLSCERTDOMAINFILE,
+            self.paths.CACERTDOMAINFILE,
+        )
+
+        console.print("[bold]## Enroll Orderer Org CA Admin [/]")
+        commands.enroll(
+            self.paths.APPPATH,
+            self.paths.CAORDERERCACLIENTPATH,
+            "admin",
+            "adminpw",
+            self.domain.caorderer.serverport,
+            self.paths.CACERTORDERERFILE,
+        )
+
+        console.print("[bold]## Registering Orderer Org CA Admin :: Orderer[/]")
+        commands.register_orderer(
+            self.paths.APPPATH,
+            self.paths.CAORDERERCACLIENTPATH,
+            "orderer",
+            "ordererpw",
+            self.domain.caorderer.serverport,
+            self.paths.CACERTORDERERFILE,
+        )
+
+        console.print("[bold]## Registering Orderer Org CA Admin :: Admin[/]")
+        commands.register_orderer_admin(
+            self.paths.APPPATH,
+            self.paths.CAORDERERCACLIENTPATH,
+            "ordereradmin",
+            "ordereradminpw",
+            self.domain.caorderer.serverport,
+            self.paths.CACERTORDERERFILE,
+        )
+
+        console.print("[bold]## Enroll Orderer Org Admin MSP[/]")
+        commands.enroll_msp(
+            self.paths.APPPATH,
+            self.paths.ORDERERORGADMINPATH,
+            "admin",
+            "adminpw",
+            self.domain.caorderer.serverport,
+            self.paths.CACERTORDERERFILE,
         )
 
         shutil.copy(
-            self.paths.ORDERERORGMSPPATH + "config.yaml",
-            self.paths.ORDDOMAINMSPPATH + "config.yaml",
+            self.paths.CAORDERERCACLIENTMSPPATH + self.configyaml,
+            self.paths.ORDERERORGMSPPATH + self.configyaml,
         )
 
-        console.print("[bold]## Generating the orderer-tls certificates[/]")
-        hosts = [self.paths.ORDERERNAME, self.domain.orderer.name, "localhost"]
+        console.print("[bold]## Enroll Orderer[/]")
+        commands.enroll(
+            self.paths.APPPATH,
+            self.paths.ORDDOMAINPATH,
+            "orderer",
+            "ordererpw",
+            self.domain.caorderer.serverport,
+            self.paths.CACERTORDERERFILE,
+        )
+
+        shutil.copy(
+            self.paths.CAORDERERCACLIENTMSPPATH + self.configyaml,
+            self.paths.ORDDOMAINMSPPATH + self.configyaml,
+        )
+
+        console.print("[bold]## Enroll Orderer TLS[/]")
+        hosts = [
+            self.domain.orderer.name + "." + self.domain.name,
+            self.domain.orderer.name,
+            "localhost",
+        ]
         commands.enroll_tls(
             self.paths.APPPATH,
-            self.paths.ORDERERORGPATH,
-            "orderer",
-            "ordererpw",
+            self.paths.ORDDOMAINPATH,
+            "admin",
+            "adminpw",
             self.domain.ca.serverport,
-            self.paths.CADOMAINNAME,
-            self.paths.ORDDOMAINTLSPATH,
             hosts,
-            self.paths.ORDERERNAME,
-            self.paths.TLSCERTDOMAINFILE,
+            self.domain.orderer.name + "." + self.domain.name,
+            self.paths.CACERTDOMAINFILE,
         )
 
-        console.print("[bold]## Generating admin msp[/]")
-        commands.enroll_msp(
-            self.paths.APPPATH,
-            self.paths.ORDERERORGPATH,
-            "ordererAdmin",
-            "ordererAdminpw",
-            self.domain.ca.serverport,
-            self.paths.CADOMAINNAME,
-            self.paths.ORDDOMAINADMINMSPPATH,
-            self.paths.TLSCERTDOMAINFILE,
-        )
+        for file_name in os.listdir(self.paths.ORDKEYSTOREPATH):
+            shutil.copy(
+                self.paths.ORDKEYSTOREPATH + file_name,
+                self.paths.ORDDOMAINTLSPATH + "server.key",
+            )
 
         shutil.copy(
-            self.paths.ORDERERORGMSPPATH + "config.yaml",
-            self.paths.ORDDOMAINADMINMSPPATH + "config.yaml",
+            self.paths.ORDSIGNCERTPATH + "cert.pem",
+            self.paths.ORDDOMAINTLSPATH + "server.crt",
+        )
+
+        for file_name in os.listdir(self.paths.ORDTLSCAPATH):
+            shutil.copy(
+                self.paths.ORDTLSCAPATH + file_name,
+                self.paths.ORDDOMAINTLSPATH + "ca-root.crt",
+            )
+            shutil.copy(
+                self.paths.ORDTLSCAPATH + file_name,
+                self.paths.ORDTLSCAMSPPATH + "tlsca-cert.pem",
+            )
+
+        shutil.copy(
+            self.paths.ORDERERORGSIGNCERTPATH + "cert.pem",
+            self.paths.ORDDOMAINADMINCERTPATH + "cert.pem",
         )
 
         for org in self.domain.organizations:
             self.build_identities_org(org)
 
     def build_identities_org(self, org: Organization):
-        console.print("[bold white]## Registering organization " + org.name + "[/]")
-        while True:
-            try:
-                container = docker.container.inspect(
-                    org.ca.name + "." + self.domain.name
-                )
-                break
-            except:
-                continue
-
-        while True:
-            if container.state.running:
-                break
-            continue
+        """_summary_"""
 
         self.paths.set_org_paths(org)
 
-        os.environ["FABRIC_CA_CLIENT_HOME"] = self.paths.ORGPATH
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client enroll -u https://admin:adminpw@localhost:"
-            + str(org.ca.serverport)
-            + " --caname "
-            + self.paths.CAORGNAME
-            + " --tls.certfiles "
-            + self.paths.TLSCERTORGFILE
+        self.config_yaml(
+            org.ca.serverport,
+            org.ca.name,
+            self.paths.CAORGCACLIENTMSPPATH,
         )
 
-        CACERTPEMFILE = (
-            "cacerts/localhost-"
-            + str(org.ca.serverport)
-            + "-"
-            + org.ca.name.replace(".", "-")
-            + "-"
-            + self.domain.name.replace(".", "-")
-            + ".pem",
+        console.print("[bold]## Enroll Org CA Admin[/]")
+        commands.enroll(
+            self.paths.APPPATH,
+            self.paths.CAORGCACLIENTPATH,
+            "admin",
+            "adminpw",
+            org.ca.serverport,
+            self.paths.CACERTORGFILE,
         )
 
-        configfile = {
-            "NodeOUs": {
-                "Enable": True,
-                "ClientOUIdentifier": {
-                    "Certificate": CACERTPEMFILE,
-                    "OrganizationalUnitIdentifier": "client",
-                },
-                "PeerOUIdentifier": {
-                    "Certificate": CACERTPEMFILE,
-                    "OrganizationalUnitIdentifier": "peer",
-                },
-                "AdminOUIdentifier": {
-                    "Certificate": CACERTPEMFILE,
-                    "OrganizationalUnitIdentifier": "admin",
-                },
-                "OrdererOUIdentifier": {
-                    "Certificate": CACERTPEMFILE,
-                    "OrganizationalUnitIdentifier": "orderer",
-                },
-            }
-        }
+        console.print("[bold]## Enroll Org CA Admin MSP[/]")
+        commands.enroll_msp(
+            self.paths.APPPATH,
+            self.paths.CAORGCACLIENTPATH,
+            "admin",
+            "adminpw",
+            org.ca.serverport,
+            self.paths.CACERTORGFILE,
+        )
 
-        with open(Paths.ORGMSPPATH + "config.yaml", "w", encoding="utf-8") as yaml_file:
-            yaml.dump(configfile, yaml_file)
+        console.print("[bold]## Register Org CA Admin :: Admin[/]")
+        commands.register_admin(
+            self.paths.APPPATH,
+            self.paths.CAORGCACLIENTPATH,
+            org.name + "admin",
+            org.name + "adminpw",
+            org.ca.serverport,
+            self.paths.CACERTORGFILE,
+        )
+
+        console.print("[bold]## Register Org CA Admin :: User[/]")
+        commands.register_user(
+            self.paths.APPPATH,
+            self.paths.CAORGCACLIENTPATH,
+            "user",
+            "userpw",
+            org.ca.serverport,
+            self.paths.CACERTORGFILE,
+        )
+
+        console.print("[bold]## Enroll Org Admin[/]")
+        commands.enroll_msp(
+            self.paths.APPPATH,
+            self.paths.ORGCACLIENTPATH,
+            "admin",
+            "adminpw",
+            org.ca.serverport,
+            self.paths.CACERTORGFILE,
+        )
+
+        shutil.copy(
+            self.paths.CAORGCACLIENTMSPPATH + self.configyaml,
+            self.paths.ORGMSPPATH + self.configyaml,
+        )
 
         for peer in org.peers:
             self.build_identities_peer(org, peer)
 
     def build_identities_peer(self, org: Organization, peer: Peer):
-        console.print("[bold]## Registering " + peer.name + "[/]")
+        """_summary_"""
 
         self.paths.set_peer_paths(org, peer)
+        peername = peer.name.replace(".", "")
 
-        os.environ["FABRIC_CA_CLIENT_HOME"] = self.paths.ORGPATH
+        console.print("[bold]## Registering TLS CA Admin Peer[/]")
+        commands.register_peer(
+            self.paths.APPPATH,
+            self.paths.CACLIENTDOMAINPATH,
+            peername,
+            peername + "pw",
+            self.domain.ca.serverport,
+            self.paths.CACERTDOMAINFILE,
+        )
 
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client register "
-            + " --caname "
-            + self.paths.CAORGNAME
-            + " --id.name "
-            + peer.name
-            + " --id.secret "
-            + peer.name
-            + "pw"
-            + " --id.type peer "
-            + " --tls.certfiles "
-            + self.paths.TLSCERTORGFILE
+        console.print("[bold]## Register Org CA Admin :: Peer[/]")
+        commands.enroll(
+            self.paths.APPPATH,
+            self.paths.CAORGCACLIENTPATH,
+            "admin",
+            "adminpw",
+            org.ca.serverport,
+            self.paths.CACERTORGFILE,
         )
-        console.print("[bold]## Registering user[/]")
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client register "
-            + " --caname "
-            + self.paths.CAORGNAME
-            + " --id.name user1"
-            + " --id.secret user1pw"
-            + " --id.type client "
-            + " --tls.certfiles "
-            + self.paths.TLSCERTORGFILE
+        commands.register_peer(
+            self.paths.APPPATH,
+            self.paths.CAORGCACLIENTPATH,
+            peername,
+            peername + "pw",
+            org.ca.serverport,
+            self.paths.CACERTORGFILE,
         )
-        console.print("[bold]## Registering org admin[/]")
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client register "
-            + " --caname "
-            + self.paths.CAORGNAME
-            + " --id.name "
-            + org.name
-            + "admin"
-            + " --id.secret "
-            + org.name
-            + "adminpw"
-            + " --id.type admin "
-            + " --tls.certfiles "
-            + self.paths.TLSCERTORGFILE
-        )
-        console.print("[bold]## Generating peer msp[/]")
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client enroll "
-            + " -u https://"
-            + peer.name
-            + ":"
-            + peer.name
-            + "pw@localhost:"
-            + str(org.ca.serverport)
-            + " --caname "
-            + self.paths.CAORGNAME
-            + " -M "
-            + self.paths.PEERMSPPATH
-            + " --tls.certfiles "
-            + self.paths.TLSCERTORGFILE
+
+        console.print("[bold]## Enroll Peer MSP[/]")
+        commands.enroll_msp(
+            self.paths.APPPATH,
+            self.paths.PEERPATH,
+            "admin",
+            "adminpw",
+            org.ca.serverport,
+            self.paths.CACERTORGFILE,
         )
 
         shutil.copy(
-            self.paths.ORGMSPPATH + "config.yaml",
-            self.paths.PEERMSPPATH + "config.yaml",
+            self.paths.CAORGCACLIENTMSPPATH + self.configyaml,
+            self.paths.PEERMSPPATH + self.configyaml,
         )
 
-        console.print("[bold]## Generating the peer-tls certificates[/]")
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client enroll "
-            + " -u https://"
-            + peer.name
-            + ":"
-            + peer.name
-            + "pw@localhost:"
-            + str(org.ca.serverport)
-            + " --caname "
-            + self.paths.CAORGNAME
-            + " -M "
-            + self.paths.PEERTLSPATH
-            + " --enrollment.profile tls --csr.hosts "
-            + self.paths.PEERNAME
-            + " --csr.hosts "
-            + peer.name
-            + " --csr.hosts localhost"
-            + " --myhost "
-            + self.paths.PEERNAME
-            + " --tls.certfiles "
-            + self.paths.TLSCERTORGFILE
+        console.print("[bold]## Enroll Peer TLS[/]")
+        hosts = [peer.name + "." + self.domain.name, peer.name, "localhost"]
+        commands.enroll_tls(
+            self.paths.APPPATH,
+            self.paths.PEERPATH,
+            "admin",
+            "adminpw",
+            self.domain.ca.serverport,
+            hosts,
+            peer.name + "." + self.domain.name,
+            self.paths.CACERTDOMAINFILE,
         )
 
-        console.print("[bold]## Generating user msp[/]")
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client enroll "
-            + " -u https://user1:user1pw@localhost:"
-            + str(org.ca.serverport)
-            + " --caname "
-            + self.paths.CAORGNAME
-            + " -M "
-            + self.paths.ORGUSERMSPPATH
-            + " --tls.certfiles "
-            + self.paths.TLSCERTORGFILE
-        )
+        for file_name in os.listdir(self.paths.PEERKEYSTOREPATH):
+            shutil.copy(
+                self.paths.PEERKEYSTOREPATH + file_name,
+                self.paths.PEERTLSPATH + "server.key",
+            )
 
         shutil.copy(
-            self.paths.ORGMSPPATH + "config.yaml",
-            self.paths.ORGUSERMSPPATH + "config.yaml",
+            self.paths.PEERSIGNCERTPATH + "cert.pem",
+            self.paths.PEERTLSPATH + "server.crt",
         )
 
-        console.print("[bold]## Generating org admin msp[/]")
-        os.system(
-            str(Path().absolute())
-            + "/bin/fabric-ca-client enroll "
-            + " -u https://"
-            + org.name
-            + "admin:"
-            + org.name
-            + "adminpw@localhost:"
-            + str(org.ca.serverport)
-            + " --caname "
-            + self.paths.CAORGNAME
-            + " -M "
-            + self.paths.ORGADMINMSPPATH
-            + " --tls.certfiles "
-            + self.paths.TLSCERTORGFILE
-        )
+        for file_name in os.listdir(self.paths.PEERTLSCAPATH):
+            shutil.copy(
+                self.paths.PEERTLSCAPATH + file_name,
+                self.paths.PEERTLSPATH + "ca-root.crt",
+            )
+            shutil.copy(
+                self.paths.PEERTLSCAPATH + file_name,
+                self.paths.PEERTLSCAMSPPATH + "tlsca-cert.pem",
+            )
 
         shutil.copy(
-            self.paths.ORGMSPPATH + "config.yaml",
-            self.paths.ORGADMINMSPPATH + "config.yaml",
+            self.paths.ORGMSPPATH + "signcerts/cert.pem",
+            self.paths.PEERADMINCERTPATH + "cert.pem",
         )
 
     def build_orderer(self):
+        """_summary_"""
         console.print("[bold white]# Building " + self.domain.name + " orderer[/]")
 
         pathorderer = "domains/" + self.domain.name + "/compose/"
@@ -522,12 +637,6 @@ class Build:
                 + self.domain.orderer.ORDERER_GENERAL_TLS_CERTIFICATE,
                 "ORDERER_GENERAL_TLS_ROOTCAS="
                 + self.domain.orderer.ORDERER_GENERAL_TLS_ROOTCAS,
-                "ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE="
-                + self.domain.orderer.ORDERER_GENERAL_CLUSTER_CLIENTCERTIFICATE,
-                "ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY="
-                + self.domain.orderer.ORDERER_GENERAL_CLUSTER_CLIENTPRIVATEKEY,
-                "ORDERER_GENERAL_CLUSTER_ROOTCAS="
-                + self.domain.orderer.ORDERER_GENERAL_CLUSTER_ROOTCAS,
                 "ORDERER_GENERAL_BOOTSTRAPMETHOD=none",
                 "ORDERER_CHANNELPARTICIPATION_ENABLED="
                 + str(self.domain.orderer.ORDERER_CHANNELPARTICIPATION_ENABLED).lower(),
@@ -573,6 +682,7 @@ class Build:
             yaml.dump(ordfile, yaml_file)
 
     def build_peers_databases(self):
+        """_summary_"""
         console.print("[bold white]# Building peers and databases[/]")
 
         pathdomains = str(Path().absolute()) + "/domains/" + self.domain.name
@@ -589,33 +699,23 @@ class Build:
             "services": {},
         }
 
-        clidataORDERER_CA = (
-            "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/tlsca/tlsca."
-            + self.domain.name
-            + "-cert.pem"
-        )
+        clidataORDERER_CA = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/ca-root"
         clidataORDERER_ADMIN_TLS_SIGN_CERT = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/server.crt"
         clidataORDERER_ADMIN_TLS_PRIVATE_KEY = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/server.key"
-        clidataORDERER_GENERAL_LOCALMSPDIR = (
-            "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/users/Admin@"
-            + self.domain.name
-            + "/msp"
-        )
+        clidataORDERER_GENERAL_LOCALMSPDIR = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/admin/msp"
         clidataCORE_PEER_LOCALMSPID = self.domain.organizations[0].name + "MSP"
         clidataCORE_PEER_TLS_ROOTCERT_FILE = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
             + cliorg.name
-            + "/tlsca/tlsca."
-            + cliorg.name
-            + "-cert.pem"
+            + "/"
+            + clipeer.name
+            + "/tls/ca-root.crt"
         )
         clidataCORE_PEER_MSPCONFIGPATH = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
             + cliorg.name
-            + "/users/Admin@"
-            + cliorg.name
-            + "."
-            + self.domain.name
+            + "/"
+            + clipeer.name
             + "/msp"
         )
         clidataCORE_PEER_ADDRESS = (
@@ -643,6 +743,7 @@ class Build:
                 "CORE_PEER_MSPCONFIGPATH=" + clidataCORE_PEER_MSPCONFIGPATH,
                 "CORE_PEER_TLS_ROOTCERT_FILE=" + clidataCORE_PEER_TLS_ROOTCERT_FILE,
                 "CORE_PEER_ADDRESS=" + clidataCORE_PEER_ADDRESS,
+                "CORE_PEER_ID=" + "cli." + self.domain.name,
                 "CHANNEL_NAME=" + clidataCHANNEL_NAME,
             ],
             "working_dir": "/opt/gopath/src/github.com/hyperledger/fabric/peer",
@@ -660,73 +761,7 @@ class Build:
 
         for org in self.domain.organizations:
             for peer in org.peers:
-                peerdata = {
-                    "hostname": peer.name + "." + self.domain.name,
-                    "container_name": peer.name + "." + self.domain.name,
-                    "image": "hyperledger/fabric-peer:latest",
-                    "labels": {"service": "hyperledger-fabric"},
-                    # "user": str(os.geteuid()) + ":" + str(os.getgid()),
-                    "environment": [
-                        "FABRIC_CFG_PATH=" + peer.FABRIC_CFG_PATH,
-                        "FABRIC_LOGGING_SPEC=" + peer.FABRIC_LOGGING_SPEC,
-                        "CORE_PEER_TLS_ENABLED="
-                        + str(peer.CORE_PEER_TLS_ENABLED).lower(),
-                        "CORE_PEER_PROFILE_ENABLED="
-                        + str(peer.CORE_PEER_PROFILE_ENABLED).lower(),
-                        "CORE_PEER_TLS_CERT_FILE=" + peer.CORE_PEER_TLS_CERT_FILE,
-                        "CORE_PEER_TLS_KEY_FILE=" + peer.CORE_PEER_TLS_KEY_FILE,
-                        "CORE_PEER_TLS_ROOTCERT_FILE="
-                        + peer.CORE_PEER_TLS_ROOTCERT_FILE,
-                        "CORE_PEER_ID=" + peer.CORE_PEER_ID,
-                        "CORE_PEER_ADDRESS=" + peer.CORE_PEER_ADDRESS,
-                        "CORE_PEER_LISTENADDRESS=" + peer.CORE_PEER_LISTENADDRESS,
-                        "CORE_PEER_CHAINCODEADDRESS=" + peer.CORE_PEER_CHAINCODEADDRESS,
-                        "CORE_PEER_CHAINCODELISTENADDRESS="
-                        + peer.CORE_PEER_CHAINCODELISTENADDRESS,
-                        "CORE_PEER_GOSSIP_BOOTSTRAP=" + peer.CORE_PEER_GOSSIP_BOOTSTRAP,
-                        "CORE_PEER_GOSSIP_EXTERNALENDPOINT="
-                        + peer.CORE_PEER_GOSSIP_EXTERNALENDPOINT,
-                        "CORE_PEER_LOCALMSPID=" + peer.CORE_PEER_LOCALMSPID,
-                        "CORE_PEER_MSPCONFIGPATH=" + peer.CORE_PEER_MSPCONFIGPATH,
-                        "CORE_OPERATIONS_LISTENADDRESS="
-                        + peer.CORE_OPERATIONS_LISTENADDRESS,
-                        "CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG="
-                        + peer.CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG,
-                        "CORE_CHAINCODE_EXECUTETIMEOUT="
-                        + peer.CORE_CHAINCODE_EXECUTETIMEOUT,
-                        "CORE_VM_ENDPOINT=" + peer.CORE_VM_ENDPOINT,
-                        "CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE="
-                        + peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE,
-                        "CORE_LEDGER_STATE_STATEDATABASE="
-                        + peer.CORE_LEDGER_STATE_STATEDATABASE,
-                        "CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS="
-                        + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS,
-                        "CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME="
-                        + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME,
-                        "CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD="
-                        + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD,
-                        "CORE_METRICS_PROVIDER=prometheus",
-                    ],
-                    "ports": ["0", "1", "2"],
-                    "working_dir": "/opt/gopath/src/github.com/hyperledger/fabric/peer",
-                    "command": "peer node start",
-                    "volumes": peer.volumes,
-                    "networks": [self.domain.networkname],
-                    "depends_on": [
-                        peer.database.name + "." + self.domain.name,
-                        self.domain.orderer.name + "." + self.domain.name,
-                    ],
-                }
-
-                peerdata["ports"][0] = DoubleQuotedScalarString(
-                    f'{str(peer.peerlistenport)+":"+str(peer.peerlistenport)}'
-                )
-                peerdata["ports"][1] = DoubleQuotedScalarString(
-                    f'{str(peer.operationslistenport)+":"+str(peer.operationslistenport)}'
-                )
-                peerdata["ports"][2] = DoubleQuotedScalarString(
-                    f'{str(peer.chaincodelistenport)+":"+str(peer.chaincodelistenport)}'
-                )
+                peerdata = self.peer_yaml(peer)
 
                 clidata["depends_on"].append(peer.name + "." + self.domain.name)
 
@@ -734,21 +769,7 @@ class Build:
 
                 peerfile["services"][peer.name + "." + self.domain.name] = peerdata
 
-                databasedata = {
-                    "image": "couchdb:3.3.2",
-                    "labels": {"service": "hyperledger-fabric"},
-                    "environment": [
-                        "COUCHDB_USER=" + peer.database.COUCHDB_USER,
-                        "COUCHDB_PASSWORD=" + peer.database.COUCHDB_PASSWORD,
-                    ],
-                    "ports": ["0"],
-                    "container_name": peer.database.name + "." + self.domain.name,
-                    "networks": [self.domain.networkname],
-                }
-
-                databasedata["ports"][0] = DoubleQuotedScalarString(
-                    f'{str(peer.database.port)+":5984"}'
-                )
+                databasedata = self.database_yaml(peer)
 
                 peerfile["services"][
                     peer.database.name + "." + self.domain.name
@@ -758,6 +779,7 @@ class Build:
             yaml.dump(peerfile, yaml_file)
 
     def build_peers_databases_org(self, org: Organization):
+        """_summary_"""
         console.print("[bold white]# Building " + org.name + " peers and databases[/]")
 
         pathpeer = "domains/" + self.domain.name + "/compose/"
@@ -773,67 +795,7 @@ class Build:
         }
 
         for peer in org.peers:
-            peerdata = {
-                "hostname": peer.name + "." + self.domain.name,
-                "container_name": peer.name + "." + self.domain.name,
-                "image": "hyperledger/fabric-peer:latest",
-                "labels": {"service": "hyperledger-fabric"},
-                # "user": str(os.geteuid()) + ":" + str(os.getgid()),
-                "environment": [
-                    "FABRIC_CFG_PATH=" + peer.FABRIC_CFG_PATH,
-                    "FABRIC_LOGGING_SPEC=" + peer.FABRIC_LOGGING_SPEC,
-                    "CORE_PEER_TLS_ENABLED=" + str(peer.CORE_PEER_TLS_ENABLED),
-                    "CORE_PEER_PROFILE_ENABLED=" + str(peer.CORE_PEER_PROFILE_ENABLED),
-                    "CORE_PEER_TLS_CERT_FILE=" + peer.CORE_PEER_TLS_CERT_FILE,
-                    "CORE_PEER_TLS_KEY_FILE=" + peer.CORE_PEER_TLS_KEY_FILE,
-                    "CORE_PEER_TLS_ROOTCERT_FILE=" + peer.CORE_PEER_TLS_ROOTCERT_FILE,
-                    "CORE_PEER_ID=" + peer.CORE_PEER_ID,
-                    "CORE_PEER_ADDRESS=" + peer.CORE_PEER_ADDRESS,
-                    "CORE_PEER_LISTENADDRESS=" + peer.CORE_PEER_LISTENADDRESS,
-                    "CORE_PEER_CHAINCODEADDRESS=" + peer.CORE_PEER_CHAINCODEADDRESS,
-                    "CORE_PEER_CHAINCODELISTENADDRESS="
-                    + peer.CORE_PEER_CHAINCODELISTENADDRESS,
-                    "CORE_PEER_GOSSIP_BOOTSTRAP=" + peer.CORE_PEER_GOSSIP_BOOTSTRAP,
-                    "CORE_PEER_GOSSIP_EXTERNALENDPOINT="
-                    + peer.CORE_PEER_GOSSIP_EXTERNALENDPOINT,
-                    "CORE_PEER_LOCALMSPID=" + peer.CORE_PEER_LOCALMSPID,
-                    "CORE_PEER_MSPCONFIGPATH=" + peer.CORE_PEER_MSPCONFIGPATH,
-                    "CORE_OPERATIONS_LISTENADDRESS="
-                    + peer.CORE_OPERATIONS_LISTENADDRESS,
-                    "CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG="
-                    + peer.CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG,
-                    "CORE_CHAINCODE_EXECUTETIMEOUT="
-                    + peer.CORE_CHAINCODE_EXECUTETIMEOUT,
-                    "CORE_VM_ENDPOINT=" + peer.CORE_VM_ENDPOINT,
-                    "CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE="
-                    + peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE,
-                    "CORE_LEDGER_STATE_STATEDATABASE="
-                    + peer.CORE_LEDGER_STATE_STATEDATABASE,
-                    "CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS="
-                    + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS,
-                    "CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME="
-                    + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME,
-                    "CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD="
-                    + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD,
-                    "CORE_METRICS_PROVIDER=prometheus",
-                ],
-                "ports": ["0", "1", "2"],
-                "working_dir": "/root",
-                "command": "peer node start",
-                "volumes": peer.volumes,
-                "networks": [self.domain.networkname],
-                "depends_on": [peer.database.name],
-            }
-
-            peerdata["ports"][0] = DoubleQuotedScalarString(
-                f'{str(peer.peerlistenport)+":"+str(peer.peerlistenport)}'
-            )
-            peerdata["ports"][1] = DoubleQuotedScalarString(
-                f'{str(peer.operationslistenport)+":"+str(peer.operationslistenport)}'
-            )
-            peerdata["ports"][2] = DoubleQuotedScalarString(
-                f'{str(peer.chaincodelistenport)+":"+str(peer.chaincodelistenport)}'
-            )
+            peerdata = self.peer_yaml(peer)
 
             peerfile["volumes"][peer.name + "." + self.domain.name] = {}
             datapeer["volumes"][peer.name + "." + self.domain.name] = {}
@@ -841,21 +803,7 @@ class Build:
             peerfile["services"][peer.name + "." + self.domain.name] = peerdata
             datapeer["services"][peer.name + "." + self.domain.name] = peerdata
 
-            databasedata = {
-                "image": "couchdb:3.3.2",
-                "labels": {"service": "hyperledger-fabric"},
-                "environment": [
-                    "COUCHDB_USER=" + peer.database.COUCHDB_USER,
-                    "COUCHDB_PASSWORD=" + peer.database.COUCHDB_PASSWORD,
-                ],
-                "ports": ["0"],
-                "container_name": peer.database.name + "." + self.domain.name,
-                "networks": [self.domain.networkname],
-            }
-
-            databasedata["ports"][0] = DoubleQuotedScalarString(
-                f'{str(peer.database.port)+":5984"}'
-            )
+            databasedata = self.database_yaml(peer)
 
             peerfile["services"][
                 peer.database.name + "." + self.domain.name
@@ -873,11 +821,12 @@ class Build:
             yaml.dump(datapeer, yamlpeer_file)
 
     def build_peer(self, peer: Peer):
+        """_summary_"""
         console.print("[bold white]# Building " + peer.name + " and database[/]")
 
-        pathpeer = "domains/" + self.domain.name + "/compose/"
-
-        with open(pathpeer + "compose-net.yaml") as yamlpeer_file:
+        with open(
+            self.paths.COMPOSEPATH + "compose-net.yaml", encoding="utf-8"
+        ) as yamlpeer_file:
             datapeer = yaml.load(yamlpeer_file)
 
         peerfile = {
@@ -887,64 +836,7 @@ class Build:
             "services": {},
         }
 
-        peerdata = {
-            "container_name": peer.name + "." + self.domain.name,
-            "image": "hyperledger/fabric-peer:latest",
-            "labels": {"service": "hyperledger-fabric"},
-            # "user": str(os.geteuid()) + ":" + str(os.getgid()),
-            "environment": [
-                "FABRIC_CFG_PATH=" + peer.FABRIC_CFG_PATH,
-                "FABRIC_LOGGING_SPEC=" + peer.FABRIC_LOGGING_SPEC,
-                "CORE_PEER_TLS_ENABLED=" + str(peer.CORE_PEER_TLS_ENABLED),
-                "CORE_PEER_PROFILE_ENABLED=" + str(peer.CORE_PEER_PROFILE_ENABLED),
-                "CORE_PEER_TLS_CERT_FILE=" + peer.CORE_PEER_TLS_CERT_FILE,
-                "CORE_PEER_TLS_KEY_FILE=" + peer.CORE_PEER_TLS_KEY_FILE,
-                "CORE_PEER_TLS_ROOTCERT_FILE=" + peer.CORE_PEER_TLS_ROOTCERT_FILE,
-                "CORE_PEER_ID=" + peer.CORE_PEER_ID,
-                "CORE_PEER_ADDRESS=" + peer.CORE_PEER_ADDRESS,
-                "CORE_PEER_LISTENADDRESS=" + peer.CORE_PEER_LISTENADDRESS,
-                "CORE_PEER_CHAINCODEADDRESS=" + peer.CORE_PEER_CHAINCODEADDRESS,
-                "CORE_PEER_CHAINCODELISTENADDRESS="
-                + peer.CORE_PEER_CHAINCODELISTENADDRESS,
-                "CORE_PEER_GOSSIP_BOOTSTRAP=" + peer.CORE_PEER_GOSSIP_BOOTSTRAP,
-                "CORE_PEER_GOSSIP_EXTERNALENDPOINT="
-                + peer.CORE_PEER_GOSSIP_EXTERNALENDPOINT,
-                "CORE_PEER_LOCALMSPID=" + peer.CORE_PEER_LOCALMSPID,
-                "CORE_PEER_MSPCONFIGPATH=" + peer.CORE_PEER_MSPCONFIGPATH,
-                "CORE_OPERATIONS_LISTENADDRESS=" + peer.CORE_OPERATIONS_LISTENADDRESS,
-                "CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG="
-                + peer.CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG,
-                "CORE_CHAINCODE_EXECUTETIMEOUT=" + peer.CORE_CHAINCODE_EXECUTETIMEOUT,
-                "CORE_VM_ENDPOINT=" + peer.CORE_VM_ENDPOINT,
-                "CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE="
-                + peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE,
-                "CORE_LEDGER_STATE_STATEDATABASE="
-                + peer.CORE_LEDGER_STATE_STATEDATABASE,
-                "CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS="
-                + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS,
-                "CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME="
-                + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME,
-                "CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD="
-                + peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD,
-                "CORE_METRICS_PROVIDER=prometheus",
-            ],
-            "ports": ["0", "1", "2"],
-            "working_dir": "/root",
-            "command": "peer node start",
-            "volumes": peer.volumes,
-            "networks": [self.domain.networkname],
-            "depends_on": [peer.database.name],
-        }
-
-        peerdata["ports"][0] = DoubleQuotedScalarString(
-            f'{str(peer.peerlistenport)+":"+str(peer.peerlistenport)}'
-        )
-        peerdata["ports"][1] = DoubleQuotedScalarString(
-            f'{str(peer.operationslistenport)+":"+str(peer.operationslistenport)}'
-        )
-        peerdata["ports"][2] = DoubleQuotedScalarString(
-            f'{str(peer.chaincodelistenport)+":"+str(peer.chaincodelistenport)}'
-        )
+        peerdata = self.peer_yaml(peer)
 
         peerfile["volumes"][peer.name + "." + self.domain.name] = {}
         datapeer["volumes"][peer.name + "." + self.domain.name] = {}
@@ -952,174 +844,41 @@ class Build:
         peerfile["services"][peer.name + "." + self.domain.name] = peerdata
         datapeer["services"][peer.name + "." + self.domain.name] = peerdata
 
-        databasedata = {
-            "image": "couchdb:3.3.2",
-            "labels": {"service": "hyperledger-fabric"},
-            "environment": [
-                "COUCHDB_USER=" + peer.database.COUCHDB_USER,
-                "COUCHDB_PASSWORD=" + peer.database.COUCHDB_PASSWORD,
-            ],
-            "ports": ["0"],
-            "container_name": peer.database.name + "." + self.domain.name,
-            "networks": [self.domain.networkname],
-        }
-
-        databasedata["ports"][0] = DoubleQuotedScalarString(
-            f'{str(peer.database.port)+":5984"}'
-        )
+        databasedata = self.database_yaml(peer)
 
         peerfile["services"][peer.database.name + "." + self.domain.name] = databasedata
         datapeer["services"][peer.database.name + "." + self.domain.name] = databasedata
 
         with open(
-            pathpeer + "compose-net-" + peer.name + ".yaml", "w", encoding="utf-8"
+            self.paths.COMPOSEPATH + "compose-net-" + peer.name + ".yaml",
+            "w",
+            encoding="utf-8",
         ) as yaml_file:
             yaml.dump(peerfile, yaml_file)
 
         with open(
-            pathpeer + "compose-net.yaml", "w", encoding="utf-8"
+            self.paths.COMPOSEPATH + "compose-net.yaml", "w", encoding="utf-8"
         ) as yamlpeer_file:
             yaml.dump(datapeer, yamlpeer_file)
 
-    def build_new_organization(self, org: Organization):
-        self.build_new_org_ca(org)
-        self.build_identities_org(org)
-        self.build_peers_databases_org(org)
-        self.prepare_firefly()
-        self.build_config()
-        self.starting_pd_org(org)
-
-    def build_new_org_ca(self, org: Organization):
-        console.print("[bold white]# Building and starting " + org.name + " CA[/]")
-
-        pathfabricca = "domains/" + self.domain.name + "/compose/"
-
-        with open(pathfabricca + "compose-ca.yaml", encoding="utf-8") as yamlca_file:
-            cadata = yaml.load(yamlca_file)
-
-        cafile = {
-            "version": "3.7",
-            "networks": {self.domain.networkname: {"name": self.domain.networkname}},
-            "services": {},
-        }
-
-        self.paths.set_org_paths(org)
-        caorg = {
-            "image": "hyperledger/fabric-ca:latest",
-            "user": str(os.geteuid()) + ":" + str(os.getgid()),
-            "labels": {"service": "hyperledger-fabric"},
-            "environment": [
-                "FABRIC_CA_HOME=" + org.ca.FABRIC_CA_HOME,
-                "FABRIC_CA_SERVER_CA_NAME="
-                + org.ca.FABRIC_CA_SERVER_CA_NAME
-                + "."
-                + self.domain.name,
-                "FABRIC_CA_SERVER_CSR_CN=" + org.ca.name + "." + self.domain.name,
-                "FABRIC_CA_SERVER_CSR_HOSTS="
-                + org.ca.name
-                + "."
-                + self.domain.name
-                + ","
-                + org.ca.name
-                + ",localhost",
-                "FABRIC_CA_SERVER_TLS_ENABLED="
-                + str(org.ca.FABRIC_CA_SERVER_TLS_ENABLED).lower(),
-                "FABRIC_CA_SERVER_PORT=" + str(org.ca.FABRIC_CA_SERVER_PORT),
-                "FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS="
-                + org.ca.FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS,
-            ],
-            "ports": ["0", "1"],
-            "command": "sh -c 'fabric-ca-server start -b admin:adminpw -d'",
-            "volumes": [org.ca.volumes],
-            "container_name": org.ca.name + "." + self.domain.name,
-            "networks": [self.domain.networkname],
-        }
-
-        caorg["ports"][0] = DoubleQuotedScalarString(
-            f'{str(org.ca.serverport)+":"+str(org.ca.serverport)}'
-        )
-        caorg["ports"][1] = DoubleQuotedScalarString(
-            f'{str(org.ca.operationslistenport)+":"+str(org.ca.operationslistenport)}'
-        )
-
-        cafile["services"][org.ca.name + "." + self.domain.name] = caorg
-        cadata["services"][org.ca.name + "." + self.domain.name] = caorg
-
-        with open(
-            pathfabricca + "compose-ca-" + org.name + ".yaml", "w", encoding="utf-8"
-        ) as yaml_file:
-            yaml.dump(cafile, yaml_file)
-
-        with open(
-            pathfabricca + "compose-ca.yaml", "w", encoding="utf-8"
-        ) as cayaml_file:
-            yaml.dump(cadata, cayaml_file)
-
-        run = Run(self.domain)
-        run.start_ca_new(org.name)
-
-    def build_new_peer(self, org: Organization, peer: Peer):
-        self.build_identities_peer(org, peer)
-        self.build_peer(peer)
-        self.build_config()
-        self.starting_new_peer(peer)
-
     def prepare_firefly(self):
+        """_summary_"""
+        # TODO
         for i, org in enumerate(self.domain.organizations):
             ## Copy MSP Users
-            mspadminpath = Path(
-                "domains/"
-                + self.domain.name
-                + "/peerOrganizations/"
-                + org.name
-                + "/msp/users"
-                + "/Admin@"
-                + org.name
-                + "."
-                + self.domain.name
-                + "/msp"
-            )
+            self.paths.set_org_paths(org)
 
             shutil.copytree(
-                str(Path().absolute())
-                + str(
-                    Path(
-                        "/domains/"
-                        + self.domain.name
-                        + "/peerOrganizations/"
-                        + org.name
-                        + "/users"
-                    )
-                ),
-                str(Path().absolute())
-                + str(
-                    Path(
-                        "/domains/"
-                        + self.domain.name
-                        + "/peerOrganizations/"
-                        + org.name
-                        + "/msp/users"
-                    )
-                ),
+                self.paths.ORGCACLIENTPATH,
+                self.paths.ORGMSPUSERSPATH,
             )
             ## Copy Orderer
-            orderercrypto = (
-                str(Path().absolute())
-                + "/domains/"
-                + self.domain.name
-                + "/ordererOrganizations/orderer"
-            )
             shutil.copytree(
-                orderercrypto,
-                str(Path().absolute())
-                + "/domains/"
-                + self.domain.name
-                + "/peerOrganizations/"
-                + org.name
-                + "/msp/orderer",
+                self.paths.ORDDOMAINPATH,
+                self.paths.ORGMSPPATH + "orderer",
             )
 
-            dir_path = str(Path().absolute()) + "/" + str(mspadminpath) + "/keystore/"
+            dir_path = self.paths.ORGMSPPATH + "keystore/"
             filelst = os.listdir(dir_path)
             for keystore in filelst:
                 if os.path.isfile(dir_path + keystore):
@@ -1133,36 +892,28 @@ class Build:
                     )
 
             for peer in org.peers:
+                self.paths.set_peer_paths(org, peer)
                 shutil.copytree(
-                    str(Path().absolute())
-                    + "/domains/"
-                    + self.domain.name
-                    + "/peerOrganizations/"
-                    + org.name
-                    + "/"
-                    + peer.name,
-                    str(Path().absolute())
-                    + "/domains/"
-                    + self.domain.name
-                    + "/peerOrganizations/"
-                    + org.name
-                    + "/msp/"
-                    + peer.name,
+                    self.paths.PEERPATH,
+                    self.paths.ORGMSPPATH + peer.name,
                 )
 
     def starting_opd(self):
+        """_summary_"""
         console.print("[bold white]# Starting orderer, peers and databases[/]")
 
         run = Run(self.domain)
         run.starting_opd()
 
     def starting_pd_org(self, org: Organization):
+        """_summary_"""
         console.print("[bold white]# Starting " + org.name + " peers and databases[/]")
 
         run = Run(self.domain)
         run.starting_pd_org(org)
 
     def starting_new_peer(self, peer: Peer):
+        """_summary_"""
         console.print("[bold white]# Starting new peer " + peer.name + "[/]")
 
         run = Run(self.domain)

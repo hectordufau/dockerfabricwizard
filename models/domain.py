@@ -10,8 +10,9 @@ from models.organization import Organization
 
 class Domain(BaseModel):
     name: str = None
-    orderer: Orderer = None
     ca: Ca = None
+    caorderer: Ca = None
+    orderer: Orderer = None
     qtyorgs: int = 0
     organizations: List[Organization] = []
     networkname: Optional[str] = None

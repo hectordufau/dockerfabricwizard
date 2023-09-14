@@ -14,7 +14,6 @@ from controllers.firefly import Firefly
 from controllers.header import Header
 from controllers.requirements import Requirements
 from controllers.run import Run
-from helpers.paths import Paths
 from models.ca import Ca
 from models.chaincode import Chaincode
 from models.database import Database
@@ -89,6 +88,10 @@ class ConsoleOutput:
             str(Path().absolute())
             + "/domains/"
             + self.domain.name
+            + "/ordererOrganizations/admin/msp:/var/hyperledger/admin/msp",
+            str(Path().absolute())
+            + "/domains/"
+            + self.domain.name
             + "/ordererOrganizations/"
             + ordererdomain.name
             + "/tls/:/var/hyperledger/orderer/tls",
@@ -100,7 +103,7 @@ class ConsoleOutput:
         self.domain.orderer = ordererdomain
 
         cadomain = Ca()
-        cadomain.name = "ca.orderer"
+        cadomain.name = "ca"
         cadomain.FABRIC_CA_SERVER_CA_NAME = cadomain.name
         cadomain.volumes = "".join(
             [
@@ -115,6 +118,32 @@ class ConsoleOutput:
         self.domain.ca = cadomain
         portlist.append(self.domain.ca.serverport)
         portlist.append(self.domain.ca.operationslistenport)
+
+        caordererserverport = self.domain.ca.serverport + 100
+        caordereroplstport = self.domain.ca.operationslistenport + 100
+
+        caorderer = Ca()
+        caorderer.name = "ca.orderer"
+        caorderer.FABRIC_CA_SERVER_CA_NAME = caorderer.name
+        caorderer.FABRIC_CA_SERVER_OPERATIONS_LISTENADDRESS = "0.0.0.0:" + str(
+            caordereroplstport
+        )
+        caorderer.FABRIC_CA_SERVER_PORT = caordererserverport
+        caorderer.volumes = "".join(
+            [
+                str(Path().absolute()),
+                "/domains/",
+                self.domain.name,
+                "/fabricca/",
+                caorderer.name,
+                ":/etc/hyperledger/fabric-ca-server",
+            ]
+        )
+        self.domain.caorderer = caorderer
+        portlist.append(self.domain.caorderer.serverport)
+        portlist.append(self.domain.caorderer.operationslistenport)
+        self.domain.caorderer.serverport = caordererserverport
+        self.domain.caorderer.operationslistenport = caordereroplstport
 
         qtyorgs = console.input("[bold]Number of Organizations:[/] ")
         if qtyorgs.lower() == "q":
@@ -146,8 +175,8 @@ class ConsoleOutput:
         portcouchdb = 5984
         peeroperationlisten = 9444
         peerchaincodelistenport = 7052
-        caorgserverport = self.domain.ca.serverport + 100
-        caorgoplstport = self.domain.ca.operationslistenport + 100
+        caorgserverport = self.domain.caorderer.serverport + 100
+        caorgoplstport = self.domain.caorderer.operationslistenport + 100
 
         while iorgs <= self.domain.qtyorgs:
             org = Organization()
@@ -355,9 +384,7 @@ class ConsoleOutput:
             caorgoplstport += 100
             console.print("")
 
-        paths = Paths(self.domain)
-        paths.build_folders()
-        build = Build(self.domain, paths)
+        build = Build(self.domain)
         build.build_all()
         blockchain = Blockchain(self.domain)
         blockchain.build_all()
@@ -597,9 +624,7 @@ class ConsoleOutput:
         domain.qtyorgs += 1
         console.print("")
 
-        paths = Paths(domain)
-        paths.build_folders_org(org)
-        build = Build(domain, paths)
+        build = Build(domain)
         build.build_new_organization(org)
         blockchain = Blockchain(domain)
         blockchain.build_new_organization(org)
@@ -747,8 +772,7 @@ class ConsoleOutput:
 
         org.qtypeers += 1
 
-        path = Paths(domain)
-        build = Build(domain, path)
+        build = Build(domain)
         build.build_new_peer(org, peer)
         blockchain = Blockchain(domain)
         blockchain.join_channel_peer(org, peer)
@@ -1086,6 +1110,7 @@ class ConsoleOutput:
                     console.print("")
 
     def select_chaincode(self, domain: Domain):
+        """Function for select chaincode"""
         os.system("clear")
         header.header()
         console.print("[bold orange1]SELECT A CHAINCODE[/]")

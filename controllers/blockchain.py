@@ -9,6 +9,8 @@ import ruamel.yaml
 from rich.console import Console
 
 from controllers.header import Header
+from helpers.commands import Commands
+from helpers.paths import Paths
 from models.domain import Domain
 from models.organization import Organization
 from models.peer import Peer
@@ -19,11 +21,14 @@ yaml.boolean_representation = [f"false", f"true"]
 console = Console()
 client = docker.from_env()
 header = Header()
+commands = Commands()
 
 
 class Blockchain:
     def __init__(self, domain: Domain) -> None:
         self.domain: Domain = domain
+        self.paths = Paths(domain)
+        self.configtxyaml = "configtx.yaml"
 
     def build_all(self):
         os.system("clear")
@@ -41,18 +46,12 @@ class Blockchain:
         console.print("[bold white]# Creating genesis block[/]")
         console.print("")
         # Preparing configtx
-        config = str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
-        pathconfig = Path(config)
-        pathconfig.mkdir(parents=True, exist_ok=True)
-
-        origconfig = str(Path().absolute()) + "/config/configtx.yaml"
-
         shutil.copy(
-            origconfig,
-            config + "configtx.yaml",
+            self.paths.CONFIGTX,
+            self.paths.DOMAINCONFIGTXFILE,
         )
 
-        with open(config + "configtx.yaml", encoding="utf-8") as cftx:
+        with open(self.paths.DOMAINCONFIGTXFILE, encoding="utf-8") as cftx:
             datacfg = yaml.load(cftx)
 
         datacfg["Organizations"][0][
@@ -61,13 +60,7 @@ class Blockchain:
         datacfg["Organizations"][0][
             "ID"
         ] = self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
-        datacfg["Organizations"][0]["MSPDir"] = (
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/ordererOrganizations/"
-            + "msp"
-        )
+        datacfg["Organizations"][0]["MSPDir"] = self.paths.ORDDOMAINMSPPATH
 
         datacfg["Organizations"][0]["Policies"]["Readers"]["Rule"] = (
             "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
@@ -83,11 +76,7 @@ class Blockchain:
         )
 
         datacfg["Organizations"][0]["OrdererEndpoints"] = [
-            self.domain.orderer.name
-            + "."
-            + self.domain.name
-            + ":"
-            + str(self.domain.orderer.generallistenport)
+            self.paths.ORDERERNAME + ":" + str(self.domain.orderer.generallistenport)
         ]
 
         datacfg["Application"]["Policies"]["LifecycleEndorsement"][
@@ -115,67 +104,15 @@ class Blockchain:
 
         for org in self.domain.organizations:
             for peer in org.peers:
+                self.paths.set_peer_paths(org, peer)
                 if peer.name.split(".")[0] == "peer1":
                     anchorpeer = {
-                        "Host": peer.name + "." + self.domain.name,
+                        "Host": self.paths.PEERNAME,
                         "Port": peer.peerlistenport,
                     }
                     datacfg["Organizations"][0]["AnchorPeers"].append(anchorpeer)
 
-                    organization = {
-                        "Name": peer.CORE_PEER_LOCALMSPID,
-                        "ID": peer.CORE_PEER_LOCALMSPID,
-                        "MSPDir": (
-                            str(Path().absolute())
-                            + "/domains/"
-                            + self.domain.name
-                            + "/peerOrganizations/"
-                            + org.name
-                            + "/msp"
-                        ),
-                        "AnchorPeers": [
-                            {
-                                "Host": peer.name + "." + self.domain.name,
-                                "Port": peer.peerlistenport,
-                            }
-                        ],
-                        "Policies": {
-                            "Readers": {
-                                "Type": "Signature",
-                                "Rule": (
-                                    "OR('"
-                                    + peer.CORE_PEER_LOCALMSPID
-                                    + ".admin', '"
-                                    + peer.CORE_PEER_LOCALMSPID
-                                    + ".peer', '"
-                                    + peer.CORE_PEER_LOCALMSPID
-                                    + ".client')"
-                                ),
-                            },
-                            "Writers": {
-                                "Type": "Signature",
-                                "Rule": (
-                                    "OR('"
-                                    + peer.CORE_PEER_LOCALMSPID
-                                    + ".admin', '"
-                                    + peer.CORE_PEER_LOCALMSPID
-                                    + ".client')"
-                                ),
-                            },
-                            "Admins": {
-                                "Type": "Signature",
-                                "Rule": (
-                                    "OR('" + peer.CORE_PEER_LOCALMSPID + ".admin')"
-                                ),
-                            },
-                            "Endorsement": {
-                                "Type": "Signature",
-                                "Rule": (
-                                    "OR('" + peer.CORE_PEER_LOCALMSPID + ".peer')"
-                                ),
-                            },
-                        },
-                    }
+                    organization = self.organization_yaml(org, peer)
 
                     datacfg["Organizations"].append(organization)
                     datacfg["Application"]["Organizations"].append(organization)
@@ -185,197 +122,128 @@ class Blockchain:
 
         datacfg["Orderer"]["OrdererType"] = "etcdraft"
         datacfg["Orderer"]["Addresses"] = [
-            self.domain.orderer.name
-            + "."
-            + self.domain.name
-            + ":"
-            + str(self.domain.orderer.generallistenport)
+            self.paths.ORDERERNAME + ":" + str(self.domain.orderer.generallistenport)
         ]
         datacfg["Orderer"]["EtcdRaft"]["Consenters"] = [
             {
                 "Host": (self.domain.orderer.name + "." + self.domain.name),
                 "Port": self.domain.orderer.generallistenport,
-                "ClientTLSCert": (
-                    str(Path().absolute())
-                    + "/domains/"
-                    + self.domain.name
-                    + "/ordererOrganizations/"
-                    + self.domain.orderer.name
-                    + "/tls/server.crt"
-                ),
-                "ServerTLSCert": (
-                    str(Path().absolute())
-                    + "/domains/"
-                    + self.domain.name
-                    + "/ordererOrganizations/"
-                    + self.domain.orderer.name
-                    + "/tls/server.crt"
-                ),
+                "ClientTLSCert": (self.paths.ORDDOMAINTLSPATH + "server.crt"),
+                "ServerTLSCert": (self.paths.ORDDOMAINTLSPATH + "server.crt"),
             },
         ]
 
-        out_file = config + "configtx.json"
-        with open(out_file, "w", encoding="utf-8") as fpo:
+        with open(self.paths.DOMAINCONFIGTXJSONFILE, "w", encoding="utf-8") as fpo:
             json.dump(datacfg, fpo, indent=2)
 
-        with open(config + "configtx.yaml", "w", encoding="utf-8") as cftx:
+        with open(self.paths.DOMAINCONFIGTXFILE, "w", encoding="utf-8") as cftx:
             yaml.dump(datacfg, cftx)
 
+        time.sleep(1)
+
         # Creating gblock
-        pathchannel = Path("domains/" + self.domain.name + "/channel-artifacts")
-        pathchannel.mkdir(parents=True, exist_ok=True)
-
-        block = (
-            str(Path().absolute())
-            + "/"
-            + str(pathchannel)
-            + "/"
-            + self.domain.networkname
-            + ".block"
+        commands.configtxgen_config_path(
+            self.paths.APPPATH,
+            self.paths.DOMAINCONFIGPATH,
+            self.paths.BLOCKFILE,
+            self.domain.networkname,
         )
 
-        os.system(
-            str(Path().absolute())
-            + "/bin/configtxgen -configPath "
-            + config
-            + " -profile SampleAppChannelEtcdRaft -outputBlock "
-            + block
-            + " -channelID "
-            + self.domain.networkname
-        )
+    def organization_yaml(self, org: Organization, peer: Peer) -> dict:
+        organization = {
+            "Name": peer.CORE_PEER_LOCALMSPID,
+            "ID": peer.CORE_PEER_LOCALMSPID,
+            "MSPDir": (
+                str(Path().absolute())
+                + "/domains/"
+                + self.domain.name
+                + "/peerOrganizations/"
+                + org.name
+                + "/admin/msp"
+            ),
+            "AnchorPeers": [
+                {
+                    "Host": peer.name + "." + self.domain.name,
+                    "Port": peer.peerlistenport,
+                }
+            ],
+            "Policies": {
+                "Readers": {
+                    "Type": "Signature",
+                    "Rule": (
+                        "OR('"
+                        + peer.CORE_PEER_LOCALMSPID
+                        + ".admin', '"
+                        + peer.CORE_PEER_LOCALMSPID
+                        + ".peer', '"
+                        + peer.CORE_PEER_LOCALMSPID
+                        + ".client')"
+                    ),
+                },
+                "Writers": {
+                    "Type": "Signature",
+                    "Rule": (
+                        "OR('"
+                        + peer.CORE_PEER_LOCALMSPID
+                        + ".admin', '"
+                        + peer.CORE_PEER_LOCALMSPID
+                        + ".client')"
+                    ),
+                },
+                "Admins": {
+                    "Type": "Signature",
+                    "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".admin')"),
+                },
+                "Endorsement": {
+                    "Type": "Signature",
+                    "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".peer')"),
+                },
+            },
+        }
+
+        return organization
 
     def create_channel(self):
         console.print("[bold white]# Creating channel[/]")
         console.print("")
-        config = str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
-        pathchannel = Path("domains/" + self.domain.name + "/channel-artifacts")
-        block = (
-            str(Path().absolute())
-            + "/"
-            + str(pathchannel)
-            + "/"
-            + self.domain.networkname
-            + ".block"
-        )
-        os.environ["FABRIC_CFG_PATH"] = config
-        os.environ["BLOCKFILE"] = block
 
-        ORDERER_CA = (
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/ordererOrganizations/tlsca/tlsca."
-            + self.domain.name
-            + "-cert.pem"
-        )
-        ORDERER_ADMIN_TLS_SIGN_CERT = (
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/ordererOrganizations/"
-            + self.domain.orderer.name
-            + "/tls/server.crt"
-        )
-        ORDERER_ADMIN_TLS_PRIVATE_KEY = (
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/ordererOrganizations/"
-            + self.domain.orderer.name
-            + "/tls/server.key"
+        commands.osnadmin(
+            self.paths.APPPATH,
+            self.paths.DOMAINCONFIGPATH,
+            self.paths.BLOCKFILE,
+            self.domain.networkname,
+            self.domain.orderer,
+            self.paths.ORDDOMAINTLSPATH + "ca-root.crt",
+            self.paths.ORDDOMAINTLSPATH + "server.crt",
+            self.paths.ORDDOMAINTLSPATH + "server.key",
         )
 
-        console.print("## Waiting Orderer...")
-        time.sleep(5)
-
-        os.system(
-            str(Path().absolute())
-            + "/bin/osnadmin channel join --channelID "
-            + self.domain.networkname
-            + " --config-block "
-            + block
-            + " -o localhost:"
-            + str(self.domain.orderer.adminlistenport)
-            + " --ca-file '"
-            + ORDERER_CA
-            + "' --client-cert '"
-            + ORDERER_ADMIN_TLS_SIGN_CERT
-            + "' --client-key '"
-            + ORDERER_ADMIN_TLS_PRIVATE_KEY
-            + "'"
-        )
+        console.print("## Waiting Orderer joining channel")
+        time.sleep(2)
 
     def join_channel(self):
         for org in self.domain.organizations:
+            self.paths.set_org_paths(org)
             self.join_channel_org(org)
 
     def join_channel_org(self, org: Organization):
         for peer in org.peers:
+            self.paths.set_peer_paths(org, peer)
             self.join_channel_peer(org, peer)
 
     def join_channel_peer(self, org: Organization, peer: Peer):
         console.print("[bold white]# Joinning channel " + peer.name + "[/]")
         console.print("")
 
-        pathchannel = Path("domains/" + self.domain.name + "/channel-artifacts")
-        block = (
-            str(Path().absolute())
-            + "/"
-            + str(pathchannel)
-            + "/"
-            + self.domain.networkname
-            + ".block"
+        commands.peer_channel_join(
+            org,
+            peer,
+            self.paths.APPPATH,
+            self.paths.BLOCKFILE,
+            self.paths.PEERCFGPATH,
+            self.paths.PEERTLSPATH + "ca-root.crt",
+            self.paths.ORGMSPPATH,
         )
-
-        os.environ["BLOCKFILE"] = block
-
-        config = (
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/"
-            + peer.name
-            + "/peercfg"
-        )
-
-        PEER_CA = (
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/tlsca"
-            + "/tlsca."
-            + org.name
-            + "-cert.pem"
-        )
-
-        PEER_MSP = (
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/users"
-            + "/Admin@"
-            + org.name
-            + "."
-            + self.domain.name
-            + "/msp"
-        )
-
-        PEER_ADDRESS = "localhost:" + str(peer.peerlistenport)
-
-        os.environ["FABRIC_CFG_PATH"] = config
-        os.environ["CORE_PEER_TLS_ENABLED"] = "true"
-        os.environ["CORE_PEER_LOCALMSPID"] = org.name + "MSP"
-        os.environ["CORE_PEER_TLS_ROOTCERT_FILE"] = PEER_CA
-        os.environ["CORE_PEER_MSPCONFIGPATH"] = PEER_MSP
-        os.environ["CORE_PEER_ADDRESS"] = PEER_ADDRESS
-
-        os.system(str(Path().absolute()) + "/bin/peer channel join -b " + block)
 
         console.print("")
         console.print("## Waiting Peer...")
@@ -389,71 +257,18 @@ class Blockchain:
         console.print("")
         console.print("[bold white]# Creating org configtx file[/]")
         console.print("")
-        config = str(Path().absolute()) + "/domains/" + self.domain.name + "/config/"
-
-        configbuild = config + "build/"
-
-        pathconfigbuild = Path(configbuild)
-        pathconfigbuild.mkdir(parents=True, exist_ok=True)
 
         datacfg = {"Organizations": []}
 
         for peer in org.peers:
             if peer.name.split(".")[0] == "peer1":
-                organization = {
-                    "Name": peer.CORE_PEER_LOCALMSPID,
-                    "ID": peer.CORE_PEER_LOCALMSPID,
-                    "MSPDir": (
-                        str(Path().absolute())
-                        + "/domains/"
-                        + self.domain.name
-                        + "/peerOrganizations/"
-                        + org.name
-                        + "/msp"
-                    ),
-                    "AnchorPeers": [
-                        {
-                            "Host": peer.name + "." + self.domain.name,
-                            "Port": peer.peerlistenport,
-                        }
-                    ],
-                    "Policies": {
-                        "Readers": {
-                            "Type": "Signature",
-                            "Rule": (
-                                "OR('"
-                                + peer.CORE_PEER_LOCALMSPID
-                                + ".admin', '"
-                                + peer.CORE_PEER_LOCALMSPID
-                                + ".peer', '"
-                                + peer.CORE_PEER_LOCALMSPID
-                                + ".client')"
-                            ),
-                        },
-                        "Writers": {
-                            "Type": "Signature",
-                            "Rule": (
-                                "OR('"
-                                + peer.CORE_PEER_LOCALMSPID
-                                + ".admin', '"
-                                + peer.CORE_PEER_LOCALMSPID
-                                + ".client')"
-                            ),
-                        },
-                        "Admins": {
-                            "Type": "Signature",
-                            "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".admin')"),
-                        },
-                        "Endorsement": {
-                            "Type": "Signature",
-                            "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".peer')"),
-                        },
-                    },
-                }
+                organization = self.organization_yaml(org, peer)
 
                 datacfg["Organizations"].append(organization)
 
-        with open(configbuild + "configtx.yaml", "w", encoding="utf-8") as cftx:
+        with open(
+            self.paths.DOMAINCONFIGBUILDPATH + self.configtxyaml, "w", encoding="utf-8"
+        ) as cftx:
             yaml.dump(datacfg, cftx)
 
         self.generate_org_definition(org)
@@ -465,23 +280,14 @@ class Blockchain:
     def generate_org_definition(self, org: Organization):
         console.print("[bold white]# Generating org definition[/]")
         console.print("")
-        configbuild = (
-            str(Path().absolute()) + "/domains/" + self.domain.name + "/config/build/"
+
+        commands.configtxgen_print_org(
+            self.paths.APPPATH, self.paths.DOMAINCONFIGBUILDPATH, org
         )
 
-        os.environ["FABRIC_CFG_PATH"] = configbuild
-
-        os.system(
-            str(Path().absolute())
-            + "/bin/configtxgen -printOrg "
-            + org.name
-            + "MSP > "
-            + configbuild
-            + org.name
-            + ".json"
-        )
-
-        with open(configbuild + org.name + ".json", encoding="utf-8") as f:
+        with open(
+            self.paths.DOMAINCONFIGBUILDPATH + org.name + ".json", encoding="utf-8"
+        ) as f:
             configjson = json.load(f)
 
         configjson["values"]["AnchorPeers"] = {
@@ -497,7 +303,9 @@ class Blockchain:
             "version": "0",
         }
 
-        with open(configbuild + org.name + ".json", "w", encoding="utf-8") as f:
+        with open(
+            self.paths.DOMAINCONFIGBUILDPATH + org.name + ".json", "w", encoding="utf-8"
+        ) as f:
             json.dump(configjson, f, indent=2)
 
     def fetch_channel_config(self, orgnew: Organization):
@@ -505,46 +313,24 @@ class Blockchain:
         console.print("[bold white]# Fetching channel config[/]")
         console.print("")
 
-        orderer = self.domain.orderer.name + "." + self.domain.name
         newpeer = orgnew.peers[0]
 
-        cliextpath = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/"
-        extconfigupttx = cliextpath + "config/build/"
+        CLIORDERER_CA = self.paths.CLIEXTPATH + self.paths.CLIROOTCA
 
-        clipath = "/etc/hyperledger/organizations/"
-        # configupttx = clipath + "config/"
-        blockpath = clipath + "channel-artifacts/"
-
-        configupttxlocal = (
-            str(Path().absolute()) + "/domains/" + self.domain.name + "/config/build/"
-        )
-
-        CLIORDERER_CA = (
-            cliextpath
-            + "ordererOrganizations/tlsca/tlsca."
-            + self.domain.name
-            + "-cert.pem"
-        )
-
-        ORDERER_CA = (
-            clipath
-            + "ordererOrganizations/tlsca/tlsca."
-            + self.domain.name
-            + "-cert.pem"
-        )
+        ORDERER_CA = self.paths.CLIPATH + self.paths.CLIROOTCA
 
         console.print("[bold white]# Updating config[/]")
         console.print("")
 
         command = (
             "peer channel fetch config "
-            + extconfigupttx
+            + self.paths.EXTCONFIGTX
             + "config_block.pb -o "
-            + orderer
+            + self.paths.ORDERERNAME
             + ":"
             + str(self.domain.orderer.generallistenport)
             + " --ordererTLSHostnameOverride "
-            + orderer
+            + self.paths.ORDERERNAME
             + " -c "
             + self.domain.networkname
             + " --tls --cafile "
@@ -559,97 +345,48 @@ class Blockchain:
         console.print("")
         time.sleep(5)
 
-        os.system(
-            str(Path().absolute())
-            + "/bin/configtxlator proto_decode --input "
-            + configupttxlocal
-            + "config_block.pb --type common.Block --output "
-            + configupttxlocal
-            + "config_block.json"
+        commands.configtxlator_proto_decode(
+            self.paths.APPPATH, self.paths.DOMAINCONFIGBUILDPATH, "config_block"
         )
 
-        os.system(
-            "jq .data.data[0].payload.data.config "
-            + configupttxlocal
-            + "config_block.json > "
-            + configupttxlocal
-            + "config.json"
+        commands.jq_export_config(self.paths.DOMAINCONFIGBUILDPATH)
+
+        commands.jq_export_modified_config(orgnew, self.paths.DOMAINCONFIGBUILDPATH)
+
+        commands.configtxlator_proto_encode(
+            self.paths.APPPATH, self.paths.DOMAINCONFIGBUILDPATH, "config"
         )
 
-        os.system(
-            'jq -s \'.[0] * {"channel_group":{"groups":{"Application":{"groups": {"'
-            + orgnew.name
-            + "MSP\":.[1]}}}}}' "
-            + configupttxlocal
-            + "config.json "
-            + configupttxlocal
-            + orgnew.name
-            + ".json > "
-            + configupttxlocal
-            + "modified_config.json"
+        commands.configtxlator_proto_encode(
+            self.paths.APPPATH, self.paths.DOMAINCONFIGBUILDPATH, "modified_config"
         )
 
-        os.system(
-            str(Path().absolute())
-            + "/bin/configtxlator proto_encode --input "
-            + configupttxlocal
-            + "config.json --type common.Config --output "
-            + configupttxlocal
-            + "config.pb"
+        commands.configtxlator_compute_update(
+            self.paths.APPPATH,
+            self.domain.networkname,
+            self.paths.DOMAINCONFIGBUILDPATH,
         )
 
-        os.system(
-            str(Path().absolute())
-            + "/bin/configtxlator proto_encode --input "
-            + configupttxlocal
-            + "modified_config.json --type common.Config --output "
-            + configupttxlocal
-            + "modified_config.pb"
+        commands.configtxlator_proto_decode(
+            self.paths.APPPATH, self.paths.DOMAINCONFIGBUILDPATH, "config_update"
         )
 
-        os.system(
-            str(Path().absolute())
-            + "/bin/configtxlator compute_update --channel_id "
-            + self.domain.networkname
-            + " --original "
-            + configupttxlocal
-            + "config.pb --updated "
-            + configupttxlocal
-            + "modified_config.pb --output "
-            + configupttxlocal
-            + "config_update.pb"
-        )
-
-        os.system(
-            str(Path().absolute())
-            + "/bin/configtxlator proto_decode --input "
-            + configupttxlocal
-            + "config_update.pb --type common.ConfigUpdate --output "
-            + configupttxlocal
-            + "config_update.json"
-        )
-
-        with open(configupttxlocal + "config_update.json", encoding="utf-8") as f:
+        with open(
+            self.paths.DOMAINCONFIGBUILDPATH + "config_update.json", encoding="utf-8"
+        ) as f:
             config_update = f.read()
 
-        os.system(
-            'echo \'{"payload":{"header":{"channel_header":{"channel_id":"'
-            + self.domain.networkname
-            + '", "type":2}},"data":{"config_update":'
-            + config_update
-            + "}}}' | jq . >"
-            + configupttxlocal
-            + "config_update_in_envelope.json"
+        commands.echo_payload(
+            self.domain.networkname,
+            config_update,
+            self.paths.DOMAINCONFIGBUILDPATH,
+            orgnew,
         )
 
-        os.system(
-            str(Path().absolute())
-            + "/bin/configtxlator proto_encode --input "
-            + configupttxlocal
-            + "config_update_in_envelope.json --type common.Envelope --output "
-            + configupttxlocal
-            + orgnew.name
-            + "_update_in_envelope.pb"
+        commands.configtxlator_proto_encode(
+            self.paths.APPPATH,
+            self.paths.DOMAINCONFIGBUILDPATH,
+            orgnew.name + "_update_in_envelope",
         )
 
         for org in self.domain.organizations:
@@ -665,7 +402,7 @@ class Blockchain:
                         console.print("")
                         command = (
                             "peer channel signconfigtx -f "
-                            + extconfigupttx
+                            + self.paths.EXTCONFIGTX
                             + orgnew.name
                             + "_update_in_envelope.pb"
                         )
@@ -684,12 +421,12 @@ class Blockchain:
 
         command = (
             "peer channel update -f "
-            + extconfigupttx
+            + self.paths.EXTCONFIGTX
             + orgnew.name
             + "_update_in_envelope.pb -c "
             + self.domain.networkname
             + " -o "
-            + orderer
+            + self.paths.ORDERERNAME
             + ":"
             + str(self.domain.orderer.generallistenport)
             + " --tls --cafile "
@@ -704,8 +441,6 @@ class Blockchain:
         console.print("")
         time.sleep(5)
 
-        block = blockpath + self.domain.networkname + ".block"
-
         console.print(
             "[bold white]# Fetching channel config block from orderer to org "
             + orgnew.name
@@ -715,13 +450,15 @@ class Blockchain:
 
         command = (
             "peer channel fetch 0 "
-            + block
+            + self.paths.CLIBLOCKPATH
+            + self.domain.networkname
+            + ".block"
             + " -o "
-            + orderer
+            + self.paths.ORDERERNAME
             + ":"
             + str(self.domain.orderer.generallistenport)
             + " --ordererTLSHostnameOverride "
-            + orderer
+            + self.paths.ORDERERNAME
             + " -c "
             + self.domain.networkname
             + " --tls --cafile "
@@ -741,7 +478,7 @@ class Blockchain:
     def env_variables(
         self, org: Organization = None, peer: Peer = None, ord: bool = None
     ):
-        path = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/"
+        path = self.paths.CLIEXTPATH
 
         if org is None:
             org = self.domain.organizations[0]
@@ -749,39 +486,24 @@ class Blockchain:
         if peer is None:
             peer = org.peers[0]
         else:
-            path = "/etc/hyperledger/organizations/"
+            path = self.paths.CLIPATH
 
-        clidataORDERER_CA = (
-            path + "ordererOrganizations/tlsca/tlsca." + self.domain.name + "-cert.pem"
-        )
-        clidataORDERER_ADMIN_TLS_SIGN_CERT = (
-            path + "ordererOrganizations/orderer/tls/server.crt"
-        )
-        clidataORDERER_ADMIN_TLS_PRIVATE_KEY = (
-            path + "ordererOrganizations/orderer/tls/server.key"
-        )
+        clidataORDERER_CA = path + self.paths.CLIROOTCA
+        clidataORDERER_ADMIN_TLS_SIGN_CERT = path + self.paths.CLISERVERCRT
+        clidataORDERER_ADMIN_TLS_PRIVATE_KEY = path + self.paths.CLISERVERKEY
 
-        clidataORDERER_GENERAL_LOCALMSPDIR = (
-            path + "ordererOrganizations/users/Admin@" + self.domain.name + "/msp"
-        )
+        clidataORDERER_GENERAL_LOCALMSPDIR = path + "ordererOrganizations/admin/msp"
         clidataCORE_PEER_LOCALMSPID = org.name + "MSP"
         clidataCORE_PEER_TLS_ROOTCERT_FILE = (
             path
             + "organizations/peerOrganizations/"
             + org.name
-            + "/tlsca/tlsca."
-            + org.name
-            + "-cert.pem"
+            + "/"
+            + peer.name
+            + "/tls/ca-root.crt"
         )
         clidataCORE_PEER_MSPCONFIGPATH = (
-            path
-            + "peerOrganizations/"
-            + org.name
-            + "/users/Admin@"
-            + org.name
-            + "."
-            + self.domain.name
-            + "/msp"
+            path + "peerOrganizations/" + org.name + "/" + peer.name + "/msp"
         )
         clidataCORE_PEER_ADDRESS = (
             peer.name + "." + self.domain.name + ":" + str(peer.peerlistenport)
@@ -810,14 +532,14 @@ class Blockchain:
         return envvar
 
     def merge_configtx(self):
-        path = str(Path().absolute()) + "/domains/" + self.domain.name
-        config = path + "/config/"
-        build = config + "build/"
-
-        with open(config + "configtx.yaml", encoding="utf-8") as cftx:
+        with open(
+            self.paths.DOMAINCONFIGPATH + self.configtxyaml, encoding="utf-8"
+        ) as cftx:
             datacfg = yaml.load(cftx)
 
-        with open(build + "configtx.yaml", encoding="utf-8") as bcftx:
+        with open(
+            self.paths.DOMAINCONFIGBUILDPATH + self.configtxyaml, encoding="utf-8"
+        ) as bcftx:
             databuild = yaml.load(bcftx)
 
         neworg = databuild["Organizations"][0]
@@ -833,13 +555,17 @@ class Blockchain:
             {"Host": anchorpeer["Host"], "Port": anchorpeer["Port"]}
         )
 
-        with open(config + "configtx.yaml", "w", encoding="utf-8") as cftx:
+        with open(
+            self.paths.DOMAINCONFIGPATH + self.configtxyaml, "w", encoding="utf-8"
+        ) as cftx:
             yaml.dump(datacfg, cftx)
 
-        with open(config + "configtx.json", "w", encoding="utf-8") as fpo:
+        with open(
+            self.paths.DOMAINCONFIGPATH + "configtx.json", "w", encoding="utf-8"
+        ) as fpo:
             json.dump(datacfg, fpo, indent=2)
 
-        os.system("rm -fR " + build)
+        os.system("rm -fR " + self.paths.DOMAINCONFIGBUILDPATH)
 
     def rebuild(self):
         os.system("clear")

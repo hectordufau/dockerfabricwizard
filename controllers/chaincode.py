@@ -10,6 +10,7 @@ from rich.console import Console
 
 from controllers.build import Build
 from controllers.header import Header
+from helpers.commands import Commands
 from helpers.paths import Paths
 from models.chaincode import Chaincode
 from models.domain import Domain
@@ -24,6 +25,7 @@ whales = DockerClient()
 client = docker.DockerClient()
 
 header = Header()
+commands = Commands()
 
 
 class ChaincodeDeploy:
@@ -36,6 +38,7 @@ class ChaincodeDeploy:
         self.chaincodename = chaincode.name
         self.chaincodeversion = 0
         self.packageid = None
+        self.paths = Paths(domain)
 
     def build_all(self):
         os.system("clear")
@@ -179,7 +182,9 @@ class ChaincodeDeploy:
         with open(cccryptopath + "/tls/server.key") as key:
             keydata = key.read()
 
-        with open(cccryptopath + "/" + self.chaincodename + "/tls/ca.crt") as cacert:
+        with open(
+            cccryptopath + "/" + self.chaincodename + "/tls/ca-root.crt"
+        ) as cacert:
             carootdata = cacert.read()
 
         peername = "{{{{{peername}}}}}".format(peername=".peername")
@@ -638,9 +643,9 @@ class ChaincodeDeploy:
                 str(Path().absolute())
                 + "/domains/"
                 + self.domain.name
-                + "/fabric-ca/"
+                + "/fabricca/"
                 + org.ca.name
-                + "/ca-cert.pem"
+                + "/crypto/ca-cert.pem"
             )
 
             pathorg = (
@@ -649,6 +654,15 @@ class ChaincodeDeploy:
                 + self.domain.name
                 + "/peerOrganizations/"
                 + org.name
+            )
+
+            commands.enroll(
+                self.paths.APPPATH,
+                pathorg,
+                "admin",
+                "adminpw",
+                org.ca.name.serverport,
+                pathfabriccaorg,
             )
 
             os.environ["FABRIC_CA_CLIENT_HOME"] = str(pathorg)
@@ -777,36 +791,17 @@ class ChaincodeDeploy:
             domainpath
             + "/peerOrganizations/"
             + org.name
-            + "/tlsca"
-            + "/tlsca."
-            + org.name
-            + "-cert.pem"
+            + "/"
+            + peer.name
+            + "/tls/ca-root.crt"
         )
 
-        PEER_MSP = (
-            domainpath
-            + "/peerOrganizations/"
-            + org.name
-            + "/users"
-            + "/Admin@"
-            + org.name
-            + "."
-            + self.domain.name
-            + "/msp"
-        )
+        PEER_MSP = domainpath + "/peerOrganizations/" + org.name + "/admin/msp"
 
-        ORDERER_GENERAL_LOCALMSPDIR = (
-            domainpath
-            + "/ordererOrganizations/users/Admin@"
-            + self.domain.name
-            + "/msp"
-        )
+        ORDERER_GENERAL_LOCALMSPDIR = domainpath + "/ordererOrganizations/admin/msp"
 
         ORDERER_CA = (
-            domainpath
-            + "/ordererOrganizations/orderer/msp/tlscacerts/tlsca."
-            + self.domain.name
-            + "-cert.pem"
+            domainpath + "/ordererOrganizations/orderer/msp/tlscacerts/tlsca-cert.pem"
         )
 
         ORDERER_ADMIN_TLS_SIGN_CERT = (

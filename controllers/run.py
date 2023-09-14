@@ -92,7 +92,7 @@ class Run:
         console.print("")
         console.print("## Waiting Network...")
         console.print("")
-        time.sleep(5)
+        time.sleep(2)
 
     def starting_pd_org(self, org: Organization):
         pathnet = "".join(
@@ -111,7 +111,7 @@ class Run:
         console.print("")
         console.print("## Waiting Organization...")
         console.print("")
-        time.sleep(5)
+        time.sleep(2)
 
         os.remove(Path(pathnet))
 
@@ -132,7 +132,7 @@ class Run:
         console.print("")
         console.print("## Waiting Peer...")
         console.print("")
-        time.sleep(5)
+        time.sleep(2)
 
         os.remove(Path(pathnet))
 
