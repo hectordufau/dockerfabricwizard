@@ -31,14 +31,12 @@ commands = Commands()
 class ChaincodeDeploy:
     def __init__(self, domain: Domain, chaincode: Chaincode) -> None:
         self.domain: Domain = domain
+        self.paths = Paths(domain)
         self.chaincode = chaincode
-        self.pathccsrc = "".join(
-            [str(Path().absolute()), "/chaincodes/", chaincode.name]
-        )
+        self.pathccsrc = self.paths.CHAINCODEPATH + chaincode.name
         self.chaincodename = chaincode.name
         self.chaincodeversion = 0
         self.packageid = None
-        self.paths = Paths(domain)
 
     def build_all(self):
         os.system("clear")
@@ -63,7 +61,7 @@ class ChaincodeDeploy:
                     console.print("")
                     self.chaincode_invoke_init(org, peer)
                     console.print("")
-            self.removeccbuild()
+            # self.remove_chaincode_build()
 
     def build_firefly(self):
         if self.build_docker_image():
@@ -81,7 +79,7 @@ class ChaincodeDeploy:
                     console.print("")
                     self.commit_chaincode_definition(org, peer)
                     console.print("")
-            self.remove_chaincode_build()
+            # self.remove_chaincode_build()
 
     def build_docker_image(self) -> bool:
         console.print("[bold white]# Building Docker Image[/]")
@@ -95,28 +93,22 @@ class ChaincodeDeploy:
         if builded:
             for org in self.domain.organizations:
                 for peer in org.peers:
-                    container = whales.container.exists(
+                    containername = (
                         peer.name.replace(".", "")
                         + "."
                         + self.chaincodename
                         + ".ccaas."
                         + self.domain.name
                     )
+                    container = whales.container.exists(containername)
                     if container:
-                        whales.container.stop(
-                            whales.container.inspect(
-                                peer.name.replace(".", "")
-                                + "."
-                                + self.chaincodename
-                                + ".ccaas."
-                                + self.domain.name
-                            )
-                        )
+                        whales.container.stop(whales.container.inspect(containername))
 
-            image = whales.image.exists(self.chaincodename + "_ccaas_image:latest")
+            imagename = self.chaincodename + "_ccaas_image:latest"
+            image = whales.image.exists(imagename)
             if image:
                 whales.image.remove(
-                    whales.image.inspect(self.chaincodename + "_ccaas_image:latest"),
+                    whales.image.inspect(imagename),
                     True,
                 )
 
@@ -143,21 +135,17 @@ class ChaincodeDeploy:
 
     def package_chaincode(self, org: Organization, peer: Peer):
         console.print("[bold white]# Packaging chaincode[/]")
-        build = (
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/chaincodes/build/"
-        )
+        self.paths.set_org_paths(org)
+        self.paths.set_peer_paths(org, peer)
 
-        pathsrc = Path(build + "src/")
+        pathsrc = Path(self.paths.CHAINCODESRC)
         pathsrc.mkdir(parents=True, exist_ok=True)
 
-        pathpkg = Path(build + "pkg/")
+        pathpkg = Path(self.paths.CHAINCODEPKG)
         pathpkg.mkdir(parents=True, exist_ok=True)
 
-        connectionfile = str(pathsrc) + "/connection.json"
-        metadatafile = str(pathpkg) + "/metadata.json"
+        connectionfile = self.paths.CHAINCODESRC + "/connection.json"
+        metadatafile = self.paths.CHAINCODEPKG + "/metadata.json"
         ccversion = 1
         ccindex = None
 
@@ -166,25 +154,13 @@ class ChaincodeDeploy:
                 ccindex = i
                 ccversion = cc.version + 1
 
-        cccryptopath = (
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/"
-            + peer.name
-        )
-
-        with open(cccryptopath + "/tls/server.crt") as cert:
+        with open(self.paths.PEERSERVERCRT) as cert:
             certdata = cert.read()
 
-        with open(cccryptopath + "/tls/server.key") as key:
+        with open(self.paths.PEERSERVERKEY) as key:
             keydata = key.read()
 
-        with open(
-            cccryptopath + "/" + self.chaincodename + "/tls/ca-root.crt"
-        ) as cacert:
+        with open(self.paths.PEERCAROOT) as cacert:
             carootdata = cacert.read()
 
         peername = "{{{{{peername}}}}}".format(peername=".peername")
@@ -199,10 +175,10 @@ class ChaincodeDeploy:
             + str(self.chaincode.ccport),
             "dial_timeout": "30s",
             "tls_required": self.chaincode.usetls,
-            # "client_auth_required": False,
-            # "client_key": keydata,
-            # "client_cert": certdata,
-            # "root_cert": carootdata,
+            "client_auth_required": False,
+            "client_key": keydata,
+            "client_cert": certdata,
+            "root_cert": carootdata,
         }
 
         metadata = {
@@ -211,8 +187,8 @@ class ChaincodeDeploy:
             "label": self.chaincodename + "_" + str(ccversion),
         }
 
-        tarcode = str(pathpkg) + "/code.tar.gz"
-        tarchaincode = build + self.chaincodename + ".tar.gz"
+        tarcode = self.paths.CHAINCODEPKG + "code.tar.gz"
+        tarchaincode = self.paths.CHAINCODEBUILDPATH + self.chaincodename + ".tar.gz"
 
         with open(connectionfile, "w", encoding="UTF-8") as connfile:
             json.dump(connectiondata, connfile, indent=2)
@@ -221,13 +197,13 @@ class ChaincodeDeploy:
             json.dump(metadata, metafile, indent=2)
 
         old_dir = os.getcwd()
-        os.chdir(str(pathsrc))
+        os.chdir(self.paths.CHAINCODESRC)
         filessrc = sorted(os.listdir())
         with tarfile.open(tarcode, "w:gz") as tar:
             for filename in filessrc:
                 tar.add(filename)
 
-        os.chdir(str(pathpkg))
+        os.chdir(self.paths.CHAINCODEPKG)
         filespkg = sorted(os.listdir())
         with tarfile.open(tarchaincode, "w:gz") as tar:
             for filename in filespkg:
@@ -237,19 +213,16 @@ class ChaincodeDeploy:
 
         self.peer_env_variables(org, peer)
 
-        os.system(
-            str(Path().absolute())
-            + "/bin/peer lifecycle chaincode calculatepackageid "
-            + tarchaincode
-            + " > "
-            + build
-            + "PACKAGEID.txt"
+        commands.peer_lifecycle_chaincode_calculatepackageid(
+            self.paths.APPPATH, tarchaincode, self.paths.CHAINCODEBUILDPATH
         )
 
         console.print("## Waiting Peer...")
         time.sleep(5)
 
-        with open(build + "PACKAGEID.txt", encoding="utf-8") as f:
+        with open(
+            self.paths.CHAINCODEBUILDPATH + "PACKAGEID.txt", encoding="utf-8"
+        ) as f:
             packageid = f.read().strip()
 
         self.chaincode.version = ccversion
@@ -266,144 +239,84 @@ class ChaincodeDeploy:
         else:
             self.domain.chaincodes[ccindex] = self.chaincode
 
-        paths = Paths(self.domain)
-        build = Build(self.domain, paths)
+        build = Build(self.domain)
         build.build_config()
 
     def install_chaincode(self, org: Organization, peer: Peer):
         console.print("[bold white]# Installing chaincode[/]")
-        domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
-        buildpath = domainpath + "/chaincodes/build/"
-        chaincodepkg = buildpath + self.chaincodename + ".tar.gz"
+
+        self.paths.set_org_paths(org)
+        self.paths.set_peer_paths(org, peer)
+
+        chaincodepkg = self.paths.CHAINCODEBUILDPATH + self.chaincodename + ".tar.gz"
 
         console.print("[bold]# Installing chaincode on " + peer.name + "[/]")
-        self.peer_env_variables(org, peer)
+        self.peer_env_variables(org, peer, True)
 
-        command = (
-            str(Path().absolute())
-            + "/bin/peer lifecycle chaincode install "
-            + chaincodepkg
-        )
-
-        os.system(command)
+        commands.peer_lifecycle_chaincode_install(self.paths.APPPATH, chaincodepkg)
 
         console.print("# Waiting Peer...")
-        time.sleep(2)
+        time.sleep(1)
 
         console.print("[bold]# Result chaincode installation on " + peer.name + "[/]")
 
-        command = (
-            str(Path().absolute())
-            + "/bin/peer lifecycle chaincode queryinstalled --output json "
-            + "| jq -r 'try (.installed_chaincodes[].package_id)'"
-            + "| grep ^"
-            + self.packageid
+        commands.peer_lifecycle_chaincode_queryinstalled(
+            self.paths.APPPATH, self.packageid
         )
-
-        os.system(command)
 
         console.print("# Waiting Peer...")
-        time.sleep(2)
+        time.sleep(1)
 
-        # shutil.rmtree(buildpath)
+        shutil.rmtree(self.paths.CHAINCODEBUILDPATH)
 
     def approve_org(self, org: Organization, peer: Peer):
-        domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
-        ORDERER_CA = (
-            domainpath
-            + "/ordererOrganizations/orderer/msp/tlscacerts/tlsca."
-            + self.domain.name
-            + "-cert.pem"
-        )
-
-        initrequired = ""
-        if self.chaincode.invoke:
-            initrequired = " --init-required"
+        self.paths.set_org_paths(org)
+        self.paths.set_peer_paths(org, peer)
 
         if peer.name.split(".")[0] == "peer1":
             console.print(
                 "[bold]# Approving chaincode definition for " + org.name + "[/]"
             )
-            self.peer_env_variables(org, peer)
+            self.peer_env_variables(org, peer, True)
 
-            command = (
-                str(Path().absolute())
-                + "/bin/peer lifecycle chaincode approveformyorg -o localhost:"
-                + str(self.domain.orderer.generallistenport)
-                + " --ordererTLSHostnameOverride "
-                + self.domain.orderer.name
-                + "."
-                + self.domain.name
-                + " --tls --cafile "
-                + ORDERER_CA
-                + " --channelID "
-                + self.domain.networkname
-                + " --name "
-                + self.chaincodename
-                + " --version "
-                + str(self.chaincodeversion)
-                + " --package-id "
-                + self.packageid
-                + " --sequence "
-                + str(self.chaincodeversion)
-                + initrequired
+            self.check_commit(org, peer)
+
+            self.peer_env_variables(org, peer, True)
+
+            commands.peer_lifecycle_chaincode_approveformyorg(
+                self.paths.APPPATH,
+                self.chaincode.invoke,
+                self.domain.orderer,
+                self.paths.ORDERERNAME,
+                self.paths.ORDTLSCAPATH + "tls-cert.pem",
+                self.domain.networkname,
+                self.chaincodename,
+                self.chaincodeversion,
+                self.packageid,
             )
 
-            os.system(command)
             console.print("# Waiting Peer...")
-            time.sleep(2)
+            time.sleep(1)
+            self.peer_env_variables(org, peer, True)
             self.check_commit(org, peer)
 
     def check_commit(self, org: Organization, peer: Peer):
         console.print("[bold]# Checking commit[/]")
-        domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
-        ORDERER_CA = (
-            domainpath
-            + "/ordererOrganizations/tlsca/tlsca."
-            + self.domain.name
-            + "-cert.pem"
+
+        self.peer_env_variables(org, peer, True)
+
+        commands.peer_lifecycle_chaincode_checkcommitreadiness(
+            self.paths.APPPATH,
+            self.chaincode.invoke,
+            self.domain.orderer,
+            self.paths.ORDTLSCAPATH + "tls-cert.pem",  # TODO CHECK
+            self.domain.networkname,
+            self.chaincodename,
+            self.chaincodeversion,
         )
-
-        self.peer_env_variables(org, peer)
-
-        initrequired = ""
-        if self.chaincode.invoke:
-            initrequired = " --init-required"
-
-        command = (
-            str(Path().absolute())
-            + "/bin/peer lifecycle chaincode checkcommitreadiness -o localhost:"
-            + str(self.domain.orderer.generallistenport)
-            + " --tls --cafile "
-            + ORDERER_CA
-            + " --channelID "
-            + self.domain.networkname
-            + " --name "
-            + self.chaincodename
-            + " --version "
-            + str(self.chaincodeversion)
-            + " --sequence "
-            + str(self.chaincodeversion)
-            + " --output json"
-            + initrequired
-        )
-
-        os.system(command)
-        time.sleep(2)
+        time.sleep(1)
 
     def commit_chaincode_definition(self, org: Organization, peer: Peer):
-        domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
-        ORDERER_CA = (
-            domainpath
-            + "/ordererOrganizations/orderer/msp/tlscacerts/tlsca."
-            + self.domain.name
-            + "-cert.pem"
-        )
-
-        initrequired = ""
-        if self.chaincode.invoke:
-            initrequired = " --init-required"
-
         if peer.name.split(".")[0] == "peer1":
             console.print(
                 "[bold]# Commiting chaincode definition for "
@@ -412,45 +325,23 @@ class ChaincodeDeploy:
                 + peer.name
                 + "[/]"
             )
-            self.peer_env_variables(org, peer)
+            self.peer_env_variables(org, peer, True)
 
-            CORE_PEER_TLS_ROOTCERT_FILE = (
-                domainpath
-                + "/peerOrganizations/"
-                + org.name
-                + "/"
-                + peer.name
-                + "/tls/ca.crt"
+            commands.peer_lifecycle_chaincode_commit(
+                self.paths.APPPATH,
+                self.chaincode.invoke,
+                self.domain.orderer,
+                self.paths.ORDERERNAME,
+                self.paths.ORDTLSCAPATH + "tls-cert.pem",
+                self.domain.networkname,
+                self.chaincodename,
+                peer,
+                self.paths.PEERCAROOT,
+                self.chaincodeversion,
             )
 
-            command = (
-                str(Path().absolute())
-                + "/bin/peer lifecycle chaincode commit -o localhost:"
-                + str(self.domain.orderer.generallistenport)
-                + " --ordererTLSHostnameOverride "
-                + self.domain.orderer.name
-                + "."
-                + self.domain.name
-                + " --tls --cafile "
-                + ORDERER_CA
-                + " --channelID "
-                + self.domain.networkname
-                + " --name "
-                + self.chaincodename
-                + " --peerAddresses localhost:"
-                + str(peer.peerlistenport)
-                + " --tlsRootCertFiles "
-                + CORE_PEER_TLS_ROOTCERT_FILE
-                + " --version "
-                + str(self.chaincodeversion)
-                + " --sequence "
-                + str(self.chaincodeversion)
-                + initrequired
-            )
-
-            os.system(command)
             console.print("# Waiting Peer...")
-            time.sleep(2)
+            time.sleep(1)
 
     def start_docker_container(self, org: Organization, peer: Peer):
         console.print("[bold]# Starting the CCAAS container[/]")
@@ -481,7 +372,6 @@ class ChaincodeDeploy:
             "CHAINCODE_SERVER_ADDRESS": "0.0.0.0:" + str(self.chaincode.ccport),
             "CORE_CHAINCODE_ID_NAME": self.packageid,
             "CORE_PEER_TLS_ENABLED": self.chaincode.usetls,
-            # "CORE_PEER_TLS_ENABLED": True,
             "CORE_PEER_CHAINCODEADDRESS": peer.name
             + "."
             + self.domain.name
@@ -490,8 +380,8 @@ class ChaincodeDeploy:
             "CORE_PEER_TLS_ROOTCERT_FILE": "/etc/hyperledger/chaincode/tls/ca.crt",
             "CORE_TLS_CLIENT_CERT_PATH": "/etc/hyperledger/chaincode/tls/server.crt",
             "CORE_TLS_CLIENT_KEY_PATH": "/etc/hyperledger/chaincode/tls/server.key",
-            "CORE_TLS_CLIENT_CERT_FILE": "/etc/hyperledger/chaincode/msp/client_pem.crt",
-            "CORE_TLS_CLIENT_KEY_FILE": "/etc/hyperledger/chaincode/msp/client_pem.key",
+            "CORE_TLS_CLIENT_CERT_FILE": "/etc/hyperledger/chaincode/tls/server.crt",
+            "CORE_TLS_CLIENT_KEY_FILE": "/etc/hyperledger/chaincode/tls/server.key",
             "CORE_PEER_LOCALMSPID": org.name + "MSP",
             "CORE_PEER_MSPCONFIGPATH": "/etc/hyperledger/chaincode/msp",
             "CORE_CHAINCODE_LOGGING_LEVEL": "info",
@@ -544,77 +434,43 @@ class ChaincodeDeploy:
 
         console.print("# Waiting Chaincode Container...")
         time.sleep(2)
-        # whales.container.pause(container)
 
         # Waiting Peer Container
-        # console.print("# Waiting Peer Container...")
-        # peercontainer = whales.container.inspect(peer.name + "." + self.domain.name)
-        # whales.container.restart(peercontainer)
-        # time.sleep(1)
-
-        # whales.container.unpause(container)
+        console.print("# Waiting Peer Container...")
+        peercontainer = whales.container.inspect(peer.name + "." + self.domain.name)
+        whales.container.restart(peercontainer)
+        time.sleep(1)
 
     def chaincode_invoke_init(self, org: Organization, peer: Peer):
-        domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
-        ORDERER_CA = (
-            domainpath
-            + "/ordererOrganizations/orderer/msp/tlscacerts/tlsca."
-            + self.domain.name
-            + "-cert.pem"
-        )
+        if self.chaincode.invoke and peer.name.split(".")[0] == "peer1":
+            console.print(
+                "[bold]# Commiting chaincode definition for "
+                + self.domain.networkname
+                + " by "
+                + peer.name
+                + "[/]"
+            )
+            self.peer_env_variables(org, peer, True)
 
-        initrequired = ""
-        if self.chaincode.invoke:
-            fcncall = '{"function":"InitLedger","Args":[]}'
-            initrequired = " --isInit -c " + "'" + fcncall + "'"
+            commands.peer_chaincode_invoke(
+                self.paths.APPPATH,
+                self.chaincode.invoke,
+                self.domain.orderer,
+                self.paths.ORDERERNAME,
+                self.paths.ORDTLSCAPATH + "tls-cert.pem",  # TODO CHECK
+                self.domain.networkname,
+                self.chaincodename,
+                peer,
+                self.paths.PEERCAROOT,
+            )
 
-            if peer.name.split(".")[0] == "peer1":
-                console.print(
-                    "[bold]# Commiting chaincode definition for "
-                    + self.domain.networkname
-                    + " by "
-                    + peer.name
-                    + "[/]"
-                )
-                self.peer_env_variables(org, peer)
-
-                CORE_PEER_TLS_ROOTCERT_FILE = (
-                    domainpath
-                    + "/peerOrganizations/"
-                    + org.name
-                    + "/tlsca/tlsca."
-                    + org.name
-                    + "-cert.pem"
-                )
-
-                command = (
-                    str(Path().absolute())
-                    + "/bin/peer chaincode invoke -o localhost:"
-                    + str(self.domain.orderer.generallistenport)
-                    + " --ordererTLSHostnameOverride "
-                    + self.domain.orderer.name
-                    + "."
-                    + self.domain.name
-                    + " --tls --cafile "
-                    + ORDERER_CA
-                    + " --channelID "
-                    + self.domain.networkname
-                    + " --name "
-                    + self.chaincodename
-                    + " --peerAddresses localhost:"
-                    + str(peer.peerlistenport)
-                    + " --tlsRootCertFiles "
-                    + CORE_PEER_TLS_ROOTCERT_FILE
-                    + initrequired
-                )
-
-                os.system(command)
-
-                console.print("# Waiting Peer...")
-                time.sleep(2)
+            console.print("# Waiting Peer...")
+            time.sleep(1)
 
     def chaincode_crypto(self, org: Organization, peer: Peer, chaincode: Chaincode):
         console.print("[bold]## Registering chaincode " + chaincode.name + " crypto[/]")
+
+        self.peer_env_variables(org, peer)
 
         chaincodehost = (
             peer.name.replace(".", "")
@@ -624,203 +480,109 @@ class ChaincodeDeploy:
             + self.domain.name
         )
 
-        pathcc = Path(
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/"
-            + peer.name
-            + "/"
-            + chaincode.name
-        )
+        chaincodename = peer.name.replace(".", "") + "." + chaincode.name + ".ccaas"
+
+        pathcc = Path(self.paths.PEERPATH + chaincode.name)
+
+        if pathcc.is_dir():
+            shutil.rmtree(str(pathcc))
 
         if not pathcc.is_dir():
             pathcc.mkdir(parents=True, exist_ok=True)
 
-            pathfabriccaorg = (
-                str(Path().absolute())
-                + "/domains/"
-                + self.domain.name
-                + "/fabricca/"
-                + org.ca.name
-                + "/crypto/ca-cert.pem"
-            )
+        commands.enroll(
+            self.paths.APPPATH,
+            self.paths.ORGPATH,
+            "admin",
+            "adminpw",
+            self.domain.ca.serverport,  # org.ca.serverport,
+            self.paths.TLSCERTDOMAINFILE,
+        )
 
-            pathorg = (
-                str(Path().absolute())
-                + "/domains/"
-                + self.domain.name
-                + "/peerOrganizations/"
-                + org.name
-            )
+        commands.register_client(
+            self.paths.APPPATH,
+            self.paths.ORGPATH,
+            peer.name.replace(".", "") + "." + chaincode.name + ".ccaas",
+            "chaincodepw",
+            self.domain.ca.serverport,  # org.ca.serverport,
+            self.paths.TLSCERTDOMAINFILE,
+        )
 
-            commands.enroll(
-                self.paths.APPPATH,
-                pathorg,
-                "admin",
-                "adminpw",
-                org.ca.name.serverport,
-                pathfabriccaorg,
-            )
+        msppath = str(pathcc) + "/msp/"
+        tlspath = str(pathcc) + "/tls/"
 
-            os.environ["FABRIC_CA_CLIENT_HOME"] = str(pathorg)
+        commands.enroll_msp(
+            self.paths.APPPATH,
+            self.paths.PEERPATH + chaincode.name,
+            peer.name.replace(".", "") + "." + chaincode.name + ".ccaas",
+            "chaincodepw",
+            self.domain.ca.serverport,  # org.ca.serverport,
+            self.paths.TLSCERTDOMAINFILE,
+        )
 
-            os.system(
-                str(Path().absolute())
-                + "/bin/fabric-ca-client register "
-                + " --caname "
-                + org.ca.name
-                + "."
-                + self.domain.name
-                + " --id.name "
-                + peer.name.replace(".", "")
-                + "."
-                + chaincode.name
-                + ".ccaas"
-                + " --id.secret chaincodepw"
-                + " --tls.certfiles "
-                + pathfabriccaorg
-            )
+        console.print("[bold]## Generating the chaincode-tls certificates[/]")
 
-            msppath = str(pathcc) + "/msp"
-            tlspath = str(pathcc) + "/tls"
+        commands.enroll_tls(
+            self.paths.APPPATH,
+            self.paths.PEERPATH + chaincode.name,
+            peer.name.replace(".", "") + "." + chaincode.name + ".ccaas",
+            "chaincodepw",
+            self.domain.ca.serverport,  # org.ca.serverport,
+            [chaincodehost, chaincodename, "localhost"],
+            chaincodehost,
+            self.paths.TLSCERTDOMAINFILE,
+        )
 
-            console.print("[bold]## Generating the chaincode-msp certificates[/]")
-            os.system(
-                str(Path().absolute())
-                + "/bin/fabric-ca-client enroll "
-                + " -u https://"
-                + peer.name.replace(".", "")
-                + "."
-                + chaincode.name
-                + ".ccaas:chaincodepw@localhost:"
-                + str(org.ca.serverport)
-                + " --caname "
-                + org.ca.name
-                + "."
-                + self.domain.name
-                + " -M "
-                + str(msppath)
-                + " --csr.cn "
-                + chaincodehost
-                + " --csr.hosts "
-                + chaincodehost
-                + ","
-                + peer.name.replace(".", "")
-                + "."
-                + chaincode.name
-                + ".ccaas"
-                + ",localhost"
-                + " --tls.certfiles "
-                + pathfabriccaorg
-            )
+        shutil.copy(
+            tlspath + "signcerts/cert.pem",
+            tlspath + "server.crt",
+        )
 
-            console.print("[bold]## Generating the chaincode-tls certificates[/]")
-            os.system(
-                str(Path().absolute())
-                + "/bin/fabric-ca-client enroll "
-                + " -u https://"
-                + peer.name.replace(".", "")
-                + "."
-                + chaincode.name
-                + ".ccaas:chaincodepw@localhost:"
-                + str(org.ca.serverport)
-                + " --caname "
-                + org.ca.name
-                + "."
-                + self.domain.name
-                + " -M "
-                + str(tlspath)
-                + " --csr.cn "
-                + chaincodehost
-                + " --enrollment.profile tls --csr.hosts "
-                + chaincodehost
-                + ","
-                + peer.name.replace(".", "")
-                + "."
-                + chaincode.name
-                + ".ccaas"
-                + ",localhost"
-                + " --tls.certfiles "
-                + pathfabriccaorg
-            )
-
+        for file_name in os.listdir(tlspath + "tlscacerts/"):
             shutil.copy(
-                str(tlspath) + "/signcerts/cert.pem",
-                str(tlspath) + "/server.crt",
+                tlspath + "tlscacerts/" + file_name,
+                tlspath + "ca.crt",
             )
 
-            for file_name in os.listdir(str(tlspath) + "/tlscacerts/"):
-                shutil.copy(
-                    str(tlspath) + "/tlscacerts/" + file_name,
-                    str(tlspath) + "/ca.crt",
-                )
-
-            for file_name in os.listdir(str(tlspath) + "/keystore/"):
-                shutil.copy(
-                    str(tlspath) + "/keystore/" + file_name,
-                    str(tlspath) + "/server.key",
-                )
-
+        for file_name in os.listdir(tlspath + "keystore/"):
             shutil.copy(
-                str(msppath) + "/signcerts/cert.pem",
-                str(msppath) + "/client_pem.crt",
+                tlspath + "keystore/" + file_name,
+                tlspath + "server.key",
             )
 
-            for file_name in os.listdir(str(msppath) + "/keystore/"):
-                shutil.copy(
-                    str(msppath) + "/keystore/" + file_name,
-                    str(msppath) + "/client_pem.key",
-                )
-
-    def remove_chaincode_build(self):
-        domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
-        buildpath = domainpath + "/chaincodes/build/"
-        shutil.rmtree(buildpath)
-
-    def peer_env_variables(self, org: Organization, peer: Peer, ord: bool = None):
-        domainpath = str(Path().absolute()) + "/domains/" + self.domain.name
-
-        config = (
-            domainpath + "/peerOrganizations/" + org.name + "/" + peer.name + "/peercfg"
+        shutil.copy(
+            msppath + "signcerts/cert.pem",
+            msppath + "client_pem.crt",
         )
 
-        PEER_CA = (
-            domainpath
-            + "/peerOrganizations/"
-            + org.name
-            + "/"
-            + peer.name
-            + "/tls/ca-root.crt"
-        )
+        for file_name in os.listdir(msppath + "keystore/"):
+            shutil.copy(
+                msppath + "keystore/" + file_name,
+                msppath + "client_pem.key",
+            )
 
-        PEER_MSP = domainpath + "/peerOrganizations/" + org.name + "/admin/msp"
+    def peer_env_variables(
+        self, org: Organization, peer: Peer, orgadm: bool = None, ord: bool = None
+    ):
+        self.paths.set_org_paths(org)
+        self.paths.set_peer_paths(org, peer)
 
-        ORDERER_GENERAL_LOCALMSPDIR = domainpath + "/ordererOrganizations/admin/msp"
-
-        ORDERER_CA = (
-            domainpath + "/ordererOrganizations/orderer/msp/tlscacerts/tlsca-cert.pem"
-        )
-
-        ORDERER_ADMIN_TLS_SIGN_CERT = (
-            domainpath + "/ordererOrganizations/orderer/tls/server.crt"
-        )
-        ORDERER_ADMIN_TLS_PRIVATE_KEY = (
-            domainpath + "/ordererOrganizations/orderer/tls/server.key"
-        )
-
-        PORT = str(peer.peerlistenport)
-
-        os.environ["FABRIC_CFG_PATH"] = config
+        os.environ["FABRIC_CFG_PATH"] = self.paths.PEERCFGPATH
         os.environ["CORE_PEER_TLS_ENABLED"] = "true"
         os.environ["CORE_PEER_LOCALMSPID"] = "OrdererMSP" if ord else org.name + "MSP"
-        os.environ["CORE_PEER_TLS_ROOTCERT_FILE"] = PEER_CA
+        os.environ["CORE_PEER_TLS_ROOTCERT_FILE"] = self.paths.PEERCAROOT
         os.environ["CORE_PEER_MSPCONFIGPATH"] = (
-            ORDERER_GENERAL_LOCALMSPDIR if ord else PEER_MSP
+            self.paths.ORGMSPPATH
+            if orgadm
+            else self.paths.ORDERERORGMSPPATH
+            if ord
+            else self.paths.PEERMSPPATH  # ORGMSPPATH
         )
-        os.environ["CORE_PEER_ADDRESS"] = "localhost:" + PORT
-        os.environ["ORDERER_CA"] = ORDERER_CA
-        os.environ["ORDERER_ADMIN_TLS_SIGN_CERT"] = ORDERER_ADMIN_TLS_SIGN_CERT
-        os.environ["ORDERER_ADMIN_TLS_PRIVATE_KEY"] = ORDERER_ADMIN_TLS_PRIVATE_KEY
+        os.environ["CORE_PEER_ADDRESS"] = "localhost:" + str(peer.peerlistenport)
+        os.environ["ORDERER_CA"] = self.paths.ORDTLSCAPATH + "tls-cert.pem"
+        os.environ["ORDERER_ADMIN_TLS_SIGN_CERT"] = (
+            self.paths.ORDSIGNCERTPATH + "cert.crt"
+        )
+        os.environ["ORDERER_ADMIN_TLS_PRIVATE_KEY"] = (
+            self.paths.ORDKEYSTOREPATH + "key.pem"
+        )

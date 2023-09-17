@@ -886,10 +886,10 @@ class ConsoleOutput:
             os.system("docker network rm " + domain.networkname + " -f")
 
         if domain is None:
-            console.print("[bold]# Removing images[/]")
-            os.system("docker rmi $(docker images -a -q)")
+            #console.print("[bold]# Removing images[/]")
+            #os.system("docker rmi $(docker images -a -q)")
             console.print("[bold]# Removing other resources[/]")
-            os.system("docker system prune -a -f")
+            #os.system("docker system prune -a -f")
             os.system("docker volume prune -a -f")
             console.print("")
             self.main_menu()
@@ -981,8 +981,8 @@ class ConsoleOutput:
         console.print("[bold white]O - Add organization[/]")
         console.print("[bold white]P - Add peer[/]")
         console.print("[bold white]A - Add chaincode[/]")
-        console.print("[bold white]F - Run Firefly[/]")
-        console.print("[bold white]Y - Remove Firefly[/]")
+        #console.print("[bold white]F - Run Firefly[/]")
+        #console.print("[bold white]Y - Remove Firefly[/]")
         console.print("[bold white]G - Start network[/]")
         console.print("[bold white]S - Stop network[/]")
         console.print("[bold white]C - Clean docker[/]")
@@ -1037,14 +1037,14 @@ class ConsoleOutput:
                     selectoption = False
                     self.select_chaincode(domain)
                     self.network_selected(domain.name)
-                case "f":
-                    selectoption = False
-                    self.run_firefly(domain)
-                    self.network_selected(domain.name)
-                case "y":
-                    selectoption = False
-                    self.remove_firefly(domain)
-                    self.network_selected(domain.name)
+                #case "f":
+                #    selectoption = False
+                #    self.run_firefly(domain)
+                #    self.network_selected(domain.name)
+                #case "y":
+                #    selectoption = False
+                #    self.remove_firefly(domain)
+                #    self.network_selected(domain.name)
                 case "g":
                     selectoption = False
                     run = Run(domain)
@@ -1062,10 +1062,11 @@ class ConsoleOutput:
                 case "c":
                     selectoption = False
                     console.print("[bold white]# Cleaning...[/]")
-                    docker.compose.down(
-                        remove_orphans=True, remove_images="all", volumes=True
-                    )
-                    docker.system.prune(True, True)
+                    #docker.compose.down(
+                    #    remove_orphans=True, remove_images="all", volumes=True
+                    #)
+                    docker.compose.down(remove_orphans=True, volumes=True)
+                    #docker.system.prune(True, True)
                     self.network_selected(domain.name)
                 case "d":
                     selectoption = False
@@ -1085,13 +1086,16 @@ class ConsoleOutput:
                             + "/bin/ff remove -f "
                             + domain.networkname
                         )
+                    #docker.compose.down(
+                    #    remove_orphans=True, remove_images="all", volumes=True
+                    #)
                     docker.compose.down(
-                        remove_orphans=True, remove_images="all", volumes=True
+                        remove_orphans=True, volumes=True
                     )
                     clist = docker.container.list(True)
                     if len(clist) > 0:
                         docker.container.stop(clist)
-                    docker.system.prune(True, True)
+                    #docker.system.prune(True, True)
                     os.system("rm -fR " + netpath)
                     self.select_network()
                 case "r":
@@ -1201,7 +1205,7 @@ class ConsoleOutput:
                 elif useprevious.lower() == "p":
                     selected = False
                     console.print("")
-                    self.networkSelected(domain.name)
+                    self.network_selected(domain.name)
                 elif useprevious.lower() == "q":
                     selected = False
                     console.print("")
@@ -1304,7 +1308,7 @@ class ConsoleOutput:
                 chaincode.ccport = valueport
                 console.print("")
 
-            """ hastls = console.input("[bold white]Use TLS Connection (y/n):[/] ")
+            hastls = console.input("[bold white]Use TLS Connection (y/n):[/] ")
             tls = False
             selected = True
             while selected:
@@ -1318,7 +1322,7 @@ class ConsoleOutput:
                 elif hastls.lower() == "p":
                     selected = False
                     console.print("")
-                    self.networkSelected(domain.name)
+                    self.network_selected(domain.name)
                 elif hastls.lower() == "q":
                     selected = False
                     console.print("")
@@ -1329,8 +1333,8 @@ class ConsoleOutput:
                     )
                     console.print("")
 
-            chaincode.usetls = tls """
-            chaincode.usetls = False
+            chaincode.usetls = tls
+            #chaincode.usetls = False
 
             self.chaincode_selected(domain, chaincode)
 

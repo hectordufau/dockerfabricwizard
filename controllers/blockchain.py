@@ -60,7 +60,9 @@ class Blockchain:
         datacfg["Organizations"][0][
             "ID"
         ] = self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
-        datacfg["Organizations"][0]["MSPDir"] = self.paths.ORDDOMAINMSPPATH
+        datacfg["Organizations"][0][
+            "MSPDir"
+        ] = self.paths.ORDDOMAINMSPPATH
 
         datacfg["Organizations"][0]["Policies"]["Readers"]["Rule"] = (
             "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
@@ -91,16 +93,10 @@ class Blockchain:
         datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"]["Organizations"] = [
             datacfg["Organizations"][0]
         ]
-        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"][
-            "Capabilities"
-        ] = datacfg["Capabilities"]["Orderer"]
 
         datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"][
             "Organizations"
         ] = []
-        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"][
-            "Capabilities"
-        ] = datacfg["Capabilities"]["Application"]
 
         for org in self.domain.organizations:
             for peer in org.peers:
@@ -128,10 +124,20 @@ class Blockchain:
             {
                 "Host": (self.domain.orderer.name + "." + self.domain.name),
                 "Port": self.domain.orderer.generallistenport,
-                "ClientTLSCert": (self.paths.ORDDOMAINTLSPATH + "server.crt"),
-                "ServerTLSCert": (self.paths.ORDDOMAINTLSPATH + "server.crt"),
+                # "ClientTLSCert": (self.paths.ORDDOMAINADMINCERTPATH + "server.crt"),
+                "ClientTLSCert": (self.paths.ORDSIGNCERTPATH + "cert.pem"),
+                # "ServerTLSCert": (self.paths.ORDDOMAINADMINCERTPATH + "server.crt"),
+                "ServerTLSCert": (self.paths.ORDSIGNCERTPATH + "cert.pem"),
             },
         ]
+
+        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Orderer"][
+            "Capabilities"
+        ] = datacfg["Capabilities"]["Orderer"]
+
+        datacfg["Profiles"]["SampleAppChannelEtcdRaft"]["Application"][
+            "Capabilities"
+        ] = datacfg["Capabilities"]["Application"]
 
         with open(self.paths.DOMAINCONFIGTXJSONFILE, "w", encoding="utf-8") as fpo:
             json.dump(datacfg, fpo, indent=2)
@@ -150,17 +156,11 @@ class Blockchain:
         )
 
     def organization_yaml(self, org: Organization, peer: Peer) -> dict:
+        self.paths.set_peer_paths(org, peer)
         organization = {
             "Name": peer.CORE_PEER_LOCALMSPID,
             "ID": peer.CORE_PEER_LOCALMSPID,
-            "MSPDir": (
-                str(Path().absolute())
-                + "/domains/"
-                + self.domain.name
-                + "/peerOrganizations/"
-                + org.name
-                + "/admin/msp"
-            ),
+            "MSPDir": self.paths.PEERMSPPATH,
             "AnchorPeers": [
                 {
                     "Host": peer.name + "." + self.domain.name,
@@ -196,7 +196,11 @@ class Blockchain:
                 },
                 "Endorsement": {
                     "Type": "Signature",
-                    "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".peer')"),
+                    "Rule": (
+                        "OR('"
+                        + peer.CORE_PEER_LOCALMSPID
+                        + ".peer')"
+                    ),
                 },
             },
         }
@@ -213,9 +217,10 @@ class Blockchain:
             self.paths.BLOCKFILE,
             self.domain.networkname,
             self.domain.orderer,
-            self.paths.ORDDOMAINTLSPATH + "ca-root.crt",
-            self.paths.ORDDOMAINTLSPATH + "server.crt",
-            self.paths.ORDDOMAINTLSPATH + "server.key",
+            self.paths.ORDTLSCAPATH
+            + "tls-cert.pem",  # ORDDOMAINTLSPATH + "ca-root.crt",
+            self.paths.ORDSIGNCERTPATH + "cert.crt",  # ORDDOMAINTLSPATH + "server.crt",
+            self.paths.ORDKEYSTOREPATH + "key.pem",  # ORDDOMAINTLSPATH + "server.key",
         )
 
         console.print("## Waiting Orderer joining channel")
@@ -241,14 +246,14 @@ class Blockchain:
             self.paths.APPPATH,
             self.paths.BLOCKFILE,
             self.paths.PEERCFGPATH,
-            self.paths.PEERTLSPATH + "ca-root.crt",
+            self.paths.PEERTLSCAPATH + "tls-cert.pem",  # PEERTLSPATH + "ca-root.crt",
             self.paths.ORGMSPPATH,
         )
 
         console.print("")
         console.print("## Waiting Peer...")
         console.print("")
-        time.sleep(5)
+        time.sleep(1)
 
     def build_new_organization(self, org: Organization):
         os.system("clear")
@@ -500,7 +505,8 @@ class Blockchain:
             + org.name
             + "/"
             + peer.name
-            + "/tls/ca-root.crt"
+            # + "/tls/ca-root.crt"
+            + "/tls/tlscacerts/tls-cert.pem"
         )
         clidataCORE_PEER_MSPCONFIGPATH = (
             path + "peerOrganizations/" + org.name + "/" + peer.name + "/msp"

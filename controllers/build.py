@@ -337,7 +337,7 @@ class Build:
             "orderer",
             "ordererpw",
             self.domain.ca.serverport,
-            self.paths.CACERTDOMAINFILE,
+            self.paths.TLSCERTDOMAINFILE,
         )
 
         console.print("[bold]## Enroll Orderer Org CA Admin [/]")
@@ -380,24 +380,25 @@ class Build:
             self.paths.CACERTORDERERFILE,
         )
 
-        shutil.copy(
-            self.paths.CAORDERERCACLIENTMSPPATH + self.configyaml,
-            self.paths.ORDERERORGMSPPATH + self.configyaml,
+        commands.enroll_tls(
+            self.paths.APPPATH,
+            self.paths.ORDERERORGADMINPATH,
+            "admin",
+            "adminpw",
+            self.domain.caorderer.serverport,
+            ["localhost"],
+            "localhost",
+            self.paths.TLSCERTORDERERFILE,
         )
 
         console.print("[bold]## Enroll Orderer[/]")
-        commands.enroll(
+        commands.enroll_msp(
             self.paths.APPPATH,
             self.paths.ORDDOMAINPATH,
             "orderer",
             "ordererpw",
             self.domain.caorderer.serverport,
             self.paths.CACERTORDERERFILE,
-        )
-
-        shutil.copy(
-            self.paths.CAORDERERCACLIENTMSPPATH + self.configyaml,
-            self.paths.ORDDOMAINMSPPATH + self.configyaml,
         )
 
         console.print("[bold]## Enroll Orderer TLS[/]")
@@ -414,34 +415,43 @@ class Build:
             self.domain.ca.serverport,
             hosts,
             self.domain.orderer.name + "." + self.domain.name,
-            self.paths.CACERTDOMAINFILE,
+            self.paths.TLSCERTDOMAINFILE,
         )
-
-        for file_name in os.listdir(self.paths.ORDKEYSTOREPATH):
-            shutil.copy(
-                self.paths.ORDKEYSTOREPATH + file_name,
-                self.paths.ORDDOMAINTLSPATH + "server.key",
-            )
 
         shutil.copy(
-            self.paths.ORDSIGNCERTPATH + "cert.pem",
-            self.paths.ORDDOMAINTLSPATH + "server.crt",
+            self.paths.CAORDERERCACLIENTMSPPATH + self.configyaml,
+            self.paths.ORDDOMAINMSPPATH + self.configyaml,
         )
 
-        for file_name in os.listdir(self.paths.ORDTLSCAPATH):
-            shutil.copy(
-                self.paths.ORDTLSCAPATH + file_name,
-                self.paths.ORDDOMAINTLSPATH + "ca-root.crt",
-            )
-            shutil.copy(
-                self.paths.ORDTLSCAPATH + file_name,
-                self.paths.ORDTLSCAMSPPATH + "tlsca-cert.pem",
-            )
+        shutil.copy(
+            self.paths.CAORDERERCACLIENTMSPPATH + self.configyaml,
+            self.paths.ORDERERORGMSPPATH + self.configyaml,
+        )
 
         shutil.copy(
             self.paths.ORDERERORGSIGNCERTPATH + "cert.pem",
             self.paths.ORDDOMAINADMINCERTPATH + "cert.pem",
         )
+        shutil.copy(
+            self.paths.ORDSIGNCERTPATH + "cert.pem",
+            self.paths.ORDSIGNCERTPATH + "cert.crt",
+        )
+
+        for file_name in os.listdir(self.paths.ORDKEYSTOREPATH):
+            shutil.copy(
+                self.paths.ORDKEYSTOREPATH + file_name,
+                self.paths.ORDKEYSTOREPATH + "key.pem",
+            )
+
+        for file_name in os.listdir(self.paths.ORDTLSCAPATH):
+            shutil.copy(
+                self.paths.ORDTLSCAPATH + file_name,
+                self.paths.ORDTLSCAPATH + "tls-cert.pem",
+            )
+            shutil.copy(
+                self.paths.ORDTLSCAPATH + file_name,
+                self.paths.ORDTLSCAMSPPATH + "tlsca-cert.pem",
+            )
 
         for org in self.domain.organizations:
             self.build_identities_org(org)
@@ -507,6 +517,17 @@ class Build:
             self.paths.CACERTORGFILE,
         )
 
+        commands.enroll_tls(
+            self.paths.APPPATH,
+            self.paths.ORGCACLIENTPATH,
+            "admin",
+            "adminpw",
+            org.ca.serverport,
+            ["localhost"],
+            "localhost",
+            self.paths.TLSCERTORGFILE,
+        )
+
         shutil.copy(
             self.paths.CAORGCACLIENTMSPPATH + self.configyaml,
             self.paths.ORGMSPPATH + self.configyaml,
@@ -522,13 +543,21 @@ class Build:
         peername = peer.name.replace(".", "")
 
         console.print("[bold]## Registering TLS CA Admin Peer[/]")
+        commands.enroll(
+            self.paths.APPPATH,
+            self.paths.CACLIENTDOMAINPATH,
+            "admin",
+            "adminpw",
+            self.domain.ca.serverport,
+            self.paths.CACERTDOMAINFILE,
+        )
         commands.register_peer(
             self.paths.APPPATH,
             self.paths.CACLIENTDOMAINPATH,
             peername,
             peername + "pw",
             self.domain.ca.serverport,
-            self.paths.CACERTDOMAINFILE,
+            self.paths.TLSCERTDOMAINFILE,
         )
 
         console.print("[bold]## Register Org CA Admin :: Peer[/]")
@@ -553,15 +582,10 @@ class Build:
         commands.enroll_msp(
             self.paths.APPPATH,
             self.paths.PEERPATH,
-            "admin",
-            "adminpw",
+            peername,
+            peername + "pw",
             org.ca.serverport,
             self.paths.CACERTORGFILE,
-        )
-
-        shutil.copy(
-            self.paths.CAORGCACLIENTMSPPATH + self.configyaml,
-            self.paths.PEERMSPPATH + self.configyaml,
         )
 
         console.print("[bold]## Enroll Peer TLS[/]")
@@ -574,24 +598,34 @@ class Build:
             self.domain.ca.serverport,
             hosts,
             peer.name + "." + self.domain.name,
-            self.paths.CACERTDOMAINFILE,
+            self.paths.TLSCERTDOMAINFILE,
+        )
+
+        shutil.copy(
+            self.paths.CAORGCACLIENTMSPPATH + self.configyaml,
+            self.paths.PEERMSPPATH + self.configyaml,
+        )
+
+        shutil.copy(
+            self.paths.ORGSIGNCERTPATH + "cert.pem",
+            self.paths.PEERADMINCERTPATH + "cert.pem",
+        )
+
+        shutil.copy(
+            self.paths.PEERSIGNCERTPATH + "cert.pem",
+            self.paths.PEERSIGNCERTPATH + "cert.crt",
         )
 
         for file_name in os.listdir(self.paths.PEERKEYSTOREPATH):
             shutil.copy(
                 self.paths.PEERKEYSTOREPATH + file_name,
-                self.paths.PEERTLSPATH + "server.key",
+                self.paths.PEERKEYSTOREPATH + "key.pem",
             )
-
-        shutil.copy(
-            self.paths.PEERSIGNCERTPATH + "cert.pem",
-            self.paths.PEERTLSPATH + "server.crt",
-        )
 
         for file_name in os.listdir(self.paths.PEERTLSCAPATH):
             shutil.copy(
                 self.paths.PEERTLSCAPATH + file_name,
-                self.paths.PEERTLSPATH + "ca-root.crt",
+                self.paths.PEERTLSCAPATH + "tls-cert.pem",
             )
             shutil.copy(
                 self.paths.PEERTLSCAPATH + file_name,
@@ -599,8 +633,8 @@ class Build:
             )
 
         shutil.copy(
-            self.paths.ORGMSPPATH + "signcerts/cert.pem",
-            self.paths.PEERADMINCERTPATH + "cert.pem",
+            self.paths.TLSCERTDOMAINFILE,
+            self.paths.ORDERERORGTLSCAMSPPATH + "tls-cert.pem",
         )
 
     def build_orderer(self):
@@ -867,11 +901,7 @@ class Build:
         for i, org in enumerate(self.domain.organizations):
             ## Copy MSP Users
             self.paths.set_org_paths(org)
-
-            shutil.copytree(
-                self.paths.ORGCACLIENTPATH,
-                self.paths.ORGMSPUSERSPATH,
-            )
+            
             ## Copy Orderer
             shutil.copytree(
                 self.paths.ORDDOMAINPATH,

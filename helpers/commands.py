@@ -20,10 +20,12 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        print("FABRIC_CA_CLIENT_HOME=" + home)
+        #print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
-            + "bin/fabric-ca-client enroll -d -u https://"
+            + "bin/fabric-ca-client enroll "
+            #+ "-d "
+            + "-u https://"
             + user
             + ":"
             + passwd
@@ -35,7 +37,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def enroll_msp(
@@ -50,10 +52,12 @@ class Commands:
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
         os.environ["FABRIC_CA_CLIENT_MSPDIR"] = "msp"
-        print("FABRIC_CA_CLIENT_HOME=" + home)
+        #print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
-            + "bin/fabric-ca-client enroll -d -u https://"
+            + "bin/fabric-ca-client enroll "
+            #+ "-d "
+            + "-u https://"
             + user
             + ":"
             + passwd
@@ -65,7 +69,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def enroll_tls(
@@ -82,10 +86,12 @@ class Commands:
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
         os.environ["FABRIC_CA_CLIENT_MSPDIR"] = "tls"
-        print("FABRIC_CA_CLIENT_HOME=" + home)
+        #print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
-            + "bin/fabric-ca-client enroll -d -u https://"
+            + "bin/fabric-ca-client enroll "
+            #+ "-d "
+            + "-u https://"
             + user
             + ":"
             + passwd
@@ -100,7 +106,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def register_orderer(
@@ -114,10 +120,12 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        print("FABRIC_CA_CLIENT_HOME=" + home)
+        #print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
-            + "bin/fabric-ca-client register -d -u https://localhost:"
+            + "bin/fabric-ca-client register "
+            #+ "-d "
+            + "-u https://localhost:"
             + str(port)
             # + " --caname "
             # + caname
@@ -129,7 +137,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def register_orderer_admin(
@@ -143,10 +151,12 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        print("FABRIC_CA_CLIENT_HOME=" + home)
+        #print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
-            + "bin/fabric-ca-client register -d -u https://localhost:"
+            + "bin/fabric-ca-client register "
+            #+ "-d "
+            + "-u https://localhost:"
             + str(port)
             # + " --caname "
             # + caname
@@ -159,7 +169,7 @@ class Commands:
             + certfile
             + ' --id.attrs "hf.Registrar.Roles=client,hf.Registrar.Attributes=*,hf.Revoker=true,hf.GenCRL=true,admin=true:ecert,abac.init=true:ecert"'
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def register_admin(
@@ -173,10 +183,12 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        print("FABRIC_CA_CLIENT_HOME=" + home)
+        #print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
-            + "bin/fabric-ca-client register -d -u https://localhost:"
+            + "bin/fabric-ca-client register "
+            #+ "-d "
+            + "-u https://localhost:"
             + str(port)
             # + " --caname "
             # + caname
@@ -188,7 +200,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def register_peer(
@@ -202,10 +214,12 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        print("FABRIC_CA_CLIENT_HOME=" + home)
+        #print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
-            + "bin/fabric-ca-client register -d -u https://localhost:"
+            + "bin/fabric-ca-client register "
+            #+ "-d "
+            + "-u https://localhost:"
             + str(port)
             # + " --caname "
             # + caname
@@ -217,7 +231,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def register_client(
@@ -231,10 +245,12 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        print("FABRIC_CA_CLIENT_HOME=" + home)
+        #print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
-            + "bin/fabric-ca-client register -d -u https://localhost:"
+            + "bin/fabric-ca-client register "
+            #+ "-d "
+            + "-u https://localhost:"
             + str(port)
             # + " --caname "
             # + caname
@@ -246,7 +262,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def register_user(
@@ -260,10 +276,12 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        print("FABRIC_CA_CLIENT_HOME=" + home)
+        #print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
-            + "bin/fabric-ca-client register -d -u https://localhost:"
+            + "bin/fabric-ca-client register "
+            #+ "-d "
+            + "-u https://localhost:"
             + str(port)
             # + " --caname "
             # + caname
@@ -275,7 +293,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def configtxgen_config_path(
@@ -290,7 +308,7 @@ class Commands:
             + " -channelID "
             + channel
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def configtxgen_print_org(self, apppath: str, configtx: str, org: Organization):
@@ -304,7 +322,7 @@ class Commands:
             + org.name
             + ".json"
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def osnadmin(
@@ -337,7 +355,7 @@ class Commands:
             + tlskey
             + "'"
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def peer_channel_join(
@@ -359,7 +377,7 @@ class Commands:
         os.environ["CORE_PEER_ADDRESS"] = "localhost:" + str(peer.peerlistenport)
 
         command = apppath + "bin/peer channel join -b " + block
-        print(command)
+        #print(command)
         os.system(command)
 
     def peer_channel_signconfigtx(self, configtx: str, org: Organization):
@@ -369,7 +387,7 @@ class Commands:
             + org.name
             + "_update_in_envelope.pb"
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def configtxlator_proto_decode(self, apppath: str, configpath: str, file: str):
@@ -383,7 +401,7 @@ class Commands:
             + file
             + ".json"
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def configtxlator_proto_encode(self, apppath: str, configpath: str, file: str):
@@ -397,7 +415,7 @@ class Commands:
             + file
             + ".pb"
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def configtxlator_compute_update(self, apppath: str, channel: str, configpath: str):
@@ -413,7 +431,7 @@ class Commands:
             + configpath
             + "config_update.pb"
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def jq_export_config(self, configpath: str):
@@ -424,7 +442,7 @@ class Commands:
             + configpath
             + "config.json"
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def jq_export_modified_config(self, org: Organization, configpath: str):
@@ -440,7 +458,7 @@ class Commands:
             + configpath
             + "modified_config.json"
         )
-        print(command)
+        #print(command)
         os.system(command)
 
     def echo_payload(
@@ -456,5 +474,185 @@ class Commands:
             + org.name
             + "_update_in_envelope.json"
         )
-        print(command)
+        #print(command)
+        os.system(command)
+
+    def peer_lifecycle_chaincode_calculatepackageid(
+        self, apppath: str, tarchaincode: str, buildpath: str
+    ):
+        command = (
+            apppath
+            + "bin/peer lifecycle chaincode calculatepackageid "
+            + tarchaincode
+            + " > "
+            + buildpath
+            + "PACKAGEID.txt"
+        )
+        #print(command)
+        os.system(command)
+
+    def peer_lifecycle_chaincode_install(self, apppath: str, chaincodepkg: str):
+        command = apppath + "bin/peer lifecycle chaincode install " + chaincodepkg
+        #print(command)
+        os.system(command)
+
+    def peer_lifecycle_chaincode_queryinstalled(self, apppath: str, packageid: str):
+        command = (
+            apppath
+            + "bin/peer lifecycle chaincode queryinstalled --output json "
+            + "| jq -r 'try (.installed_chaincodes[].package_id)'"
+            + "| grep ^"
+            + packageid
+        )
+        #print(command)
+        os.system(command)
+
+    def peer_lifecycle_chaincode_approveformyorg(
+        self,
+        apppath: str,
+        invoke: bool,
+        orderer: Orderer,
+        orderername: str,
+        cafile: str,
+        channel: str,
+        chaincodename: str,
+        chaincodeversion: int,
+        packageid: str,
+    ):
+        initrequired = ""
+        if invoke:
+            initrequired = " --init-required"
+        command = (
+            apppath
+            + "bin/peer lifecycle chaincode approveformyorg -o localhost:"
+            + str(orderer.generallistenport)
+            + " --ordererTLSHostnameOverride "
+            + orderername
+            + " --tls --cafile "
+            + cafile
+            + " --channelID "
+            + channel
+            + " --name "
+            + chaincodename
+            + " --version "
+            + str(chaincodeversion)
+            + " --package-id "
+            + packageid
+            + " --sequence "
+            + str(chaincodeversion)
+            + initrequired
+        )
+        #print(command)
+        os.system(command)
+
+    def peer_lifecycle_chaincode_checkcommitreadiness(
+        self,
+        apppath: str,
+        invoke: bool,
+        orderer: Orderer,
+        cafile: str,
+        channel: str,
+        chaincodename: str,
+        chaincodeversion: int,
+    ):
+        initrequired = ""
+        if invoke:
+            initrequired = " --init-required"
+        command = (
+            apppath
+            + "bin/peer lifecycle chaincode checkcommitreadiness -o localhost:"
+            + str(orderer.generallistenport)
+            + " --tls --cafile "
+            + cafile
+            + " --channelID "
+            + channel
+            + " --name "
+            + chaincodename
+            + " --version "
+            + str(chaincodeversion)
+            + " --sequence "
+            + str(chaincodeversion)
+            + " --output json"
+            + initrequired
+        )
+        #print(command)
+        os.system(command)
+
+    def peer_lifecycle_chaincode_commit(
+        self,
+        apppath: str,
+        invoke: bool,
+        orderer: Orderer,
+        orderername: str,
+        cafile: str,
+        channel: str,
+        chaincodename: str,
+        peer: Peer,
+        peercafile: str,
+        chaincodeversion: int,
+    ):
+        initrequired = ""
+        if invoke:
+            initrequired = " --init-required"
+        command = (
+            apppath
+            + "bin/peer lifecycle chaincode commit -o localhost:"
+            + str(orderer.generallistenport)
+            + " --ordererTLSHostnameOverride "
+            + orderername
+            + " --tls --cafile "
+            + cafile
+            + " --channelID "
+            + channel
+            + " --name "
+            + chaincodename
+            + " --peerAddresses localhost:"
+            + str(peer.peerlistenport)
+            + " --tlsRootCertFiles "
+            + peercafile
+            + " --version "
+            + str(chaincodeversion)
+            + " --sequence "
+            + str(chaincodeversion)
+            + initrequired
+        )
+        #print(command)
+        os.system(command)
+
+    def peer_chaincode_invoke(
+        self,
+        apppath: str,
+        invoke: bool,
+        orderer: Orderer,
+        orderername: str,
+        cafile: str,
+        channel: str,
+        chaincodename: str,
+        peer: Peer,
+        peercafile: str,
+    ):
+        initrequired = ""
+        if invoke:
+            fcncall = '{"function":"InitLedger","Args":[]}'
+            initrequired = " --isInit -c " + "'" + fcncall + "'"
+
+        command = (
+            apppath
+            + "/bin/peer chaincode invoke -o localhost:"
+            + str(orderer.generallistenport)
+            + " --ordererTLSHostnameOverride "
+            + orderername
+            + " --tls --cafile "
+            + cafile
+            + " --channelID "
+            + channel
+            + " --name "
+            + chaincodename
+            + " --peerAddresses localhost:"
+            + str(peer.peerlistenport)
+            + " --tlsRootCertFiles "
+            + peercafile
+            + initrequired
+        )
+        #print(command)
         os.system(command)

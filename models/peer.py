@@ -14,9 +14,12 @@ class Peer(BaseModel):
     CORE_VM_ENDPOINT: str = "unix:///host/var/run/docker.sock"
     FABRIC_LOGGING_SPEC: str = "WARN:grpc=debug"
     CORE_PEER_TLS_ENABLED: bool = True
-    CORE_PEER_TLS_CERT_FILE: str = "/etc/hyperledger/fabric/tls/server.crt"
-    CORE_PEER_TLS_KEY_FILE: str = "/etc/hyperledger/fabric/tls/server.key"
-    CORE_PEER_TLS_ROOTCERT_FILE: str = "/etc/hyperledger/fabric/tls/ca-root.crt"
+    CORE_PEER_TLS_CERT_FILE: str = "/etc/hyperledger/fabric/tls/signcerts/cert.crt"
+    CORE_PEER_TLS_KEY_FILE: str = "/etc/hyperledger/fabric/tls/keystore/key.pem"
+    CORE_PEER_TLS_ROOTCERT_FILE: str = "/etc/hyperledger/fabric/tls/tlscacerts/tls-cert.pem"
+    #CORE_PEER_TLS_CERT_FILE: str = "/etc/hyperledger/fabric/tls/server.crt"
+    #CORE_PEER_TLS_KEY_FILE: str = "/etc/hyperledger/fabric/tls/server.key"
+    #CORE_PEER_TLS_ROOTCERT_FILE: str = "/etc/hyperledger/fabric/tls/ca-root.crt"
     CORE_PEER_GOSSIP_USELEADERELECTION: bool = True
     CORE_PEER_GOSSIP_ORGLEADER: bool = False
     CORE_PEER_GOSSIP_EXTERNALENDPOINT: Optional[str] = None
