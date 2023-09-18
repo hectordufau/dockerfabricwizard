@@ -49,15 +49,18 @@ class Build:
 
     def build_new_organization(self, org: Organization):
         """Build all config files for hosts and identities of a new organization added in a running Hyperledger Fabric network"""
+        self.paths.build_folders_org(org)
         self.build_new_org_ca(org)
         self.build_identities_org(org)
         self.build_peers_databases_org(org)
-        self.prepare_firefly()
+        #self.prepare_firefly()
         self.build_config()
         self.starting_pd_org(org)
 
     def build_new_peer(self, org: Organization, peer: Peer):
         """Build all config files and identities for a new peer added in a organization added in a running Hyperledger Fabric network"""
+        self.paths.set_org_paths(org)
+        self.paths.build_folder_peer(org, peer)
         self.build_identities_peer(org, peer)
         self.build_peer(peer)
         self.build_config()
@@ -258,7 +261,7 @@ class Build:
             "networks": [self.domain.networkname],
             "depends_on": [
                 peer.database.name + "." + self.domain.name,
-                self.domain.orderer.name + "." + self.domain.name,
+                #self.domain.orderer.name + "." + self.domain.name,
             ],
         }
 
@@ -901,7 +904,7 @@ class Build:
         for i, org in enumerate(self.domain.organizations):
             ## Copy MSP Users
             self.paths.set_org_paths(org)
-            
+
             ## Copy Orderer
             shutil.copytree(
                 self.paths.ORDDOMAINPATH,

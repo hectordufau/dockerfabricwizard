@@ -579,7 +579,7 @@ class ConsoleOutput:
             peer.CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME = database.COUCHDB_USER
             peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD = database.COUCHDB_PASSWORD
             peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS = (
-                database.name + "." + self.domain.name + ":5984"
+                database.name + "." + domain.name + ":5984"
             )
             peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE = domain.networkname
             peer.CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG = (
@@ -739,7 +739,7 @@ class ConsoleOutput:
         peer.CORE_LEDGER_STATE_COUCHDBCONFIG_USERNAME = database.COUCHDB_USER
         peer.CORE_LEDGER_STATE_COUCHDBCONFIG_PASSWORD = database.COUCHDB_PASSWORD
         peer.CORE_LEDGER_STATE_COUCHDBCONFIG_COUCHDBADDRESS = (
-            database.name + "." + self.domain.name + ":5984"
+            database.name + "." + domain.name + ":5984"
         )
         peer.CORE_VM_DOCKER_HOSTCONFIG_NETWORKMODE = domain.networkname
         peer.CHAINCODE_AS_A_SERVICE_BUILDER_CONFIG = (

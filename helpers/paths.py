@@ -105,6 +105,7 @@ class Paths:
     ORGTLSTLSCAPATH = str()
     ORGSIGNCERTPATH = str()
     ORDERERORGCAMSPPATH = str()
+    CLIHOSTNAME = str()
 
     def __init__(self, domain: Domain) -> None:
         self.domain: Domain = domain
@@ -250,6 +251,7 @@ class Paths:
         Paths.CONFIGORDERER = Paths.CONFIGPATH + "orderer.yaml"
 
         # CLI
+        Paths.CLIHOSTNAME = "cli."+self.domain.name
         Paths.CLIEXTPATH = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/"
         )

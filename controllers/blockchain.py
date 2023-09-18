@@ -60,9 +60,7 @@ class Blockchain:
         datacfg["Organizations"][0][
             "ID"
         ] = self.domain.orderer.ORDERER_GENERAL_LOCALMSPID
-        datacfg["Organizations"][0][
-            "MSPDir"
-        ] = self.paths.ORDDOMAINMSPPATH
+        datacfg["Organizations"][0]["MSPDir"] = self.paths.ORDDOMAINMSPPATH
 
         datacfg["Organizations"][0]["Policies"]["Readers"]["Rule"] = (
             "OR('" + self.domain.orderer.ORDERER_GENERAL_LOCALMSPID + ".member')"
@@ -196,11 +194,7 @@ class Blockchain:
                 },
                 "Endorsement": {
                     "Type": "Signature",
-                    "Rule": (
-                        "OR('"
-                        + peer.CORE_PEER_LOCALMSPID
-                        + ".peer')"
-                    ),
+                    "Rule": ("OR('" + peer.CORE_PEER_LOCALMSPID + ".peer')"),
                 },
             },
         }
@@ -342,44 +336,52 @@ class Blockchain:
             + CLIORDERER_CA
         )
 
-        clidocker = client.containers.get("cli")
+        clidocker = client.containers.get(self.paths.CLIHOSTNAME)
         envvar = self.env_variables()
         clidocker.exec_run(command, environment=envvar)
 
         console.print("## Waiting Peer...")
         console.print("")
-        time.sleep(5)
+        time.sleep(1)
 
         commands.configtxlator_proto_decode(
             self.paths.APPPATH, self.paths.DOMAINCONFIGBUILDPATH, "config_block"
         )
+        time.sleep(1)
 
         commands.jq_export_config(self.paths.DOMAINCONFIGBUILDPATH)
+        time.sleep(1)
 
         commands.jq_export_modified_config(orgnew, self.paths.DOMAINCONFIGBUILDPATH)
+        time.sleep(1)
 
         commands.configtxlator_proto_encode(
             self.paths.APPPATH, self.paths.DOMAINCONFIGBUILDPATH, "config"
         )
+        time.sleep(1)
 
         commands.configtxlator_proto_encode(
             self.paths.APPPATH, self.paths.DOMAINCONFIGBUILDPATH, "modified_config"
         )
+        time.sleep(1)
 
         commands.configtxlator_compute_update(
             self.paths.APPPATH,
             self.domain.networkname,
             self.paths.DOMAINCONFIGBUILDPATH,
         )
+        time.sleep(1)
 
         commands.configtxlator_proto_decode(
-            self.paths.APPPATH, self.paths.DOMAINCONFIGBUILDPATH, "config_update"
+            self.paths.APPPATH, self.paths.DOMAINCONFIGBUILDPATH, "config_update", True
         )
+        time.sleep(1)
 
         with open(
             self.paths.DOMAINCONFIGBUILDPATH + "config_update.json", encoding="utf-8"
         ) as f:
             config_update = f.read()
+        time.sleep(1)
 
         commands.echo_payload(
             self.domain.networkname,
@@ -387,12 +389,15 @@ class Blockchain:
             self.paths.DOMAINCONFIGBUILDPATH,
             orgnew,
         )
+        time.sleep(1)
 
         commands.configtxlator_proto_encode(
             self.paths.APPPATH,
             self.paths.DOMAINCONFIGBUILDPATH,
             orgnew.name + "_update_in_envelope",
+            True,
         )
+        time.sleep(1)
 
         for org in self.domain.organizations:
             if org.name != orgnew.name:
@@ -411,14 +416,15 @@ class Blockchain:
                             + orgnew.name
                             + "_update_in_envelope.pb"
                         )
+                        #print(command)
 
-                        clidocker = client.containers.get("cli")
-                        envvar = self.env_variables(org)
+                        clidocker = client.containers.get(self.paths.CLIHOSTNAME)
+                        envvar = self.env_variables(org, peer)
                         clidocker.exec_run(command, environment=envvar)
 
                         console.print("# Waiting Peer...")
                         console.print("")
-                        time.sleep(5)
+                        time.sleep(1)
 
         ### SEND AS ORDERER ADMIN
         console.print("[bold white]# Updating channel[/]")
@@ -437,14 +443,15 @@ class Blockchain:
             + " --tls --cafile "
             + CLIORDERER_CA
         )
+        #print(command)
 
-        clidocker = client.containers.get("cli")
-        envvar = self.env_variables(ord=True)
+        clidocker = client.containers.get(self.paths.CLIHOSTNAME)
+        envvar = self.env_variables()
         clidocker.exec_run(command, environment=envvar)
 
         console.print("# Waiting Orderer...")
         console.print("")
-        time.sleep(5)
+        time.sleep(1)
 
         console.print(
             "[bold white]# Fetching channel config block from orderer to org "
@@ -469,6 +476,7 @@ class Blockchain:
             + " --tls --cafile "
             + ORDERER_CA
         )
+        #print(command)
 
         clidocker = client.containers.get(newpeer.name + "." + self.domain.name)
         envvar = self.env_variables(orgnew, newpeer)
@@ -476,7 +484,7 @@ class Blockchain:
 
         console.print("# Waiting Peer...")
         console.print("")
-        time.sleep(5)
+        time.sleep(1)
 
         self.join_channel_org(orgnew)
 
@@ -509,7 +517,7 @@ class Blockchain:
             + "/tls/tlscacerts/tls-cert.pem"
         )
         clidataCORE_PEER_MSPCONFIGPATH = (
-            path + "peerOrganizations/" + org.name + "/" + peer.name + "/msp"
+            path + "peerOrganizations/" + org.name + "/admin/msp"
         )
         clidataCORE_PEER_ADDRESS = (
             peer.name + "." + self.domain.name + ":" + str(peer.peerlistenport)

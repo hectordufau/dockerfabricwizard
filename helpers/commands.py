@@ -390,13 +390,16 @@ class Commands:
         #print(command)
         os.system(command)
 
-    def configtxlator_proto_decode(self, apppath: str, configpath: str, file: str):
+    def configtxlator_proto_decode(self, apppath: str, configpath: str, file: str, update: bool = None):
+        commontype = "common.ConfigUpdate " if update else "common.Block "
         command = (
             apppath
             + "bin/configtxlator proto_decode --input "
             + configpath
             + file
-            + ".pb --type common.Block --output "
+            + ".pb --type "
+            + commontype
+            + "--output "
             + configpath
             + file
             + ".json"
@@ -404,13 +407,16 @@ class Commands:
         #print(command)
         os.system(command)
 
-    def configtxlator_proto_encode(self, apppath: str, configpath: str, file: str):
+    def configtxlator_proto_encode(self, apppath: str, configpath: str, file: str, envelope: bool = None):
+        commontype = "common.Envelope" if envelope else "common.Config"
         command = (
             apppath
             + "bin/configtxlator proto_encode --input "
             + configpath
             + file
-            + ".json --type common.Config --output "
+            + ".json --type "
+            + commontype
+            + " --output "
             + configpath
             + file
             + ".pb"
@@ -421,7 +427,7 @@ class Commands:
     def configtxlator_compute_update(self, apppath: str, channel: str, configpath: str):
         command = (
             apppath
-            + "/bin/configtxlator compute_update --channel_id "
+            + "bin/configtxlator compute_update --channel_id "
             + channel
             + " --original "
             + configpath
