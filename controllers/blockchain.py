@@ -240,7 +240,7 @@ class Blockchain:
             self.paths.APPPATH,
             self.paths.BLOCKFILE,
             self.paths.PEERCFGPATH,
-            self.paths.PEERTLSCAPATH + "tls-cert.pem",  # PEERTLSPATH + "ca-root.crt",
+            self.paths.PEERTLSCAPATH + "tls-cert.pem",
             self.paths.ORGMSPPATH,
         )
 
@@ -416,17 +416,17 @@ class Blockchain:
                             + orgnew.name
                             + "_update_in_envelope.pb"
                         )
-                        #print(command)
 
-                        clidocker = client.containers.get(self.paths.CLIHOSTNAME)
-                        envvar = self.env_variables(org, peer)
+                        clidocker = client.containers.get(
+                            self.paths.CLIHOSTNAME
+                        )
+                        envvar = self.env_variables(org)
                         clidocker.exec_run(command, environment=envvar)
 
                         console.print("# Waiting Peer...")
                         console.print("")
                         time.sleep(1)
 
-        ### SEND AS ORDERER ADMIN
         console.print("[bold white]# Updating channel[/]")
         console.print("")
 
@@ -443,13 +443,12 @@ class Blockchain:
             + " --tls --cafile "
             + CLIORDERER_CA
         )
-        #print(command)
 
         clidocker = client.containers.get(self.paths.CLIHOSTNAME)
         envvar = self.env_variables()
         clidocker.exec_run(command, environment=envvar)
 
-        console.print("# Waiting Orderer...")
+        console.print("# Waiting Peers...")
         console.print("")
         time.sleep(1)
 
@@ -476,7 +475,6 @@ class Blockchain:
             + " --tls --cafile "
             + ORDERER_CA
         )
-        #print(command)
 
         clidocker = client.containers.get(newpeer.name + "." + self.domain.name)
         envvar = self.env_variables(orgnew, newpeer)
@@ -513,7 +511,6 @@ class Blockchain:
             + org.name
             + "/"
             + peer.name
-            # + "/tls/ca-root.crt"
             + "/tls/tlscacerts/tls-cert.pem"
         )
         clidataCORE_PEER_MSPCONFIGPATH = (
@@ -579,7 +576,17 @@ class Blockchain:
         ) as fpo:
             json.dump(datacfg, fpo, indent=2)
 
-        os.system("rm -fR " + self.paths.DOMAINCONFIGBUILDPATH)
+        # os.system("rm -fR " + self.paths.DOMAINCONFIGBUILDPATH)
+
+        for filename in os.listdir(self.paths.DOMAINCONFIGBUILDPATH):
+            file_path = os.path.join(self.paths.DOMAINCONFIGBUILDPATH, filename)
+            try:
+                if os.path.isfile(file_path) or os.path.islink(file_path):
+                    os.unlink(file_path)
+                elif os.path.isdir(file_path):
+                    shutil.rmtree(file_path)
+            except Exception as e:
+                print("Failed to delete %s. Reason: %s" % (file_path, e))
 
     def rebuild(self):
         os.system("clear")

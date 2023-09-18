@@ -45,7 +45,7 @@ class Run:
         docker = DockerClient(compose_files=[pathfabricca])
         docker.compose.up(detach=True)
         console.print("[bold]# Waiting CAs...[/]")
-        time.sleep(5)
+        time.sleep(2)
 
     def start_ca_new(self, orgname: str):
         pathfabricca = "".join(
@@ -61,7 +61,7 @@ class Run:
         docker = DockerClient(compose_files=[pathfabricca])
         docker.compose.up(detach=True)
         console.print("[bold]# Waiting new CA...[/]")
-        time.sleep(5)
+        time.sleep(2)
 
         os.remove(Path(pathfabricca))
 
