@@ -377,11 +377,11 @@ class ChaincodeDeploy:
             + self.domain.name
             + ":"
             + str(peer.chaincodelistenport),
-            "CORE_PEER_TLS_ROOTCERT_FILE": "/etc/hyperledger/chaincode/tls/ca.crt",
-            "CORE_TLS_CLIENT_CERT_PATH": "/etc/hyperledger/chaincode/tls/server.crt",
-            "CORE_TLS_CLIENT_KEY_PATH": "/etc/hyperledger/chaincode/tls/server.key",
-            "CORE_TLS_CLIENT_CERT_FILE": "/etc/hyperledger/chaincode/tls/server.crt",
-            "CORE_TLS_CLIENT_KEY_FILE": "/etc/hyperledger/chaincode/tls/server.key",
+            "CORE_PEER_TLS_ROOTCERT_FILE": "/etc/hyperledger/chaincode/tls/tlscacerts/tlsca-cert.pem",
+            "CORE_TLS_CLIENT_CERT_PATH": "/etc/hyperledger/chaincode/tls/signcerts/cert.crt",
+            "CORE_TLS_CLIENT_KEY_PATH": "/etc/hyperledger/chaincode/tls/keystore/key.pem",
+            "CORE_TLS_CLIENT_CERT_FILE": "/etc/hyperledger/chaincode/tls/signcerts/cert.crt",
+            "CORE_TLS_CLIENT_KEY_FILE": "/etc/hyperledger/chaincode/tls/keystore/key.pem",
             "CORE_PEER_LOCALMSPID": org.name + "MSP",
             "CORE_PEER_MSPCONFIGPATH": "/etc/hyperledger/chaincode/msp",
             "CORE_CHAINCODE_LOGGING_LEVEL": "info",
@@ -436,10 +436,10 @@ class ChaincodeDeploy:
         time.sleep(2)
 
         # Waiting Peer Container
-        console.print("# Waiting Peer Container...")
-        peercontainer = whales.container.inspect(peer.name + "." + self.domain.name)
-        whales.container.restart(peercontainer)
-        time.sleep(1)
+        # console.print("# Waiting Peer Container...")
+        # peercontainer = whales.container.inspect(peer.name + "." + self.domain.name)
+        # whales.container.restart(peercontainer)
+        # time.sleep(1)
 
     def chaincode_invoke_init(self, org: Organization, peer: Peer):
         if self.chaincode.invoke and peer.name.split(".")[0] == "peer1":
@@ -470,6 +470,8 @@ class ChaincodeDeploy:
     def chaincode_crypto(self, org: Organization, peer: Peer, chaincode: Chaincode):
         console.print("[bold]## Registering chaincode " + chaincode.name + " crypto[/]")
 
+        self.paths.set_org_paths(org)
+        self.paths.set_peer_paths(org, peer)
         self.peer_env_variables(org, peer)
 
         chaincodehost = (
@@ -492,20 +494,20 @@ class ChaincodeDeploy:
 
         commands.enroll(
             self.paths.APPPATH,
-            self.paths.ORGPATH,
+            self.paths.CAORGCACLIENTPATH,
             "admin",
             "adminpw",
-            self.domain.ca.serverport,  # org.ca.serverport,
-            self.paths.TLSCERTDOMAINFILE,
+            org.ca.serverport,
+            self.paths.CACERTORGFILE,
         )
 
-        commands.register_client(
+        commands.register_peer(  # register_client
             self.paths.APPPATH,
-            self.paths.ORGPATH,
+            self.paths.CAORGCACLIENTPATH,
             peer.name.replace(".", "") + "." + chaincode.name + ".ccaas",
             "chaincodepw",
-            self.domain.ca.serverport,  # org.ca.serverport,
-            self.paths.TLSCERTDOMAINFILE,
+            org.ca.serverport,
+            self.paths.CACERTORGFILE,
         )
 
         msppath = str(pathcc) + "/msp/"
@@ -516,8 +518,8 @@ class ChaincodeDeploy:
             self.paths.PEERPATH + chaincode.name,
             peer.name.replace(".", "") + "." + chaincode.name + ".ccaas",
             "chaincodepw",
-            self.domain.ca.serverport,  # org.ca.serverport,
-            self.paths.TLSCERTDOMAINFILE,
+            org.ca.serverport,
+            self.paths.CACERTORGFILE,
         )
 
         console.print("[bold]## Generating the chaincode-tls certificates[/]")
@@ -525,41 +527,47 @@ class ChaincodeDeploy:
         commands.enroll_tls(
             self.paths.APPPATH,
             self.paths.PEERPATH + chaincode.name,
-            peer.name.replace(".", "") + "." + chaincode.name + ".ccaas",
-            "chaincodepw",
+            "admin",
+            "adminpw",
             self.domain.ca.serverport,  # org.ca.serverport,
             [chaincodehost, chaincodename, "localhost"],
             chaincodehost,
             self.paths.TLSCERTDOMAINFILE,
         )
 
+        admincerts = Path(msppath + "admincerts")
+        admincerts.mkdir(parents=True, exist_ok=True)
+        tlscacerts = Path(msppath + "tlscacerts")
+        tlscacerts.mkdir(parents=True, exist_ok=True)
+
+        # TLS
         shutil.copy(
             tlspath + "signcerts/cert.pem",
-            tlspath + "server.crt",
+            tlspath + "signcerts/cert.crt",
         )
 
         for file_name in os.listdir(tlspath + "tlscacerts/"):
             shutil.copy(
                 tlspath + "tlscacerts/" + file_name,
-                tlspath + "ca.crt",
+                tlspath + "tlscacerts/tlsca-cert.pem",
+            )
+
+            shutil.copy(
+                tlspath + "tlscacerts/" + file_name,
+                msppath + "tlscacerts/tlsca-cert.pem",
             )
 
         for file_name in os.listdir(tlspath + "keystore/"):
             shutil.copy(
                 tlspath + "keystore/" + file_name,
-                tlspath + "server.key",
+                tlspath + "keystore/key.pem",
             )
 
+        # MSP
         shutil.copy(
-            msppath + "signcerts/cert.pem",
-            msppath + "client_pem.crt",
+            self.paths.ORGSIGNCERTPATH + "cert.pem",
+            msppath + "admincerts/cert.pem",
         )
-
-        for file_name in os.listdir(msppath + "keystore/"):
-            shutil.copy(
-                msppath + "keystore/" + file_name,
-                msppath + "client_pem.key",
-            )
 
     def peer_env_variables(
         self, org: Organization, peer: Peer, orgadm: bool = None, ord: bool = None
