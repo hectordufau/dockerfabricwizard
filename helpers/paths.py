@@ -4,6 +4,7 @@ from pathlib import Path
 
 from rich.console import Console
 
+from models.chaincode import Chaincode
 from models.domain import Domain
 from models.organization import Organization
 from models.peer import Peer
@@ -251,7 +252,7 @@ class Paths:
         Paths.CONFIGORDERER = Paths.CONFIGPATH + "orderer.yaml"
 
         # CLI
-        Paths.CLIHOSTNAME = "cli."+self.domain.name
+        Paths.CLIHOSTNAME = "cli." + self.domain.name
         Paths.CLIEXTPATH = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/"
         )
@@ -448,3 +449,31 @@ class Paths:
         # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/[PEER]/tls/ca-root.crt
         # Paths.PEERCAROOT = Paths.PEERTLSPATH + "ca-root.crt"
         Paths.PEERCAROOT = Paths.PEERTLSCAPATH + "tls-cert.pem"
+
+    def set_chaincode_paths(self, org: Organization, peer: Peer, chaincode: Chaincode):
+        """_summary_"""
+
+        # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/[PEER]/[CHAINCODE]
+        Paths.CCPATH = (
+            Paths.PEERORGPATH + org.name + "/" + peer.name + "/" + chaincode.name
+        )
+        # [PEER].[CHAINCODE].ccaas.[DOMAIN]
+        Paths.CCNAME = (
+            peer.name.replace(".", "")
+            + "."
+            + chaincode.name
+            + ".ccaas."
+            + self.domain.name
+        )
+        
+        Paths.CCSMALLNAME = (
+            peer.name.replace(".", "")
+            + "."
+            + chaincode.name
+            + ".ccaas"
+        )
+        
+        # [CHAINCODE]_ccaas_image:latest
+        Paths.CCIMAGE = chaincode.name + "_ccaas_image:latest"
+        
+        

@@ -93,16 +93,12 @@ class ChaincodeDeploy:
         if builded:
             for org in self.domain.organizations:
                 for peer in org.peers:
-                    containername = (
-                        peer.name.replace(".", "")
-                        + "."
-                        + self.chaincodename
-                        + ".ccaas."
-                        + self.domain.name
-                    )
-                    container = whales.container.exists(containername)
+                    self.paths.set_chaincode_paths(org, peer, self.chaincode)
+                    container = whales.container.exists(self.paths.CCNAME)
                     if container:
-                        whales.container.stop(whales.container.inspect(containername))
+                        whales.container.stop(
+                            whales.container.inspect(self.paths.CCNAME)
+                        )
 
             imagename = self.chaincodename + "_ccaas_image:latest"
             image = whales.image.exists(imagename)
@@ -345,21 +341,10 @@ class ChaincodeDeploy:
 
     def start_docker_container(self, org: Organization, peer: Peer):
         console.print("[bold]# Starting the CCAAS container[/]")
-
-        pathcc = (
-            str(Path().absolute())
-            + "/domains/"
-            + self.domain.name
-            + "/peerOrganizations/"
-            + org.name
-            + "/"
-            + peer.name
-            + "/"
-            + self.chaincode.name
-        )
+        self.paths.set_chaincode_paths(org, peer, self.chaincode)
 
         volumes = [
-            (pathcc, "/etc/hyperledger/chaincode/"),
+            (self.paths.CCPATH, "/etc/hyperledger/chaincode/"),
         ]
 
         envs = {
@@ -472,17 +457,8 @@ class ChaincodeDeploy:
 
         self.paths.set_org_paths(org)
         self.paths.set_peer_paths(org, peer)
+        self.paths.set_chaincode_paths(org, peer, self.chaincode)
         self.peer_env_variables(org, peer)
-
-        chaincodehost = (
-            peer.name.replace(".", "")
-            + "."
-            + chaincode.name
-            + ".ccaas."
-            + self.domain.name
-        )
-
-        chaincodename = peer.name.replace(".", "") + "." + chaincode.name + ".ccaas"
 
         pathcc = Path(self.paths.PEERPATH + chaincode.name)
 
@@ -492,6 +468,26 @@ class ChaincodeDeploy:
         if not pathcc.is_dir():
             pathcc.mkdir(parents=True, exist_ok=True)
 
+        console.print("[bold]## Registering TLS CA Admin Chaincode[/]")
+
+        commands.enroll(
+            self.paths.APPPATH,
+            self.paths.CACLIENTDOMAINPATH,
+            "admin",
+            "adminpw",
+            self.domain.ca.serverport,
+            self.paths.CACERTDOMAINFILE,
+        )
+        commands.register_peer(
+            self.paths.APPPATH,
+            self.paths.CACLIENTDOMAINPATH,
+            self.chaincode.name,
+            self.chaincode.name + "pw",
+            self.domain.ca.serverport,
+            self.paths.TLSCERTDOMAINFILE,
+        )
+
+        console.print("[bold]## Register Org CA Admin :: Chaincode[/]")
         commands.enroll(
             self.paths.APPPATH,
             self.paths.CAORGCACLIENTPATH,
@@ -501,11 +497,11 @@ class ChaincodeDeploy:
             self.paths.CACERTORGFILE,
         )
 
-        commands.register_peer(  # register_client
+        commands.register_peer(
             self.paths.APPPATH,
             self.paths.CAORGCACLIENTPATH,
-            peer.name.replace(".", "") + "." + chaincode.name + ".ccaas",
-            "chaincodepw",
+            self.chaincode.name,
+            self.chaincode.name + "pw",
             org.ca.serverport,
             self.paths.CACERTORGFILE,
         )
@@ -513,11 +509,13 @@ class ChaincodeDeploy:
         msppath = str(pathcc) + "/msp/"
         tlspath = str(pathcc) + "/tls/"
 
+        console.print("[bold]## Generating the chaincode-msp certificates[/]")
+
         commands.enroll_msp(
             self.paths.APPPATH,
             self.paths.PEERPATH + chaincode.name,
-            peer.name.replace(".", "") + "." + chaincode.name + ".ccaas",
-            "chaincodepw",
+            self.chaincode.name,
+            self.chaincode.name + "pw",
             org.ca.serverport,
             self.paths.CACERTORGFILE,
         )
@@ -529,9 +527,9 @@ class ChaincodeDeploy:
             self.paths.PEERPATH + chaincode.name,
             "admin",
             "adminpw",
-            self.domain.ca.serverport,  # org.ca.serverport,
-            [chaincodehost, chaincodename, "localhost"],
-            chaincodehost,
+            self.domain.ca.serverport,
+            [self.paths.CCNAME, self.paths.CCSMALLNAME, "localhost"],
+            peer.name + "." + self.domain.name,
             self.paths.TLSCERTDOMAINFILE,
         )
 
