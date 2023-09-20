@@ -167,3 +167,4 @@ install-fabric.sh
 .vscode/
 chaincodes/*
 firefly/
+fireflysources/*

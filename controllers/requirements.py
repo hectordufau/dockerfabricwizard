@@ -7,6 +7,8 @@ from pathlib import Path
 import docker
 from git import Repo
 from rich.console import Console
+from python_on_whales import DockerClient
+whales = DockerClient()
 
 console = Console()
 
@@ -21,8 +23,8 @@ class Requirements:
         self.check_jq()
         self.check_docker()
         self.check_hlf_binaries()
-        self.check_firefly_binary()
-        self.check_firefly_chaincode()
+        self.check_firefly_cli()
+        self.check_firefly()
         self.check_domain_folder()
 
     def check_curl(self):
@@ -80,7 +82,7 @@ class Requirements:
             )
             os.system("./install-fabric.sh binary")
 
-    def check_firefly_binary(self):
+    """ def check_firefly_binary(self):
         console.print("[bold white]# Checking Firefly binary[/]")
         fireflyfile = str(Path().absolute()) + "/bin/ff"
         isFireflyExist = os.path.exists(Path(fireflyfile))
@@ -101,29 +103,68 @@ class Requirements:
                         tar.extract("ff")
                     os.remove(str(Path().absolute()) + "/" + file)
             os.chdir(old_dir)
-
-    def check_firefly_chaincode(self):
-        console.print("[bold white]# Checking Firefly chaincode source[/]")
-        fireflysource = str(Path().absolute()) + "/firefly/"
+ """
+    def check_firefly(self):
+        console.print("[bold white]# Checking FireFly chaincode source[/]")
+        fireflysource = str(Path().absolute()) + "/fireflysources/firefly/"
+        fireflyccgo = str(Path().absolute()) + "/chaincodes/firefly-go"
+        fireflychaincode = str(Path().absolute()) + "/chaincodes/firefly/"
         isFireflyExist = os.path.exists(Path(fireflysource))
         if not isFireflyExist:
             console.print(
-                "[bold yellow]> Please wait for Firefly chaincode source downloading and installing.[/]"
+                "[bold yellow]> Please wait for FireFly chaincode source downloading and installing.[/]"
             )
 
             Repo.clone_from("https://github.com/hyperledger/firefly", fireflysource)
-            shutil.move(
+            shutil.copytree(
                 fireflysource + "smart_contracts/fabric/firefly-go",
-                str(Path().absolute()) + "/chaincodes/",
+                fireflyccgo,
             )
             os.rename(
-                str(Path().absolute()) + "/chaincodes/firefly-go",
-                str(Path().absolute()) + "/chaincodes/firefly",
+                fireflyccgo,
+                fireflychaincode,
             )
-            shutil.rmtree(fireflysource + ".git")
-            shutil.rmtree(fireflysource + ".githooks")
-            shutil.rmtree(fireflysource + ".github")
-            shutil.rmtree(fireflysource + ".vscode")
+        else:
+            repo = Repo(path=fireflysource)
+            pull = repo.remotes.origin.pull("main")
+            if pull[0].flags != 0:
+                console.print(
+                    "[bold yellow]> Please wait for FireFly chaincode source updating.[/]"
+                )
+                shutil.copytree(
+                    fireflysource + "smart_contracts/fabric/firefly-go",
+                    fireflyccgo,
+                )
+                shutil.rmtree(str(Path().absolute()) + "/chaincodes/firefly")
+                os.rename(
+                    fireflyccgo,
+                    fireflychaincode,
+                )
+
+    def check_firefly_cli(self):
+        console.print("[bold white]# Checking FireFly CLI source[/]")
+        fireflysource = str(Path().absolute()) + "/fireflysources/firefly-cli/"
+        fireflybin = str(Path().absolute()) + "/bin/"
+        isFireflyExist = os.path.exists(Path(fireflysource))
+        if not isFireflyExist:
+            console.print(
+                "[bold yellow]> Please wait for FireFly CLI source downloading and installing.[/]"
+            )
+
+            Repo.clone_from("https://github.com/hyperledger/firefly-cli", fireflysource)
+            whales.run(image="golang:1.18", volumes=[(fireflysource,"/usr/src/myapp")], workdir="/usr/src/myapp", command=["make"], remove=True)
+            shutil.copy(fireflysource+"ff/ff", fireflybin)
+
+        else:
+            repo = Repo(path=fireflysource)
+            pull = repo.remotes.origin.pull("main")
+            if pull[0].flags != 0:
+                console.print(
+                    "[bold yellow]> Please wait for FireFly CLI source updating.[/]"
+                )
+                whales.run(image="golang:1.18", volumes=[(fireflysource,"/usr/src/myapp")], workdir="/usr/src/myapp", command="make", remove=True)
+                os.remove(fireflybin+"/ff")
+                shutil.copy(fireflysource+"ff/ff", fireflybin)
 
     def check_domain_folder(self):
         pathdomains = "domains"

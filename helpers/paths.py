@@ -57,7 +57,9 @@ class Paths:
     CHANNELARTIFACTSPATH = str()
     BLOCKFILE = str()
     COMPOSEPATH = str()
+    FIREFLYSOURCESPATH = str()
     FIREFLYPATH = str()
+    FIREFLYCLIPATH = str()
     CONFIGPATH = str()
     CONFIGPEER = str()
     CONFIGTX = str()
@@ -238,8 +240,10 @@ class Paths:
         Paths.COMPOSEPATH = Paths.DOMAINPATH + "compose/"
 
         # Firefly Git Path
-        # ${PWD}/domains/[DOMAIN]/firefly/
+        # ${PWD}/domains/[DOMAIN]/fireflysources/
+        #Paths.FIREFLYSOURCESPATH = Paths.DOMAINPATH + "fireflysources/"
         Paths.FIREFLYPATH = Paths.DOMAINPATH + "firefly/"
+        #Paths.FIREFLYCLIPATH = Paths.FIREFLYSOURCESPATH + "firefly-cli/"
 
         # Config Path and Files
         # ${PWD}/config/
@@ -292,8 +296,14 @@ class Paths:
         pathcompose = Path(Paths.COMPOSEPATH)
         pathcompose.mkdir(parents=True, exist_ok=True)
 
+        #pathfireflysrc = Path(Paths.FIREFLYSOURCESPATH)
+        #pathfireflysrc.mkdir(parents=True, exist_ok=True)
+
         pathfirefly = Path(Paths.FIREFLYPATH)
         pathfirefly.mkdir(parents=True, exist_ok=True)
+
+        #pathfireflycli = Path(Paths.FIREFLYCLIPATH)
+        #pathfireflycli.mkdir(parents=True, exist_ok=True)
 
         pathfabricca = Path(Paths.CADOMAINPATH)
         pathfabricca.mkdir(parents=True, exist_ok=True)
@@ -465,15 +475,8 @@ class Paths:
             + ".ccaas."
             + self.domain.name
         )
-        
-        Paths.CCSMALLNAME = (
-            peer.name.replace(".", "")
-            + "."
-            + chaincode.name
-            + ".ccaas"
-        )
-        
+
+        Paths.CCSMALLNAME = peer.name.replace(".", "") + "." + chaincode.name + ".ccaas"
+
         # [CHAINCODE]_ccaas_image:latest
         Paths.CCIMAGE = chaincode.name + "_ccaas_image:latest"
-        
-        
