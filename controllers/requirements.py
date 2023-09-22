@@ -22,6 +22,7 @@ class Requirements:
         console.print("[bold green]Checking Requirements[/]")
         self.check_curl()
         self.check_jq()
+        self.check_go()
         self.check_docker()
         self.check_hlf_binaries()
         self.check_firefly_cli()
@@ -44,6 +45,17 @@ class Requirements:
         )
         if rc != 0:
             console.print("[bold red]> jq isn't installed. Please install it.[/]")
+            exit(0)
+
+    def check_go(self):
+        console.print("[bold white]# Checking go[/]")
+        rc = subprocess.call(
+            ["which", "go"], stdout=subprocess.PIPE, stderr=subprocess.STDOUT
+        )
+        if rc != 0:
+            console.print(
+                "[bold red]> go (Golang) isn't installed. Please install it.[/]"
+            )
             exit(0)
 
     def check_docker(self):
