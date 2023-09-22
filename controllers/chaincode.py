@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 
 import docker
+import ruamel.yaml
 from rich.console import Console
 
 from controllers.build import Build
@@ -16,6 +17,9 @@ from models.chaincode import Chaincode
 from models.domain import Domain
 from models.organization import Organization
 from models.peer import Peer
+yaml = ruamel.yaml.YAML()
+yaml.indent(sequence=3, offset=1)
+yaml.boolean_representation = [f"false", f"true"]
 
 console = Console()
 from python_on_whales import DockerClient
@@ -356,7 +360,7 @@ class ChaincodeDeploy:
             + str(peer.peerlistenport),
             "CHAINCODE_SERVER_ADDRESS": "0.0.0.0:" + str(self.chaincode.ccport),
             "CORE_CHAINCODE_ID_NAME": self.packageid,
-            "CORE_PEER_TLS_ENABLED": self.chaincode.usetls,
+            "CORE_PEER_TLS_ENABLED": str(self.chaincode.usetls).lower(),
             "CORE_PEER_CHAINCODEADDRESS": peer.name
             + "."
             + self.domain.name
@@ -369,8 +373,8 @@ class ChaincodeDeploy:
             "CORE_TLS_CLIENT_KEY_FILE": "/etc/hyperledger/chaincode/tls/keystore/key.pem",
             "CORE_PEER_LOCALMSPID": org.name + "MSP",
             "CORE_PEER_MSPCONFIGPATH": "/etc/hyperledger/chaincode/msp",
-            "CORE_CHAINCODE_LOGGING_LEVEL": "info",
-            "CORE_CHAINCODE_LOGGING_SHIM": "warn",
+            "CORE_CHAINCODE_LOGGING_LEVEL": "debug",
+            "CORE_CHAINCODE_LOGGING_SHIM": "debug ",
             "HOSTNAME": peer.name.replace(".", "")
             + "."
             + self.chaincodename

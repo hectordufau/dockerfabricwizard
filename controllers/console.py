@@ -886,10 +886,10 @@ class ConsoleOutput:
             os.system("docker network rm " + domain.networkname + " -f")
 
         if domain is None:
-            #console.print("[bold]# Removing images[/]")
-            #os.system("docker rmi $(docker images -a -q)")
+            console.print("[bold]# Removing images[/]")
+            os.system("docker rmi $(docker images -a -q)")
             console.print("[bold]# Removing other resources[/]")
-            #os.system("docker system prune -a -f")
+            os.system("docker system prune -a -f")
             os.system("docker volume prune -a -f")
             console.print("")
             self.main_menu()
@@ -981,8 +981,8 @@ class ConsoleOutput:
         console.print("[bold white]O - Add organization[/]")
         console.print("[bold white]P - Add peer[/]")
         console.print("[bold white]A - Add chaincode[/]")
-        #console.print("[bold white]F - Run Firefly[/]")
-        #console.print("[bold white]Y - Remove Firefly[/]")
+        console.print("[bold white]F - Run FireFly[/]")
+        console.print("[bold white]Y - Remove FireFly[/]")
         console.print("[bold white]G - Start network[/]")
         console.print("[bold white]S - Stop network[/]")
         console.print("[bold white]C - Clean docker[/]")
@@ -1037,14 +1037,15 @@ class ConsoleOutput:
                     selectoption = False
                     self.select_chaincode(domain)
                     self.network_selected(domain.name)
-                #case "f":
-                #    selectoption = False
-                #    self.run_firefly(domain)
-                #    self.network_selected(domain.name)
-                #case "y":
-                #    selectoption = False
-                #    self.remove_firefly(domain)
-                #    self.network_selected(domain.name)
+                case "f":
+                    selectoption = False
+                    self.run_firefly(domain)
+                    self.network_selected(domain.name)
+                case "y":
+                    selectoption = False
+                    self.remove_firefly(domain)
+                    docker.compose.down(remove_orphans=True, volumes=True)
+                    self.network_selected(domain.name)
                 case "g":
                     selectoption = False
                     run = Run(domain)

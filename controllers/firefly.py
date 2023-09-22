@@ -1,13 +1,13 @@
 import os
 import subprocess
 import webbrowser
-from pathlib import Path
 
 import ruamel.yaml
 from rich.console import Console
 
 from controllers.chaincode import ChaincodeDeploy
 from controllers.header import Header
+from helpers.paths import Paths
 from models.chaincode import Chaincode
 from models.domain import Domain
 
@@ -21,6 +21,7 @@ header = Header()
 class Firefly:
     def __init__(self, domain: Domain) -> None:
         self.domain: Domain = domain
+        self.paths: Paths = Paths(domain)
 
     def build_all(self):
         os.system("clear")
@@ -38,21 +39,17 @@ class Firefly:
     def check_install(self) -> bool:
         console.print("[bold white]# Checking Firefly install[/]")
         return os.path.isdir(
-            str(Path().home()) + "/.firefly/stacks/" + self.domain.networkname
+            self.paths.FIREFLYPATH + "stacks/" + self.domain.networkname
         )
 
     def remove(self):
-        console.print("[bold white]# Starting Firefly stack[/]")
-        os.system(str(Path().absolute()) + "/bin/ff stop " + self.domain.networkname)
-        os.system(
-            str(Path().absolute()) + "/bin/ff remove -f " + self.domain.networkname
-        )
+        console.print("[bold white]# Stoping Firefly stack[/]")
+        os.environ["FIREFLY_HOME"] = self.paths.FIREFLYPATH
+        os.system(self.paths.APPPATH + "bin/ff stop " + self.domain.networkname)
+        os.system(self.paths.APPPATH + "bin/ff remove -f " + self.domain.networkname)
 
     def build_connection_profiles(self):
         console.print("[bold white]# Preparing connection profiles[/]")
-
-        msppath = str(Path().absolute()) + "/domains/" + self.domain.name
-        fireflypath = msppath + "/firefly/"
 
         for org in self.domain.organizations:
             ccp = {
@@ -181,7 +178,7 @@ class Firefly:
                 }
 
             with open(
-                fireflypath + org.name + "_ccp.yaml", "w", encoding="utf-8"
+                self.paths.FIREFLYPATH + org.name + "_ccp.yaml", "w", encoding="utf-8"
             ) as yaml_file:
                 yaml.dump(ccp, yaml_file)
 
@@ -198,27 +195,27 @@ class Firefly:
     def create_stack(self):
         console.print("[bold white]# Creating Firefly stack[/]")
 
-        msppath = str(Path().absolute()) + "/domains/" + self.domain.name
-        fireflypath = msppath + "/firefly/"
         ccpstring = ""
         nffmembers = len(self.domain.organizations)
         for org in self.domain.organizations:
             ccpstring = (
                 ccpstring
                 + " --ccp "
-                + fireflypath
+                + self.paths.FIREFLYPATH
                 + org.name
                 + "_ccp.yaml"
                 + " --msp "
-                + msppath
-                + "/peerOrganizations/"
+                + self.paths.DOMAINPATH
+                + "peerOrganizations/"
                 + org.name
-                + "/msp"
+                + "/admin/msp"
             )
 
+        os.environ["FIREFLY_HOME"] = self.paths.FIREFLYPATH
+
         command = (
-            str(Path().absolute())
-            + "/bin/ff init fabric "
+            self.paths.APPPATH
+            + "bin/ff init fabric "
             + self.domain.networkname
             + " "
             + str(nffmembers)
@@ -238,8 +235,8 @@ class Firefly:
         }
 
         overridepath = (
-            os.environ["HOME"]
-            + "/.firefly/stacks/"
+            self.paths.FIREFLYPATH
+            + "stacks/"
             + self.domain.networkname
             + "/docker-compose.override.yml"
         )
@@ -248,9 +245,10 @@ class Firefly:
 
     def start_stack(self):
         console.print("[bold white]# Starting Firefly stack[/]")
+        os.environ["FIREFLY_HOME"] = self.paths.FIREFLYPATH
         command = (
-            str(Path().absolute())
-            + "/bin/ff start "
+            self.paths.APPPATH
+            + "bin/ff start "
             + self.domain.networkname
             + " --no-rollback -v"
         )

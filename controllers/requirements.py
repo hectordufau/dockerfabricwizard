@@ -6,8 +6,9 @@ from pathlib import Path
 
 import docker
 from git import Repo
-from rich.console import Console
 from python_on_whales import DockerClient
+from rich.console import Console
+
 whales = DockerClient()
 
 console = Console()
@@ -82,28 +83,6 @@ class Requirements:
             )
             os.system("./install-fabric.sh binary")
 
-    """ def check_firefly_binary(self):
-        console.print("[bold white]# Checking Firefly binary[/]")
-        fireflyfile = str(Path().absolute()) + "/bin/ff"
-        isFireflyExist = os.path.exists(Path(fireflyfile))
-        if not isFireflyExist:
-            console.print(
-                "[bold yellow]> Please wait for Firefly downloading and installing.[/]"
-            )
-            old_dir = os.getcwd()
-            os.chdir(Path(str(Path().absolute()) + "/bin"))
-            os.system(
-                'curl -s https://api.github.com/repos/hyperledger/firefly-cli/releases/latest | grep -wo "https.*$(uname)_x86_64.*gz" | wget -qi -'
-            )
-            for file in os.listdir(Path().absolute()):
-                if file.endswith(".tar.gz"):
-                    with tarfile.open(
-                        str(Path().absolute()) + "/" + file, "r:gz"
-                    ) as tar:
-                        tar.extract("ff")
-                    os.remove(str(Path().absolute()) + "/" + file)
-            os.chdir(old_dir)
- """
     def check_firefly(self):
         console.print("[bold white]# Checking FireFly chaincode source[/]")
         fireflysource = str(Path().absolute()) + "/fireflysources/firefly/"
@@ -152,8 +131,14 @@ class Requirements:
             )
 
             Repo.clone_from("https://github.com/hyperledger/firefly-cli", fireflysource)
-            whales.run(image="golang:1.18", volumes=[(fireflysource,"/usr/src/myapp")], workdir="/usr/src/myapp", command=["make"], remove=True)
-            shutil.copy(fireflysource+"ff/ff", fireflybin)
+            whales.run(
+                image="golang:1.18",
+                volumes=[(fireflysource, "/usr/src/myapp")],
+                workdir="/usr/src/myapp",
+                command=["make"],
+                remove=True,
+            )
+            shutil.copy(fireflysource + "ff/ff", fireflybin)
 
         else:
             repo = Repo(path=fireflysource)
@@ -162,9 +147,15 @@ class Requirements:
                 console.print(
                     "[bold yellow]> Please wait for FireFly CLI source updating.[/]"
                 )
-                whales.run(image="golang:1.18", volumes=[(fireflysource,"/usr/src/myapp")], workdir="/usr/src/myapp", command="make", remove=True)
-                os.remove(fireflybin+"/ff")
-                shutil.copy(fireflysource+"ff/ff", fireflybin)
+                whales.run(
+                    image="golang:1.18",
+                    volumes=[(fireflysource, "/usr/src/myapp")],
+                    workdir="/usr/src/myapp",
+                    command="make",
+                    remove=True,
+                )
+                os.remove(fireflybin + "/ff")
+                shutil.copy(fireflysource + "ff/ff", fireflybin)
 
     def check_domain_folder(self):
         pathdomains = "domains"

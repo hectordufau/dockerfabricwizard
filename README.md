@@ -186,13 +186,12 @@ Would you like to contribute with a donation?
 
 ### Todo
 
-- [ ] External chaincode TLS use
 - [ ] Remove chaincode
-- [ ] Firefly integration (incomplete, because external chaincode TLS use is a challenge now.)
 
 ### In Progress
 
-- [ ] Improving and Refactoring (I guess it is a mess now!)
+- [ ] External chaincode TLS use
+- [ ] Firefly integration
 
 ### Done ✓
 
@@ -228,6 +227,7 @@ Would you like to contribute with a donation?
 - [x] Set external chaincode invoke initial function name
 - [x] Set external chaincode port use
 - [x] Reinstall chaincode
+- [x] Code Improving and Refactoring
 
 ## License
 
