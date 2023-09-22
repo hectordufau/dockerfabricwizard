@@ -175,10 +175,10 @@ class ChaincodeDeploy:
             + str(self.chaincode.ccport),
             "dial_timeout": "30s",
             "tls_required": self.chaincode.usetls,
-            "client_auth_required": False,
-            "client_key": keydata,
-            "client_cert": certdata,
-            "root_cert": carootdata,
+            #"client_auth_required": False,
+            #"client_key": keydata,
+            #"client_cert": certdata,
+            #"root_cert": carootdata,
         }
 
         metadata = {
@@ -373,8 +373,8 @@ class ChaincodeDeploy:
             "CORE_TLS_CLIENT_KEY_FILE": "/etc/hyperledger/chaincode/tls/keystore/key.pem",
             "CORE_PEER_LOCALMSPID": org.name + "MSP",
             "CORE_PEER_MSPCONFIGPATH": "/etc/hyperledger/chaincode/msp",
-            "CORE_CHAINCODE_LOGGING_LEVEL": "debug",
-            "CORE_CHAINCODE_LOGGING_SHIM": "debug ",
+            "CORE_CHAINCODE_LOGGING_LEVEL": "info",
+            "CORE_CHAINCODE_LOGGING_SHIM": "warn",
             "HOSTNAME": peer.name.replace(".", "")
             + "."
             + self.chaincodename

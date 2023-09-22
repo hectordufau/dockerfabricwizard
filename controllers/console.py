@@ -14,6 +14,7 @@ from controllers.firefly import Firefly
 from controllers.header import Header
 from controllers.requirements import Requirements
 from controllers.run import Run
+from helpers.paths import Paths
 from models.ca import Ca
 from models.chaincode import Chaincode
 from models.database import Database
@@ -1008,6 +1009,7 @@ class ConsoleOutput:
         with open(configfile) as config_file:
             j = json.loads(config_file.read())
             domain = Domain(**j)
+            self.paths = Paths(domain)
 
         netpath = str(Path().absolute()) + "/domains/" + domain.name
         dockpath = netpath + "/compose/"
@@ -1120,12 +1122,7 @@ class ConsoleOutput:
         header.header()
         console.print("[bold orange1]SELECT A CHAINCODE[/]")
         console.print("")
-        dirchaincodes = "".join(
-            [
-                str(Path().absolute()),
-                "/chaincodes/",
-            ]
-        )
+        self.paths = Paths(domain)
 
         chaincode = Chaincode()
 
@@ -1151,11 +1148,12 @@ class ConsoleOutput:
 
         listccsrc = [
             name
-            for name in os.listdir(dirchaincodes)
-            if os.path.isdir(os.path.join(dirchaincodes, name))
+            for name in os.listdir(self.paths.CHAINCODEPATH)
+            if os.path.isdir(os.path.join(self.paths.CHAINCODEPATH, name))
         ]
         for i, folder in enumerate(listccsrc):
-            console.print("[bold]" + str(i) + " : " + folder)
+            if folder != "firefly":
+                console.print("[bold]" + str(i) + " : " + folder)
         console.print("[bold]P - Return to previous menu[/]")
         console.print("[bold]Q - Quit[/]")
         console.print("")
@@ -1171,7 +1169,7 @@ class ConsoleOutput:
                 selected = False
                 console.print("")
                 exit(0)
-            elif option.isdigit() and (int(option) <= (len(listccsrc) - 1)):
+            elif option.isdigit() and (int(option) <= (len(listccsrc) - 1)) and int(option) > 0:
                 selected = False
                 console.print("")
                 chaincode.name = listccsrc[int(option)]
@@ -1309,7 +1307,7 @@ class ConsoleOutput:
                 chaincode.ccport = valueport
                 console.print("")
 
-            hastls = console.input("[bold white]Use TLS Connection (y/n):[/] ")
+            """ hastls = console.input("[bold white]Use TLS Connection (y/n):[/] ")
             tls = False
             selected = True
             while selected:
@@ -1334,8 +1332,8 @@ class ConsoleOutput:
                     )
                     console.print("")
 
-            chaincode.usetls = tls
-            #chaincode.usetls = False
+            chaincode.usetls = tls """
+            chaincode.usetls = False
 
             self.chaincode_selected(domain, chaincode)
 
