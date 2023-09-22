@@ -59,6 +59,7 @@ class Paths:
     COMPOSEPATH = str()
     FIREFLYSOURCESPATH = str()
     FIREFLYPATH = str()
+    FIREFLYCCPATH = str()
     FIREFLYCLIPATH = str()
     CONFIGPATH = str()
     CONFIGPEER = str()
@@ -239,12 +240,6 @@ class Paths:
         # ${PWD}/domains/[DOMAIN]/compose/
         Paths.COMPOSEPATH = Paths.DOMAINPATH + "compose/"
 
-        # Firefly Git Path
-        # ${PWD}/domains/[DOMAIN]/fireflysources/
-        #Paths.FIREFLYSOURCESPATH = Paths.DOMAINPATH + "fireflysources/"
-        Paths.FIREFLYPATH = Paths.DOMAINPATH + "firefly/"
-        #Paths.FIREFLYCLIPATH = Paths.FIREFLYSOURCESPATH + "firefly-cli/"
-
         # Config Path and Files
         # ${PWD}/config/
         Paths.CONFIGPATH = Paths.APPPATH + "config/"
@@ -282,6 +277,13 @@ class Paths:
         # ${PWD}/chaincodes/build/pkg/
         Paths.CHAINCODEPKG = Paths.CHAINCODEBUILDPATH + "pkg/"
 
+        # Firefly Git Path
+        # ${PWD}/domains/[DOMAIN]/fireflysources/
+        # Paths.FIREFLYSOURCESPATH = Paths.DOMAINPATH + "fireflysources/"
+        Paths.FIREFLYPATH = Paths.DOMAINPATH + "firefly/"
+        Paths.FIREFLYCCPATH = Paths.CHAINCODEPATH + "firefly/"
+        # Paths.FIREFLYCLIPATH = Paths.FIREFLYSOURCESPATH + "firefly-cli/"
+
     def build_folders(self):
         """_summary_"""
         console.print("[bold white]# Preparing folders[/]")
@@ -296,14 +298,14 @@ class Paths:
         pathcompose = Path(Paths.COMPOSEPATH)
         pathcompose.mkdir(parents=True, exist_ok=True)
 
-        #pathfireflysrc = Path(Paths.FIREFLYSOURCESPATH)
-        #pathfireflysrc.mkdir(parents=True, exist_ok=True)
+        # pathfireflysrc = Path(Paths.FIREFLYSOURCESPATH)
+        # pathfireflysrc.mkdir(parents=True, exist_ok=True)
 
         pathfirefly = Path(Paths.FIREFLYPATH)
         pathfirefly.mkdir(parents=True, exist_ok=True)
 
-        #pathfireflycli = Path(Paths.FIREFLYCLIPATH)
-        #pathfireflycli.mkdir(parents=True, exist_ok=True)
+        # pathfireflycli = Path(Paths.FIREFLYCLIPATH)
+        # pathfireflycli.mkdir(parents=True, exist_ok=True)
 
         pathfabricca = Path(Paths.CADOMAINPATH)
         pathfabricca.mkdir(parents=True, exist_ok=True)

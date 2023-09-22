@@ -17,6 +17,7 @@ from models.chaincode import Chaincode
 from models.domain import Domain
 from models.organization import Organization
 from models.peer import Peer
+
 yaml = ruamel.yaml.YAML()
 yaml.indent(sequence=3, offset=1)
 yaml.boolean_representation = [f"false", f"true"]
@@ -68,22 +69,17 @@ class ChaincodeDeploy:
             # self.remove_chaincode_build()
 
     def build_firefly(self):
-        if self.build_docker_image():
-            for org in self.domain.organizations:
-                for peer in org.peers:
-                    self.chaincode_crypto(org, peer, self.chaincode)
-                    console.print("")
-                    self.package_chaincode(org, peer)
-                    console.print("")
-                    self.install_chaincode(org, peer)
-                    console.print("")
-                    self.approve_org(org, peer)
-                    console.print("")
-                    self.start_docker_container(org, peer)
-                    console.print("")
-                    self.commit_chaincode_definition(org, peer)
-                    console.print("")
-            # self.remove_chaincode_build()
+        for org in self.domain.organizations:
+            for peer in org.peers:
+                self.package_chaincode_firefly(org, peer)
+                console.print("")
+                self.install_chaincode_firefly(org, peer)
+                console.print("")
+                self.approve_org(org, peer)
+                console.print("")
+                self.commit_chaincode_definition(org, peer)
+                console.print("")
+        shutil.rmtree(self.paths.CHAINCODEBUILDPATH)
 
     def build_docker_image(self) -> bool:
         console.print("[bold white]# Building Docker Image[/]")
@@ -175,10 +171,10 @@ class ChaincodeDeploy:
             + str(self.chaincode.ccport),
             "dial_timeout": "30s",
             "tls_required": self.chaincode.usetls,
-            #"client_auth_required": False,
-            #"client_key": keydata,
-            #"client_cert": certdata,
-            #"root_cert": carootdata,
+            # "client_auth_required": False,
+            # "client_key": keydata,
+            # "client_cert": certdata,
+            # "root_cert": carootdata,
         }
 
         metadata = {
@@ -218,7 +214,7 @@ class ChaincodeDeploy:
         )
 
         console.print("## Waiting Peer...")
-        time.sleep(5)
+        time.sleep(1)
 
         with open(
             self.paths.CHAINCODEBUILDPATH + "PACKAGEID.txt", encoding="utf-8"
@@ -268,6 +264,78 @@ class ChaincodeDeploy:
         time.sleep(1)
 
         shutil.rmtree(self.paths.CHAINCODEBUILDPATH)
+
+    def package_chaincode_firefly(self, org: Organization, peer: Peer):
+        console.print("[bold white]# Installing chaincode[/]")
+
+        self.paths.set_org_paths(org)
+        self.paths.set_peer_paths(org, peer)
+
+        pathpkg = Path(self.paths.CHAINCODEPKG)
+        pathpkg.mkdir(parents=True, exist_ok=True)
+
+        old_dir = os.getcwd()
+        os.chdir(self.paths.FIREFLYCCPATH)
+        os.system("go mod vendor")
+        os.chdir(self.paths.CHAINCODEPKG)
+        console.print("[bold]# Installing chaincode on " + peer.name + "[/]")
+        self.peer_env_variables(org, peer)
+        commands.peer_lifecycle_chaincode_package(
+            self.paths.APPPATH, self.paths.FIREFLYCCPATH, self.chaincode
+        )
+        os.chdir(old_dir)
+
+        self.peer_env_variables(org, peer)
+
+        tarchaincode = self.paths.CHAINCODEPKG + self.chaincodename + ".tar.gz"
+        commands.peer_lifecycle_chaincode_calculatepackageid(
+            self.paths.APPPATH, tarchaincode, self.paths.CHAINCODEPKG
+        )
+
+        with open(self.paths.CHAINCODEPKG + "PACKAGEID.txt", encoding="utf-8") as f:
+            packageid = f.read().strip()
+
+        ccversion = 1
+        ccindex = None
+
+        self.chaincode.version = ccversion
+        self.chaincode.servicename = self.chaincodename # + "_ccaas"
+        self.chaincode.packageid = packageid
+        self.packageid = packageid
+        self.chaincodeversion = ccversion
+
+        if ccindex is None:
+            self.domain.chaincodes.append(self.chaincode)
+        else:
+            self.domain.chaincodes[ccindex] = self.chaincode
+
+        console.print("# Waiting Peer...")
+        time.sleep(1)
+
+    def install_chaincode_firefly(self, org: Organization, peer: Peer):
+        console.print("[bold white]# Installing chaincode[/]")
+
+        self.paths.set_org_paths(org)
+        self.paths.set_peer_paths(org, peer)
+
+        chaincodepkg = self.paths.CHAINCODEPKG + self.chaincodename + ".tar.gz"
+
+        console.print("[bold]# Installing chaincode on " + peer.name + "[/]")
+        self.peer_env_variables(org, peer, True)
+
+        commands.peer_lifecycle_chaincode_install(self.paths.APPPATH, chaincodepkg)
+
+        console.print("# Waiting Peer...")
+        time.sleep(1)
+
+        console.print("[bold]# Result chaincode installation on " + peer.name + "[/]")
+
+        commands.peer_lifecycle_chaincode_queryinstalled(
+            self.paths.APPPATH, self.packageid
+        )
+
+        console.print("# Waiting Peer...")
+        time.sleep(1)
 
     def approve_org(self, org: Organization, peer: Peer):
         self.paths.set_org_paths(org)

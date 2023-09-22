@@ -29,6 +29,7 @@ Before you begin, make sure you have the following prerequisites:
 - Linux OS (don't use Windows/WSL2 - if your OS is Micro$oft Window$, install and use any VM manager, like VirtualBox or Vagrant)
 - Docker
 - Python (version 3.10 minimal).
+- Go
 - Git (sure!)
 - Basic understanding of [Docker](https://docs.docker.com/) and [Hyperledger Fabric](https://hyperledger-fabric.readthedocs.io/en/latest/getting_started.html) concepts.
 
@@ -190,7 +191,6 @@ Would you like to contribute with a donation?
 
 ### In Progress
 
-- [ ] External chaincode TLS use
 - [ ] Firefly integration
 
 ### Done ✓
@@ -220,7 +220,7 @@ Would you like to contribute with a donation?
    - [x] Add organization
    - [x] Add peer
 - [x] Restore network from config file
-- [x] Chaincode as a Service installer (external chaincode)
+- [x] Chaincode as a Service installer (external chaincode - without TLS)
    - [x] Typescript chaincode
    - [x] Java chaincode
    - [x] Go chaincode

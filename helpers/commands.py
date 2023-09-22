@@ -1,5 +1,6 @@
 import os
 
+from models.chaincode import Chaincode
 from models.orderer import Orderer
 from models.organization import Organization
 from models.peer import Peer
@@ -20,11 +21,11 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        #print("FABRIC_CA_CLIENT_HOME=" + home)
+        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client enroll "
-            #+ "-d "
+            # + "-d "
             + "-u https://"
             + user
             + ":"
@@ -37,7 +38,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def enroll_msp(
@@ -52,11 +53,11 @@ class Commands:
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
         os.environ["FABRIC_CA_CLIENT_MSPDIR"] = "msp"
-        #print("FABRIC_CA_CLIENT_HOME=" + home)
+        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client enroll "
-            #+ "-d "
+            # + "-d "
             + "-u https://"
             + user
             + ":"
@@ -69,7 +70,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def enroll_tls(
@@ -86,11 +87,11 @@ class Commands:
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
         os.environ["FABRIC_CA_CLIENT_MSPDIR"] = "tls"
-        #print("FABRIC_CA_CLIENT_HOME=" + home)
+        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client enroll "
-            #+ "-d "
+            # + "-d "
             + "-u https://"
             + user
             + ":"
@@ -106,7 +107,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def register_orderer(
@@ -120,11 +121,11 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        #print("FABRIC_CA_CLIENT_HOME=" + home)
+        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client register "
-            #+ "-d "
+            # + "-d "
             + "-u https://localhost:"
             + str(port)
             # + " --caname "
@@ -137,7 +138,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def register_orderer_admin(
@@ -151,11 +152,11 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        #print("FABRIC_CA_CLIENT_HOME=" + home)
+        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client register "
-            #+ "-d "
+            # + "-d "
             + "-u https://localhost:"
             + str(port)
             # + " --caname "
@@ -169,7 +170,7 @@ class Commands:
             + certfile
             + ' --id.attrs "hf.Registrar.Roles=client,hf.Registrar.Attributes=*,hf.Revoker=true,hf.GenCRL=true,admin=true:ecert,abac.init=true:ecert"'
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def register_admin(
@@ -183,11 +184,11 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        #print("FABRIC_CA_CLIENT_HOME=" + home)
+        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client register "
-            #+ "-d "
+            # + "-d "
             + "-u https://localhost:"
             + str(port)
             # + " --caname "
@@ -200,7 +201,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def register_peer(
@@ -214,11 +215,11 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        #print("FABRIC_CA_CLIENT_HOME=" + home)
+        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client register "
-            #+ "-d "
+            # + "-d "
             + "-u https://localhost:"
             + str(port)
             # + " --caname "
@@ -231,7 +232,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def register_client(
@@ -245,11 +246,11 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        #print("FABRIC_CA_CLIENT_HOME=" + home)
+        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client register "
-            #+ "-d "
+            # + "-d "
             + "-u https://localhost:"
             + str(port)
             # + " --caname "
@@ -262,7 +263,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def register_user(
@@ -276,11 +277,11 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        #print("FABRIC_CA_CLIENT_HOME=" + home)
+        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client register "
-            #+ "-d "
+            # + "-d "
             + "-u https://localhost:"
             + str(port)
             # + " --caname "
@@ -293,7 +294,7 @@ class Commands:
             + " --tls.certfiles "
             + certfile
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def configtxgen_config_path(
@@ -308,7 +309,7 @@ class Commands:
             + " -channelID "
             + channel
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def configtxgen_print_org(self, apppath: str, configtx: str, org: Organization):
@@ -322,7 +323,7 @@ class Commands:
             + org.name
             + ".json"
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def osnadmin(
@@ -355,7 +356,7 @@ class Commands:
             + tlskey
             + "'"
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def peer_channel_join(
@@ -377,7 +378,7 @@ class Commands:
         os.environ["CORE_PEER_ADDRESS"] = "localhost:" + str(peer.peerlistenport)
 
         command = apppath + "bin/peer channel join -b " + block
-        #print(command)
+        # print(command)
         os.system(command)
 
     def peer_channel_signconfigtx(self, configtx: str, org: Organization):
@@ -387,10 +388,12 @@ class Commands:
             + org.name
             + "_update_in_envelope.pb"
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
-    def configtxlator_proto_decode(self, apppath: str, configpath: str, file: str, update: bool = None):
+    def configtxlator_proto_decode(
+        self, apppath: str, configpath: str, file: str, update: bool = None
+    ):
         commontype = "common.ConfigUpdate " if update else "common.Block "
         command = (
             apppath
@@ -404,10 +407,12 @@ class Commands:
             + file
             + ".json"
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
-    def configtxlator_proto_encode(self, apppath: str, configpath: str, file: str, envelope: bool = None):
+    def configtxlator_proto_encode(
+        self, apppath: str, configpath: str, file: str, envelope: bool = None
+    ):
         commontype = "common.Envelope" if envelope else "common.Config"
         command = (
             apppath
@@ -421,7 +426,7 @@ class Commands:
             + file
             + ".pb"
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def configtxlator_compute_update(self, apppath: str, channel: str, configpath: str):
@@ -437,7 +442,7 @@ class Commands:
             + configpath
             + "config_update.pb"
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def jq_export_config(self, configpath: str):
@@ -448,7 +453,7 @@ class Commands:
             + configpath
             + "config.json"
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def jq_export_modified_config(self, org: Organization, configpath: str):
@@ -464,7 +469,7 @@ class Commands:
             + configpath
             + "modified_config.json"
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def echo_payload(
@@ -480,7 +485,7 @@ class Commands:
             + org.name
             + "_update_in_envelope.json"
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def peer_lifecycle_chaincode_calculatepackageid(
@@ -494,12 +499,29 @@ class Commands:
             + buildpath
             + "PACKAGEID.txt"
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def peer_lifecycle_chaincode_install(self, apppath: str, chaincodepkg: str):
         command = apppath + "bin/peer lifecycle chaincode install " + chaincodepkg
-        #print(command)
+        # print(command)
+        os.system(command)
+
+    def peer_lifecycle_chaincode_package(
+        self, apppath: str, chaincodepkg: str, chaincode: Chaincode
+    ):
+        command = (
+            apppath
+            + "bin/peer lifecycle chaincode package "
+            + chaincode.name
+            + ".tar.gz"
+            + " --path "
+            + chaincodepkg
+            + " --lang golang --label "
+            + chaincode.name
+            + "_"
+            + str(chaincode.version)
+        )
         os.system(command)
 
     def peer_lifecycle_chaincode_queryinstalled(self, apppath: str, packageid: str):
@@ -510,7 +532,7 @@ class Commands:
             + "| grep ^"
             + packageid
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def peer_lifecycle_chaincode_approveformyorg(
@@ -548,7 +570,7 @@ class Commands:
             + str(chaincodeversion)
             + initrequired
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def peer_lifecycle_chaincode_checkcommitreadiness(
@@ -581,7 +603,7 @@ class Commands:
             + " --output json"
             + initrequired
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def peer_lifecycle_chaincode_commit(
@@ -622,7 +644,7 @@ class Commands:
             + str(chaincodeversion)
             + initrequired
         )
-        #print(command)
+        # print(command)
         os.system(command)
 
     def peer_chaincode_invoke(
@@ -660,5 +682,5 @@ class Commands:
             + peercafile
             + initrequired
         )
-        #print(command)
+        # print(command)
         os.system(command)
