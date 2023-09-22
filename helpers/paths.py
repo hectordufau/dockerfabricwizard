@@ -419,8 +419,12 @@ class Paths:
         Paths.ORGMSPPATH = Paths.ORGCACLIENTPATH + "msp/"
         # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/admin/msp/admincerts/
         Paths.ORGADMINCERTPATH = Paths.ORGMSPPATH + "admincerts/"
+        # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/admin/msp/keystore/
+        Paths.ORGADMINKEYPATH = Paths.ORGMSPPATH + "keystore/"
         # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/admin/msp/signcerts/
         Paths.ORGSIGNCERTPATH = Paths.ORGMSPPATH + "signcerts/"
+        # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/admin/msp/tlscacerts/
+        Paths.ORGMSPTLSCAPATH = Paths.ORGMSPPATH + "tlscacerts/"
 
         # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/admin/tls/
         Paths.ORGTLSPATH = Paths.ORGCACLIENTPATH + "tls/"

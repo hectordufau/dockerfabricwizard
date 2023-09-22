@@ -1,4 +1,5 @@
 import os
+import shutil
 import subprocess
 import webbrowser
 
@@ -58,7 +59,7 @@ class Firefly:
                     + "."
                     + self.domain.name: {
                         "tlsCACerts": {
-                            "path": "/etc/firefly/organizations/tlscacerts/ca.crt"
+                            "path": "/etc/firefly/organizations/tlscacerts/tlsca-cert.pem"
                         },
                         "url": "https://"
                         + org.ca.name
@@ -98,13 +99,9 @@ class Firefly:
                     "tlsCerts": {
                         "client": {
                             "cert": {
-                                "path": "/etc/firefly/organizations/users/Admin@"
-                                + org.name
-                                + "."
-                                + self.domain.name
-                                + "/msp/signcerts/cert.pem"
+                                "path": "/etc/firefly/organizations/signcerts/cert.pem"
                             },
-                            "key": {"path": org.keystore},
+                            "key": {"path": "/etc/firefly/organizations/keystore/key.pem"},
                         }
                     },
                 },
@@ -113,13 +110,7 @@ class Firefly:
                     + "."
                     + self.domain.name: {
                         "tlsCACerts": {
-                            "path": "/etc/firefly/organizations/orderer/tls/tlscacerts/tls-localhost-"
-                            + str(self.domain.ca.serverport)
-                            + "-"
-                            + self.domain.ca.name.replace(".", "-")
-                            + "-"
-                            + self.domain.name.replace(".", "-")
-                            + ".pem"
+                            "path": "/etc/firefly/organizations/orderer/tls/tlscacerts/tls-cert.pem"
                         },
                         "url": "grpcs://"
                         + self.domain.orderer.name
@@ -161,13 +152,7 @@ class Firefly:
                     "tlsCACerts": {
                         "path": "/etc/firefly/organizations/"
                         + peer.name
-                        + "/tls/tlscacerts/tls-localhost-"
-                        + str(org.ca.serverport)
-                        + "-"
-                        + org.ca.name.replace(".", "-")
-                        + "-"
-                        + self.domain.name.replace(".", "-")
-                        + ".pem"
+                        + "/tls/tlscacerts/tls-cert.pem"
                     },
                     "url": "grpcs://"
                     + peer.name

@@ -42,7 +42,7 @@ class Build:
         self.build_identities()
         self.build_orderer()
         self.build_peers_databases()
-        # self.prepare_firefly() TODO
+        self.prepare_firefly()
         self.build_config()
         self.starting_opd()
         console.print("")
@@ -53,7 +53,7 @@ class Build:
         self.build_new_org_ca(org)
         self.build_identities_org(org)
         self.build_peers_databases_org(org)
-        #self.prepare_firefly()
+        # self.prepare_firefly()
         self.build_config()
         self.starting_pd_org(org)
 
@@ -261,7 +261,7 @@ class Build:
             "networks": [self.domain.networkname],
             "depends_on": [
                 peer.database.name + "." + self.domain.name,
-                #self.domain.orderer.name + "." + self.domain.name,
+                # self.domain.orderer.name + "." + self.domain.name,
             ],
         }
 
@@ -535,6 +535,23 @@ class Build:
             self.paths.CAORGCACLIENTMSPPATH + self.configyaml,
             self.paths.ORGMSPPATH + self.configyaml,
         )
+
+        shutil.copytree(
+            self.paths.ORGTLSTLSCAPATH,
+            self.paths.ORGMSPTLSCAPATH,
+        )
+        
+        for file_name in os.listdir(self.paths.ORGMSPTLSCAPATH):
+            shutil.copy(
+                self.paths.ORGMSPTLSCAPATH + file_name,
+                self.paths.ORGMSPTLSCAPATH + "tlsca-cert.pem",
+            )
+
+        for file_name in os.listdir(self.paths.ORGADMINKEYPATH):
+            shutil.copy(
+                self.paths.ORGADMINKEYPATH + file_name,
+                self.paths.ORGADMINKEYPATH + "key.pem",
+            )
 
         for peer in org.peers:
             self.build_identities_peer(org, peer)
@@ -900,9 +917,7 @@ class Build:
 
     def prepare_firefly(self):
         """_summary_"""
-        # TODO
-        for i, org in enumerate(self.domain.organizations):
-            ## Copy MSP Users
+        for org in self.domain.organizations:
             self.paths.set_org_paths(org)
 
             ## Copy Orderer
@@ -910,19 +925,6 @@ class Build:
                 self.paths.ORDDOMAINPATH,
                 self.paths.ORGMSPPATH + "orderer",
             )
-
-            dir_path = self.paths.ORGMSPPATH + "keystore/"
-            filelst = os.listdir(dir_path)
-            for keystore in filelst:
-                if os.path.isfile(dir_path + keystore):
-                    self.domain.organizations[i].keystore = (
-                        "/etc/firefly/organizations/users/Admin@"
-                        + org.name
-                        + "."
-                        + self.domain.name
-                        + "/msp/keystore/"
-                        + keystore
-                    )
 
             for peer in org.peers:
                 self.paths.set_peer_paths(org, peer)

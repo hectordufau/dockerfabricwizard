@@ -266,7 +266,7 @@ class ChaincodeDeploy:
         shutil.rmtree(self.paths.CHAINCODEBUILDPATH)
 
     def package_chaincode_firefly(self, org: Organization, peer: Peer):
-        console.print("[bold white]# Installing chaincode[/]")
+        console.print("[bold white]# Packaging chaincode[/]")
 
         self.paths.set_org_paths(org)
         self.paths.set_peer_paths(org, peer)
@@ -278,7 +278,11 @@ class ChaincodeDeploy:
         os.chdir(self.paths.FIREFLYCCPATH)
         os.system("go mod vendor")
         os.chdir(self.paths.CHAINCODEPKG)
-        console.print("[bold]# Installing chaincode on " + peer.name + "[/]")
+        console.print(
+            "[bold]# Generating and registering chaincode package on "
+            + org.name
+            + "[/]"
+        )
         self.peer_env_variables(org, peer)
         commands.peer_lifecycle_chaincode_package(
             self.paths.APPPATH, self.paths.FIREFLYCCPATH, self.chaincode
@@ -299,7 +303,7 @@ class ChaincodeDeploy:
         ccindex = None
 
         self.chaincode.version = ccversion
-        self.chaincode.servicename = self.chaincodename # + "_ccaas"
+        self.chaincode.servicename = self.chaincodename  # + "_ccaas"
         self.chaincode.packageid = packageid
         self.packageid = packageid
         self.chaincodeversion = ccversion
