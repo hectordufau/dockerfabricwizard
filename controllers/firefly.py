@@ -67,7 +67,9 @@ class Firefly:
                         + ":"
                         + str(org.ca.serverport),
                         "grpcOptions": {
-                            "ssl-target-name-override": org.name + "." + self.domain.name
+                            "ssl-target-name-override": org.name
+                            + "."
+                            + self.domain.name
                         },
                         "registrar": {"enrollId": "admin", "enrollSecret": "adminpw"},
                     }
@@ -216,7 +218,7 @@ class Firefly:
         res = subprocess.call(command, shell=True, universal_newlines=True)
 
         override = {
-            "version": "2.1",
+            "version": "3.7",
             "networks": {self.domain.networkname: {"name": self.domain.networkname}},
         }
 
@@ -228,6 +230,26 @@ class Firefly:
         )
         with open(overridepath, "w", encoding="utf-8") as yaml_file:
             yaml.dump(override, yaml_file)
+
+        ffcomposefile = (
+            self.paths.FIREFLYPATH
+            + "stacks/"
+            + self.domain.networkname
+            + "/docker-compose.yml"
+        )
+
+        with open(ffcomposefile, encoding="utf-8") as cftx:
+            datacfg = yaml.load(cftx)
+
+            datacfg["version"] = "3.7"
+            datacfg["networks"] = {
+                self.domain.networkname: {"name": self.domain.networkname}
+            }
+            for service in datacfg["services"]:
+                datacfg["services"][service]["networks"] = ["teste"]
+
+        with open(ffcomposefile, "w", encoding="utf-8") as yaml_file:
+            yaml.dump(datacfg, yaml_file)
 
     def start_stack(self):
         console.print("[bold white]# Starting Firefly stack[/]")
