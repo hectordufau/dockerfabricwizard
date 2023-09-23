@@ -1,5 +1,4 @@
 import os
-import shutil
 import subprocess
 import webbrowser
 
@@ -68,7 +67,7 @@ class Firefly:
                         + ":"
                         + str(org.ca.serverport),
                         "grpcOptions": {
-                            "ssl-target-name-override": "localhost"  #  org.name + "." + self.domain.name
+                            "ssl-target-name-override": org.name + "." + self.domain.name
                         },
                         "registrar": {"enrollId": "admin", "enrollSecret": "adminpw"},
                     }
@@ -99,9 +98,11 @@ class Firefly:
                     "tlsCerts": {
                         "client": {
                             "cert": {
-                                "path": "/etc/firefly/organizations/signcerts/cert.pem"
+                                "path": "/etc/firefly/organizations/user/admin/msp/signcerts/cert.pem"
                             },
-                            "key": {"path": "/etc/firefly/organizations/keystore/key.pem"},
+                            "key": {
+                                "path": "/etc/firefly/organizations/user/admin/msp/keystore/key.pem"
+                            },
                         }
                     },
                 },
@@ -193,7 +194,7 @@ class Firefly:
                 + self.paths.DOMAINPATH
                 + "peerOrganizations/"
                 + org.name
-                + "/admin/msp"
+                + "/msp"
             )
 
         os.environ["FIREFLY_HOME"] = self.paths.FIREFLYPATH

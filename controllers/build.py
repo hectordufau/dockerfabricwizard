@@ -520,9 +520,30 @@ class Build:
             self.paths.CACERTORGFILE,
         )
 
+        console.print("[bold]## Enroll Org MSP[/]")
+        commands.enroll_msp(
+            self.paths.APPPATH,
+            self.paths.ORGPATH,
+            "admin",
+            "adminpw",
+            org.ca.serverport,
+            self.paths.CACERTORGFILE,
+        )
+
         commands.enroll_tls(
             self.paths.APPPATH,
             self.paths.ORGCACLIENTPATH,
+            "admin",
+            "adminpw",
+            org.ca.serverport,
+            ["localhost"],
+            "localhost",
+            self.paths.TLSCERTORGFILE,
+        )
+
+        commands.enroll_tls(
+            self.paths.APPPATH,
+            self.paths.ORGPATH,
             "admin",
             "adminpw",
             org.ca.serverport,
@@ -536,22 +557,22 @@ class Build:
             self.paths.ORGMSPPATH + self.configyaml,
         )
 
-        shutil.copytree(
-            self.paths.ORGTLSTLSCAPATH,
-            self.paths.ORGMSPTLSCAPATH,
-        )
-        
-        for file_name in os.listdir(self.paths.ORGMSPTLSCAPATH):
-            shutil.copy(
-                self.paths.ORGMSPTLSCAPATH + file_name,
-                self.paths.ORGMSPTLSCAPATH + "tlsca-cert.pem",
-            )
-
         for file_name in os.listdir(self.paths.ORGADMINKEYPATH):
             shutil.copy(
                 self.paths.ORGADMINKEYPATH + file_name,
                 self.paths.ORGADMINKEYPATH + "key.pem",
             )
+
+        for file_name in os.listdir(self.paths.TLSORGTLSCAPATH):
+            shutil.copy(
+                self.paths.TLSORGTLSCAPATH + file_name,
+                self.paths.TLSORGTLSCAPATH + "tlsca-cert.pem",
+            )
+
+        shutil.copytree(
+            self.paths.TLSORGTLSCAPATH,
+            self.paths.MSPORGPATH + "/tlscacerts",
+        )
 
         for peer in org.peers:
             self.build_identities_peer(org, peer)
@@ -640,6 +661,12 @@ class Build:
             shutil.copy(
                 self.paths.PEERKEYSTOREPATH + file_name,
                 self.paths.PEERKEYSTOREPATH + "key.pem",
+            )
+
+        for file_name in os.listdir(self.paths.PEERKEYSTOREMSPPATH):
+            shutil.copy(
+                self.paths.PEERKEYSTOREMSPPATH + file_name,
+                self.paths.PEERKEYSTOREMSPPATH + "key.pem",
             )
 
         for file_name in os.listdir(self.paths.PEERTLSCAPATH):
@@ -919,18 +946,23 @@ class Build:
         """_summary_"""
         for org in self.domain.organizations:
             self.paths.set_org_paths(org)
-
-            ## Copy Orderer
-            shutil.copytree(
-                self.paths.ORDDOMAINPATH,
-                self.paths.ORGMSPPATH + "orderer",
-            )
-
             for peer in org.peers:
                 self.paths.set_peer_paths(org, peer)
+                if peer.name.split(".")[0] == "peer1":
+                    # shutil.copytree(self.paths.PEERMSPPATH, self.paths.ORGPATH + "msp")
+                    ## Copy Orderer
+                    shutil.copytree(
+                        self.paths.ORDDOMAINPATH,
+                        self.paths.ORGPATH + "msp/orderer",
+                    )
+
+                    shutil.copytree(
+                        self.paths.ORGCACLIENTPATH,
+                        self.paths.ORGPATH + "msp/user/admin",
+                    )
+
                 shutil.copytree(
-                    self.paths.PEERPATH,
-                    self.paths.ORGMSPPATH + peer.name,
+                    self.paths.PEERPATH, self.paths.ORGPATH + "msp/" + peer.name
                 )
 
     def starting_opd(self):

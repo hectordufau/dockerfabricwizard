@@ -1,7 +1,6 @@
 import os
 import shutil
 import subprocess
-import tarfile
 from pathlib import Path
 
 import docker

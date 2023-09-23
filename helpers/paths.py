@@ -410,6 +410,12 @@ class Paths:
 
         # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/
         Paths.ORGPATH = Paths.PEERORGPATH + org.name + "/"
+        # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/msp
+        Paths.MSPORGPATH = Paths.PEERORGPATH + org.name + "/msp/"
+        # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/tls/
+        Paths.TLSORGPATH = Paths.PEERORGPATH + org.name + "/tls/"
+        # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/tls/tlscacerts
+        Paths.TLSORGTLSCAPATH = Paths.TLSORGPATH + "tlscacerts/"
         # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/crypto/
         Paths.ORGCRYPTOPATH = Paths.ORGPATH + "crypto/"
 
@@ -444,6 +450,8 @@ class Paths:
         Paths.PEERMSPPATH = Paths.PEERPATH + "msp/"
         # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/[PEER]/msp/tlscacerts/
         Paths.PEERTLSCAMSPPATH = Paths.PEERMSPPATH + "tlscacerts/"
+        # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/[PEER]/msp/keystore/
+        Paths.PEERKEYSTOREMSPPATH = Paths.PEERMSPPATH + "keystore/"
         # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/[PEER]/msp/cacerts/
         Paths.PEERCACERTPATH = Paths.PEERMSPPATH + "cacerts/"
         # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/[PEER]/msp/admincerts/

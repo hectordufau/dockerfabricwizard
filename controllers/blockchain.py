@@ -416,9 +416,7 @@ class Blockchain:
                             + "_update_in_envelope.pb"
                         )
 
-                        clidocker = client.containers.get(
-                            self.paths.CLIHOSTNAME
-                        )
+                        clidocker = client.containers.get(self.paths.CLIHOSTNAME)
                         envvar = self.env_variables(org)
                         clidocker.exec_run(command, environment=envvar)
 

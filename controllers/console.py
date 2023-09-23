@@ -1065,11 +1065,11 @@ class ConsoleOutput:
                 case "c":
                     selectoption = False
                     console.print("[bold white]# Cleaning...[/]")
-                    #docker.compose.down(
+                    # docker.compose.down(
                     #    remove_orphans=True, remove_images="all", volumes=True
-                    #)
+                    # )
                     docker.compose.down(remove_orphans=True, volumes=True)
-                    #docker.system.prune(True, True)
+                    # docker.system.prune(True, True)
                     self.network_selected(domain.name)
                 case "d":
                     selectoption = False
@@ -1089,16 +1089,14 @@ class ConsoleOutput:
                             + "/bin/ff remove -f "
                             + domain.networkname
                         )
-                    #docker.compose.down(
+                    # docker.compose.down(
                     #    remove_orphans=True, remove_images="all", volumes=True
-                    #)
-                    docker.compose.down(
-                        remove_orphans=True, volumes=True
-                    )
+                    # )
+                    docker.compose.down(remove_orphans=True, volumes=True)
                     clist = docker.container.list(True)
                     if len(clist) > 0:
                         docker.container.stop(clist)
-                    #docker.system.prune(True, True)
+                    # docker.system.prune(True, True)
                     os.system("rm -fR " + netpath)
                     self.select_network()
                 case "r":
@@ -1169,7 +1167,11 @@ class ConsoleOutput:
                 selected = False
                 console.print("")
                 exit(0)
-            elif option.isdigit() and (int(option) <= (len(listccsrc) - 1)) and int(option) > 0:
+            elif (
+                option.isdigit()
+                and (int(option) <= (len(listccsrc) - 1))
+                and int(option) > 0
+            ):
                 selected = False
                 console.print("")
                 chaincode.name = listccsrc[int(option)]
