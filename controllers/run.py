@@ -132,7 +132,7 @@ class Run:
         console.print("")
         console.print("## Waiting Peer...")
         console.print("")
-        time.sleep(2)
+        time.sleep(1)
 
         os.remove(Path(pathnet))
 

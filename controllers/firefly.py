@@ -1,8 +1,10 @@
 import os
 import subprocess
+import time
 import webbrowser
 
 import ruamel.yaml
+from python_on_whales import DockerClient
 from rich.console import Console
 
 from controllers.chaincode import ChaincodeDeploy
@@ -30,6 +32,7 @@ class Firefly:
         console.print("")
         if self.check_install():
             self.start_stack()
+            pass
         else:
             self.build_connection_profiles()
             self.deploy_firefly_chaincode()
@@ -38,9 +41,7 @@ class Firefly:
 
     def check_install(self) -> bool:
         console.print("[bold white]# Checking Firefly install[/]")
-        return os.path.isdir(
-            self.paths.FIREFLYPATH + "stacks/" + self.domain.networkname
-        )
+        return os.path.isdir(self.paths.FIREFLYSTACK)
 
     def remove(self):
         console.print("[bold white]# Stoping Firefly stack[/]")
@@ -58,19 +59,19 @@ class Firefly:
                     + "."
                     + self.domain.name: {
                         "tlsCACerts": {
-                            "path": "/etc/firefly/organizations/tlscacerts/tlsca-cert.pem"
+                            "path": "/etc/firefly/organizations/tlscacerts/tls-cert.pem"
                         },
-                        "url": "https://"
+                        "url": "http://"
                         + org.ca.name
                         + "."
                         + self.domain.name
                         + ":"
                         + str(org.ca.serverport),
-                        "grpcOptions": {
-                            "ssl-target-name-override": org.name
-                            + "."
-                            + self.domain.name
-                        },
+                        # "grpcOptions": {
+                        #    "ssl-target-name-override": org.name
+                        #    + "."
+                        #    + self.domain.name
+                        # },
                         "registrar": {"enrollId": "admin", "enrollSecret": "adminpw"},
                     }
                 },
@@ -91,19 +92,25 @@ class Firefly:
                         }
                     },
                     "credentialStore": {
-                        "cryptoStore": {"path": "/etc/firefly/organizations"},
-                        "path": "/etc/firefly/organizations",
+                        "cryptoStore": {
+                            "path": "/etc/firefly/organizations/peer1."
+                            + org.name
+                            + "/msp"
+                        },
+                        "path": "/etc/firefly/organizations/peer1." + org.name + "/msp",
                     },
-                    "cryptoconfig": {"path": "/etc/firefly/organizations"},
+                    "cryptoconfig": {
+                        "path": "/etc/firefly/organizations/peer1." + org.name + "/msp"
+                    },
                     "logging": {"level": "debug"},
                     "organization": org.name + "." + self.domain.name,
                     "tlsCerts": {
                         "client": {
                             "cert": {
-                                "path": "/etc/firefly/organizations/user/admin/msp/signcerts/cert.pem"
+                                "path": "/etc/firefly/organizations/user/admin/tls/signcerts/cert.pem"
                             },
                             "key": {
-                                "path": "/etc/firefly/organizations/user/admin/msp/keystore/key.pem"
+                                "path": "/etc/firefly/organizations/user/admin/tls/keystore/key.pem"
                             },
                         }
                     },
@@ -210,7 +217,7 @@ class Firefly:
             + ccpstring
             + " --channel "
             + self.domain.networkname
-            + " --chaincode firefly"
+            + " --chaincode firefly_0"
             + " --sandbox-enabled=false"
             + " -v"
         )
@@ -242,26 +249,30 @@ class Firefly:
             datacfg = yaml.load(cftx)
 
             datacfg["version"] = "3.7"
-            datacfg["networks"] = {
-                self.domain.networkname: {"name": self.domain.networkname}
-            }
             for service in datacfg["services"]:
                 datacfg["services"][service]["networks"] = ["teste"]
+                newvolumes = []
+                for volume in datacfg["services"][service]["volumes"]:
+                    volume = volume.replace("runtime", "init")
+                    newvolumes.append(volume)
+                datacfg["services"][service]["volumes"] = newvolumes
 
         with open(ffcomposefile, "w", encoding="utf-8") as yaml_file:
             yaml.dump(datacfg, yaml_file)
 
     def start_stack(self):
         console.print("[bold white]# Starting Firefly stack[/]")
-        os.environ["FIREFLY_HOME"] = self.paths.FIREFLYPATH
-        command = (
-            self.paths.APPPATH
-            + "bin/ff start "
-            + self.domain.networkname
-            + " --no-rollback -v"
-        )
-        console.print("# Waiting Firefly start...")
+        pathfirefly = self.paths.FIREFLYSTACK + "docker-compose.yml"
+        pathffoverride = self.paths.FIREFLYSTACK + "docker-compose.override.yml"
 
-        subprocess.call(command, shell=True, universal_newlines=True)
+        docker = DockerClient(compose_files=[pathffoverride, pathfirefly])
+        docker.compose.up(detach=True)
+
+        console.print("")
+        console.print("# Waiting Firefly start...")
+        console.print("")
+        time.sleep(1)
+
+        # subprocess.call(command, shell=True, universal_newlines=True)
         webbrowser.open("http://127.0.0.1:5000/ui")
         webbrowser.open("http://127.0.0.1:5000/api")

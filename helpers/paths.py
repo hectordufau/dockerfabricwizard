@@ -282,6 +282,9 @@ class Paths:
         # Paths.FIREFLYSOURCESPATH = Paths.DOMAINPATH + "fireflysources/"
         Paths.FIREFLYPATH = Paths.DOMAINPATH + "firefly/"
         Paths.FIREFLYCCPATH = Paths.CHAINCODEPATH + "firefly/"
+        Paths.FIREFLYSTACK = (
+            Paths.FIREFLYPATH + "stacks/" + self.domain.networkname + "/"
+        )
         # Paths.FIREFLYCLIPATH = Paths.FIREFLYSOURCESPATH + "firefly-cli/"
 
     def build_folders(self):
@@ -412,6 +415,8 @@ class Paths:
         Paths.ORGPATH = Paths.PEERORGPATH + org.name + "/"
         # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/msp
         Paths.MSPORGPATH = Paths.PEERORGPATH + org.name + "/msp/"
+        # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/msp
+        Paths.MSPORGCACERTPATH = Paths.MSPORGPATH + "cacerts/"
         # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/tls/
         Paths.TLSORGPATH = Paths.PEERORGPATH + org.name + "/tls/"
         # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/tls/tlscacerts
@@ -436,6 +441,8 @@ class Paths:
         Paths.ORGTLSPATH = Paths.ORGCACLIENTPATH + "tls/"
         # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/admin/tls/tlscacerts/
         Paths.ORGTLSTLSCAPATH = Paths.ORGTLSPATH + "tlscacerts/"
+        # ${PWD}/domains/[DOMAIN]/peerOrganizations/[ORG]/admin/tls/keystore/
+        Paths.ORGADMINTLSKEYPATH = Paths.ORGTLSPATH + "keystore/"
 
     def set_peer_paths(self, org: Organization, peer: Peer):
         """_summary_"""

@@ -563,14 +563,25 @@ class Build:
                 self.paths.ORGADMINKEYPATH + "key.pem",
             )
 
-        for file_name in os.listdir(self.paths.TLSORGTLSCAPATH):
+        for file_name in os.listdir(self.paths.ORGADMINTLSKEYPATH):
             shutil.copy(
-                self.paths.TLSORGTLSCAPATH + file_name,
-                self.paths.TLSORGTLSCAPATH + "tlsca-cert.pem",
+                self.paths.ORGADMINTLSKEYPATH + file_name,
+                self.paths.ORGADMINTLSKEYPATH + "key.pem",
+            )
+
+        for file_name in os.listdir(self.paths.MSPORGCACERTPATH):
+            shutil.copy(
+                self.paths.MSPORGCACERTPATH + file_name,
+                self.paths.MSPORGCACERTPATH + "ca-cert.pem",
             )
 
         shutil.copytree(
             self.paths.TLSORGTLSCAPATH,
+            self.paths.MSPORGPATH + "/tlscacerts",
+        )
+
+        shutil.copy(
+            self.paths.CAORGCRYPTOPATH + "tls-cert.pem",
             self.paths.MSPORGPATH + "/tlscacerts",
         )
 
