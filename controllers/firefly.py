@@ -15,7 +15,7 @@ from models.domain import Domain
 
 console = Console()
 yaml = ruamel.yaml.YAML()
-yaml.indent(sequence=3, offset=2)
+yaml.indent(sequence=3, offset=1)
 yaml.boolean_representation = [f"false", f"true"]
 header = Header()
 
@@ -24,6 +24,7 @@ class Firefly:
     def __init__(self, domain: Domain) -> None:
         self.domain: Domain = domain
         self.paths: Paths = Paths(domain)
+        self.ffchaincode: Chaincode = None
 
     def build_all(self):
         os.system("clear")
@@ -185,7 +186,7 @@ class Firefly:
         chaincode.invoke = False
         chaincode.usetls = True
         chaincodedeploy = ChaincodeDeploy(self.domain, chaincode)
-        chaincodedeploy.build_firefly()
+        self.ffchaincode = chaincodedeploy.build_firefly()
 
     def create_stack(self):
         console.print("[bold white]# Creating Firefly stack[/]")
@@ -258,6 +259,58 @@ class Firefly:
                 datacfg["services"][service]["volumes"] = newvolumes
 
         with open(ffcomposefile, "w", encoding="utf-8") as yaml_file:
+            yaml.dump(datacfg, yaml_file)
+
+        ffconfigcore = (
+            self.paths.FIREFLYPATH
+            + "stacks/"
+            + self.domain.networkname
+            + "/init/config/firefly_core_0.yml"
+        )
+
+        with open(ffconfigcore, encoding="utf-8") as cftx:
+            datacfg = yaml.load(cftx)
+
+            pluginsnames = []
+            for plugin in datacfg["plugins"]:
+                for pname in datacfg["plugins"][plugin]:
+                    pluginsnames.append(pname["name"])
+
+            datacfg["namespaces"] = {
+                "default": self.domain.networkname,
+                "predefined": [
+                    {
+                        "name": self.domain.networkname,
+                        "description": "Default predefined namespace",
+                        "defaultKey": 1193046,
+                        "plugins": pluginsnames,
+                        "multiparty": {
+                            "networkNamespace": self.domain.networkname,
+                            "enabled": True,
+                            "org": {
+                                "name": "org0",
+                                "description": "org0",
+                                "key": 1193046,
+                            },
+                            "node": {"name": "node0", "description": "node0"},
+                            "contract": [
+                                {
+                                    "location": {
+                                        "name": "firefly_0",
+                                        "address": self.ffchaincode.packageid.split(
+                                            ":"
+                                        )[1],
+                                        "channel": self.domain.networkname,
+                                    },
+                                    "firstEvent": 0,
+                                }
+                            ],
+                        },
+                    }
+                ],
+            }
+
+        with open(ffconfigcore, "w", encoding="utf-8") as yaml_file:
             yaml.dump(datacfg, yaml_file)
 
     def start_stack(self):

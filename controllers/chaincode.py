@@ -71,7 +71,7 @@ class ChaincodeDeploy:
     def build_firefly(self):
         for org in self.domain.organizations:
             for peer in org.peers:
-                self.package_chaincode_firefly(org, peer)
+                self.chaincode = self.package_chaincode_firefly(org, peer)
                 console.print("")
                 self.install_chaincode_firefly(org, peer)
                 console.print("")
@@ -80,6 +80,7 @@ class ChaincodeDeploy:
                 self.commit_chaincode_definition(org, peer)
                 console.print("")
         shutil.rmtree(self.paths.CHAINCODEBUILDPATH)
+        return self.chaincode
 
     def build_docker_image(self) -> bool:
         console.print("[bold white]# Building Docker Image[/]")
@@ -265,7 +266,7 @@ class ChaincodeDeploy:
 
         shutil.rmtree(self.paths.CHAINCODEBUILDPATH)
 
-    def package_chaincode_firefly(self, org: Organization, peer: Peer):
+    def package_chaincode_firefly(self, org: Organization, peer: Peer) -> Chaincode:
         console.print("[bold white]# Packaging chaincode[/]")
 
         self.paths.set_org_paths(org)
@@ -315,6 +316,7 @@ class ChaincodeDeploy:
 
         console.print("# Waiting Peer...")
         time.sleep(1)
+        return self.chaincode
 
     def install_chaincode_firefly(self, org: Organization, peer: Peer):
         console.print("[bold white]# Installing chaincode[/]")
