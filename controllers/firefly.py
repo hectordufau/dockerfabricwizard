@@ -227,7 +227,7 @@ class Firefly:
 
         override = {
             "version": "3.7",
-            "networks": {self.domain.networkname: {"name": self.domain.networkname}},
+            "networks": {self.domain.networkname: {"name": self.domain.networkname, "external": True}},
         }
 
         overridepath = (
@@ -268,41 +268,48 @@ class Firefly:
             + "/init/config/firefly_core_0.yml"
         )
 
+        # orgname = self.domain.organizations[0]
+        # nodename = orgname.peers[0]
+
         with open(ffconfigcore, encoding="utf-8") as cftx:
             datacfg = yaml.load(cftx)
 
             pluginsnames = []
+            orgname = ""
+            nodename = ""
             for plugin in datacfg["plugins"]:
-                for pname in datacfg["plugins"][plugin]:
+                for i, pname in enumerate(datacfg["plugins"][plugin]):
                     pluginsnames.append(pname["name"])
+                    if pname["name"] == "blockchain0":
+                        #    datacfg["plugins"][plugin][i]["fabric"]["fabconnect"]["signer"] = nodename.name + "." + self.domain.name
+                        orgname = datacfg["plugins"][plugin][i]["fabric"]["fabconnect"][
+                            "signer"
+                        ]
+                        nodename = orgname.replace("org", "node")
 
             datacfg["namespaces"] = {
-                "default": self.domain.networkname,
+                "default": "default",
                 "predefined": [
                     {
-                        "name": self.domain.networkname,
+                        "name": "default",
                         "description": "Default predefined namespace",
-                        "defaultKey": 1193046,
+                        "defaultKey": orgname,  # org
                         "plugins": pluginsnames,
                         "multiparty": {
                             "networkNamespace": self.domain.networkname,
                             "enabled": True,
                             "org": {
-                                "name": "org0",
-                                "description": "org0",
-                                "key": 1193046,
+                                "name": orgname,
+                                "key": orgname,
                             },
-                            "node": {"name": "node0", "description": "node0"},
+                            "node": {"name": nodename},
                             "contract": [
                                 {
                                     "location": {
-                                        "name": "firefly_0",
-                                        "address": self.ffchaincode.packageid.split(
-                                            ":"
-                                        )[1],
+                                        "chaincode": "firefly_0",
                                         "channel": self.domain.networkname,
                                     },
-                                    "firstEvent": 0,
+                                    "firstEvent": "",
                                 }
                             ],
                         },
@@ -315,17 +322,25 @@ class Firefly:
 
     def start_stack(self):
         console.print("[bold white]# Starting Firefly stack[/]")
-        pathfirefly = self.paths.FIREFLYSTACK + "docker-compose.yml"
-        pathffoverride = self.paths.FIREFLYSTACK + "docker-compose.override.yml"
+        # pathfirefly = self.paths.FIREFLYSTACK + "docker-compose.yml"
+        # pathffoverride = self.paths.FIREFLYSTACK + "docker-compose.override.yml"
 
-        docker = DockerClient(compose_files=[pathffoverride, pathfirefly])
-        docker.compose.up(detach=True)
+        # docker = DockerClient(compose_files=[pathffoverride, pathfirefly])
+        # docker.compose.up(detach=True)
 
-        console.print("")
+        # console.print("")
+        # console.print("# Waiting Firefly start...")
+        # console.print("")
+        # time.sleep(1)
+
+        command = (
+            self.paths.APPPATH
+            + "bin/ff start "
+            + self.domain.networkname
+            + " --no-rollback -v"
+        )
         console.print("# Waiting Firefly start...")
-        console.print("")
-        time.sleep(1)
+        subprocess.call(command, shell=True, universal_newlines=True)
 
-        # subprocess.call(command, shell=True, universal_newlines=True)
         webbrowser.open("http://127.0.0.1:5000/ui")
         webbrowser.open("http://127.0.0.1:5000/api")

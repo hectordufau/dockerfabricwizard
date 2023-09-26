@@ -187,11 +187,11 @@ Would you like to contribute with a donation?
 
 ### Todo
 
-- [ ] Remove chaincode
+
 
 ### In Progress
 
-- [ ] Firefly integration
+- [ ] Remove chaincode
 
 ### Done ✓
 
