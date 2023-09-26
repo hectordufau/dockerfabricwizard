@@ -982,8 +982,8 @@ class ConsoleOutput:
         console.print("[bold white]O - Add organization[/]")
         console.print("[bold white]P - Add peer[/]")
         console.print("[bold white]A - Add chaincode[/]")
-        #console.print("[bold white]F - Run FireFly[/]")
-        #console.print("[bold white]Y - Remove FireFly[/]")
+        console.print("[bold white]F - Run FireFly[/]")
+        console.print("[bold white]Y - Remove FireFly[/]")
         console.print("[bold white]G - Start network[/]")
         console.print("[bold white]S - Stop network[/]")
         console.print("[bold white]C - Clean docker[/]")
@@ -992,12 +992,12 @@ class ConsoleOutput:
         console.print("[bold white]M - Return to main menu[/]")
         console.print("[bold white]Q - Quit[/]")
         console.print("")
-        #option = console.input(
-        #    "[bold]Select an option (N,O,P,A,F,Y,G,S,C,D,R,M or Q):[/] "
-        #)
         option = console.input(
-            "[bold]Select an option (N,O,P,A,G,S,C,D,R,M or Q):[/] "
+            "[bold]Select an option (N,O,P,A,F,Y,G,S,C,D,R,M or Q):[/] "
         )
+        #option = console.input(
+        #    "[bold]Select an option (N,O,P,A,G,S,C,D,R,M or Q):[/] "
+        #)
         console.print("")
 
         configfile = "".join(
@@ -1042,15 +1042,15 @@ class ConsoleOutput:
                     selectoption = False
                     self.select_chaincode(domain)
                     self.network_selected(domain.name)
-                #case "f":
-                #    selectoption = False
-                #    self.run_firefly(domain)
-                #    self.network_selected(domain.name)
-                #case "y":
-                #    selectoption = False
-                #    self.remove_firefly(domain)
-                #    docker.compose.down(remove_orphans=True, volumes=True)
-                #    self.network_selected(domain.name)
+                case "f":
+                    selectoption = False
+                    self.run_firefly(domain)
+                    self.network_selected(domain.name)
+                case "y":
+                    selectoption = False
+                    self.remove_firefly(domain)
+                    docker.compose.down(remove_orphans=True, volumes=True)
+                    self.network_selected(domain.name)
                 case "g":
                     selectoption = False
                     run = Run(domain)
@@ -1113,12 +1113,12 @@ class ConsoleOutput:
                     selectoption = False
                     exit(0)
                 case _:
-                    option = console.input(
-                        "[bold]Select an option (N,O,P,A,G,S,C,D,R,M or Q):[/] "
-                    )
                     #option = console.input(
-                    #    "[bold]Select an option (N,O,P,A,F,Y,G,S,C,D,R,M or Q):[/] "
+                    #    "[bold]Select an option (N,O,P,A,G,S,C,D,R,M or Q):[/] "
                     #)
+                    option = console.input(
+                        "[bold]Select an option (N,O,P,A,F,Y,G,S,C,D,R,M or Q):[/] "
+                    )
                     console.print("")
 
     def select_chaincode(self, domain: Domain):

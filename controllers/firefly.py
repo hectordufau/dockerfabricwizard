@@ -1,10 +1,8 @@
 import os
 import subprocess
-import time
 import webbrowser
 
 import ruamel.yaml
-from python_on_whales import DockerClient
 from rich.console import Console
 
 from controllers.chaincode import ChaincodeDeploy
@@ -33,7 +31,6 @@ class Firefly:
         console.print("")
         if self.check_install():
             self.start_stack()
-            pass
         else:
             self.build_connection_profiles()
             self.deploy_firefly_chaincode()
@@ -227,7 +224,12 @@ class Firefly:
 
         override = {
             "version": "3.7",
-            "networks": {self.domain.networkname: {"name": self.domain.networkname, "external": True}},
+            "networks": {
+                self.domain.networkname: {
+                    "name": self.domain.networkname,
+                    "external": True,
+                }
+            },
         }
 
         overridepath = (
