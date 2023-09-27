@@ -29,7 +29,6 @@ Before you begin, make sure you have the following prerequisites:
 - Linux OS (don't use Windows/WSL2 - if your OS is Micro$oft Window$, install and use any VM manager, like VirtualBox or Vagrant)
 - Docker
 - Python (version 3.10 minimal).
-- Go
 - Git (sure!)
 - Basic understanding of [Docker](https://docs.docker.com/) and [Hyperledger Fabric](https://hyperledger-fabric.readthedocs.io/en/latest/getting_started.html) concepts.
 
@@ -187,11 +186,17 @@ Would you like to contribute with a donation?
 
 ### Todo
 
-
+- [ ] Remove chaincode
 
 ### In Progress
 
-- [ ] Remove chaincode
+- [ ] FireFly
+   - [x] Connection Profile
+   - [x] Fabconnect API
+   - [x] Shared Storage
+   - [x] Data Exchange
+   - [x] Database
+   - [ ] Core
 
 ### Done ✓
 

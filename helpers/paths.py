@@ -282,6 +282,20 @@ class Paths:
         # Paths.FIREFLYSOURCESPATH = Paths.DOMAINPATH + "fireflysources/"
         Paths.FIREFLYPATH = Paths.DOMAINPATH + "firefly/"
         Paths.FIREFLYCCPATH = Paths.CHAINCODEPATH + "firefly/"
+        # ${PWD}/domains/[DOMAIN]/firefly/fabconnect
+        Paths.FIREFLYFABCONNECTPATH = Paths.FIREFLYPATH + "fabconnect/"
+        # ${PWD}/domains/[DOMAIN]/firefly/dataexchange
+        Paths.FIREFLYDATAEXCHPATH = Paths.FIREFLYPATH + "dataexchange/"
+        # ${PWD}/domains/[DOMAIN]/firefly/core
+        Paths.FIREFLYCOREPATH = Paths.FIREFLYPATH + "core/"
+        # ${PWD}/domains/[DOMAIN]/firefly/database
+        Paths.FIREFLYDATABASEPATH = Paths.FIREFLYPATH + "database/"
+        # ${PWD}/fireflysources/firefly/db/migrations/postgres
+        Paths.FIREFLYDBMIGRATION = (
+            Paths.APPPATH + "fireflysources/firefly/db/migrations/postgres"
+        )
+
+        # ${PWD}/domains/[DOMAIN]/firefly/stacks/[NETWORK]
         Paths.FIREFLYSTACK = (
             Paths.FIREFLYPATH + "stacks/" + self.domain.networkname + "/"
         )

@@ -21,10 +21,10 @@ class Requirements:
         console.print("[bold green]Checking Requirements[/]")
         self.check_curl()
         self.check_jq()
-        self.check_go()
+        #self.check_go()
         self.check_docker()
         self.check_hlf_binaries()
-        self.check_firefly_cli()
+        #self.check_firefly_cli()
         self.check_firefly()
         self.check_domain_folder()
 

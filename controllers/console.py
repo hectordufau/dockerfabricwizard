@@ -995,9 +995,9 @@ class ConsoleOutput:
         option = console.input(
             "[bold]Select an option (N,O,P,A,F,Y,G,S,C,D,R,M or Q):[/] "
         )
-        #option = console.input(
+        # option = console.input(
         #    "[bold]Select an option (N,O,P,A,G,S,C,D,R,M or Q):[/] "
-        #)
+        # )
         console.print("")
 
         configfile = "".join(
@@ -1077,22 +1077,7 @@ class ConsoleOutput:
                 case "d":
                     selectoption = False
                     console.print("[bold white]# Deleting...[/]")
-                    os.environ["FIREFLY_HOME"] = self.paths.FIREFLYPATH
-                    ffpath = (
-                        self.paths.FIREFLYPATH+ "stacks/"+ domain.networkname
-                    )
-                    ffdir = os.path.isdir(ffpath)
-                    if ffdir:
-                        os.system(
-                            str(Path().absolute())
-                            + "/bin/ff stop "
-                            + domain.networkname
-                        )
-                        os.system(
-                            str(Path().absolute())
-                            + "/bin/ff remove -f "
-                            + domain.networkname
-                        )
+                    ffdir = os.path.isdir(self.paths.FIREFLYFABCONNECTPATH)
                     # docker.compose.down(
                     #    remove_orphans=True, remove_images="all", volumes=True
                     # )
@@ -1102,6 +1087,10 @@ class ConsoleOutput:
                         docker.container.stop(clist)
                     # docker.system.prune(True, True)
                     os.system("rm -fR " + netpath)
+                    if ffdir:
+                        ffimg = docker.image.list(filters={"reference": "*firefly_0*"})
+                        if len(ffimg) > 0:
+                            docker.image.remove(ffimg)
                     self.select_network()
                 case "r":
                     selectoption = False
@@ -1113,9 +1102,9 @@ class ConsoleOutput:
                     selectoption = False
                     exit(0)
                 case _:
-                    #option = console.input(
+                    # option = console.input(
                     #    "[bold]Select an option (N,O,P,A,G,S,C,D,R,M or Q):[/] "
-                    #)
+                    # )
                     option = console.input(
                         "[bold]Select an option (N,O,P,A,F,Y,G,S,C,D,R,M or Q):[/] "
                     )

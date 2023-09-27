@@ -1,8 +1,14 @@
+import json
 import os
+import shutil
 import subprocess
+import time
 import webbrowser
+from pathlib import Path
 
+import docker
 import ruamel.yaml
+from python_on_whales import DockerClient
 from rich.console import Console
 
 from controllers.chaincode import ChaincodeDeploy
@@ -10,6 +16,9 @@ from controllers.header import Header
 from helpers.paths import Paths
 from models.chaincode import Chaincode
 from models.domain import Domain
+
+whales = DockerClient()
+client = docker.from_env()
 
 console = Console()
 yaml = ruamel.yaml.YAML()
@@ -39,110 +48,137 @@ class Firefly:
 
     def check_install(self) -> bool:
         console.print("[bold white]# Checking Firefly install[/]")
-        return os.path.isdir(self.paths.FIREFLYSTACK)
+        return os.path.isdir(self.paths.FIREFLYFABCONNECTPATH)
 
     def remove(self):
         console.print("[bold white]# Stoping Firefly stack[/]")
-        os.environ["FIREFLY_HOME"] = self.paths.FIREFLYPATH
+        """ os.environ["FIREFLY_HOME"] = self.paths.FIREFLYPATH
         os.system(self.paths.APPPATH + "bin/ff stop " + self.domain.networkname)
-        os.system(self.paths.APPPATH + "bin/ff remove -f " + self.domain.networkname)
+        os.system(self.paths.APPPATH + "bin/ff remove -f " + self.domain.networkname) """
 
     def build_connection_profiles(self):
         console.print("[bold white]# Preparing connection profiles[/]")
 
+        # create firefly/fabconnect folder
+        pathfabconnect = Path(self.paths.FIREFLYFABCONNECTPATH)
+        pathfabconnect.mkdir(parents=True, exist_ok=True)
+
+        orgclient = self.domain.organizations[0]
+        # peerclient = orgclient.peers[0]
+
+        ccp = {
+            "version": "1.1.0%",
+            "channels": {
+                self.domain.networkname: {
+                    "orderers": [self.domain.orderer.name + "." + self.domain.name],
+                    "peers": {},
+                }
+            },
+            "organizations": {},
+            "orderers": {
+                self.domain.orderer.name
+                + "."
+                + self.domain.name: {
+                    "url": "grpcs://"
+                    + self.domain.orderer.name
+                    + "."
+                    + self.domain.name
+                    + ":"
+                    + str(self.domain.orderer.generallistenport),
+                    "grpcOptions": {
+                        "ssl-target-name-override": self.domain.orderer.name
+                        + "."
+                        + self.domain.name,
+                        "grpc-max-send-message-length": 4194304,
+                    },
+                    "tlsCACerts": {
+                        "path": "/etc/firefly/organizations/"
+                        + orgclient.name
+                        + "/orderer/tls/tlscacerts/tls-cert.pem"
+                    },
+                }
+            },
+            "client": {
+                "organization": orgclient.name + "." + self.domain.name,
+                "BCCSP": {
+                    "security": {
+                        "default": {"provider": "SW"},
+                        "enabled": True,
+                        "hashAlgorithm": "SHA2",
+                        "level": 256,
+                        "softVerify": True,
+                    }
+                },
+                "credentialStore": {
+                    "path": "/etc/firefly/organizations/"
+                    + orgclient.name
+                    + "/user/admin/msp",
+                    "cryptoStore": {
+                        "path": "/etc/firefly/organizations/"
+                        + orgclient.name
+                        + "/user/admin/msp"
+                    },
+                },
+                "logging": {"level": "debug"},
+                "tlsCerts": {
+                    "client": {
+                        "cert": {
+                            "path": "/etc/firefly/organizations/"
+                            + orgclient.name
+                            + "/user/admin/tls/signcerts/cert.pem"
+                        },
+                        "key": {
+                            "path": "/etc/firefly/organizations/"
+                            + orgclient.name
+                            + "/user/admin/tls/keystore/key.pem"
+                        },
+                    }
+                },
+            },
+            "peers": {},
+            "certificateAuthorities": {},
+        }
+
         for org in self.domain.organizations:
-            ccp = {
-                "certificateAuthorities": {
-                    org.name
-                    + "."
-                    + self.domain.name: {
-                        "tlsCACerts": {
-                            "path": "/etc/firefly/organizations/tlscacerts/tls-cert.pem"
-                        },
-                        "url": "http://"
-                        + org.ca.name
-                        + "."
-                        + self.domain.name
-                        + ":"
-                        + str(org.ca.serverport),
-                        # "grpcOptions": {
-                        #    "ssl-target-name-override": org.name
-                        #    + "."
-                        #    + self.domain.name
-                        # },
-                        "registrar": {"enrollId": "admin", "enrollSecret": "adminpw"},
-                    }
+            self.paths.set_org_paths(org)
+
+            ccp["certificateAuthorities"][org.name + "." + self.domain.name] = {
+                "url": "https://"
+                + org.ca.name
+                + "."
+                + self.domain.name
+                + ":"
+                + str(org.ca.serverport),
+                "httpOptions": {"verify": False},
+                "tlsCACerts": {
+                    "path": "/etc/firefly/organizations/"
+                    + org.name
+                    + "/tlscacerts/tls-cert.pem"
                 },
-                "channels": {
-                    self.domain.networkname: {
-                        "orderers": [self.domain.orderer.name + "." + self.domain.name],
-                        "peers": {},
-                    }
+                "registrar": {"enrollId": "admin", "enrollSecret": "adminpw"},
+                "caName": org.ca.name + "." + self.domain.name,
+            }
+
+            ccp["organizations"][org.name + "." + self.domain.name] = {
+                "mspid": org.name + "MSP",
+                "peers": [],
+                "certificateAuthorities": [org.name + "." + self.domain.name],
+                "adminPrivateKey": {
+                    "path": "/etc/firefly/organizations/"
+                    + org.name
+                    + "/user/admin/msp/keystore/key.pem"
                 },
-                "client": {
-                    "BCCSP": {
-                        "security": {
-                            "default": {"provider": "SW"},
-                            "enabled": True,
-                            "hashAlgorithm": "SHA2",
-                            "level": 256,
-                            "softVerify": True,
-                        }
-                    },
-                    "credentialStore": {
-                        "cryptoStore": {
-                            "path": "/etc/firefly/organizations/peer1."
-                            + org.name
-                            + "/msp"
-                        },
-                        "path": "/etc/firefly/organizations/peer1." + org.name + "/msp",
-                    },
-                    "cryptoconfig": {
-                        "path": "/etc/firefly/organizations/peer1." + org.name + "/msp"
-                    },
-                    "logging": {"level": "debug"},
-                    "organization": org.name + "." + self.domain.name,
-                    "tlsCerts": {
-                        "client": {
-                            "cert": {
-                                "path": "/etc/firefly/organizations/user/admin/tls/signcerts/cert.pem"
-                            },
-                            "key": {
-                                "path": "/etc/firefly/organizations/user/admin/tls/keystore/key.pem"
-                            },
-                        }
-                    },
+                "signedCert": {
+                    "path": "/etc/firefly/organizations/"
+                    + org.name
+                    + "/user/admin/msp/signcerts/cert.pem"
                 },
-                "orderers": {
-                    self.domain.orderer.name
-                    + "."
-                    + self.domain.name: {
-                        "tlsCACerts": {
-                            "path": "/etc/firefly/organizations/orderer/tls/tlscacerts/tls-cert.pem"
-                        },
-                        "url": "grpcs://"
-                        + self.domain.orderer.name
-                        + "."
-                        + self.domain.name
-                        + ":"
-                        + str(self.domain.orderer.generallistenport),
-                    }
-                },
-                "organizations": {
-                    org.name
-                    + "."
-                    + self.domain.name: {
-                        "certificateAuthorities": [org.name + "." + self.domain.name],
-                        "cryptoPath": "/etc/firefly/organizations",
-                        "mspid": org.name + "MSP",
-                        "peers": [],
-                    }
-                },
-                "peers": {},
-                "version": "1.1.0%",
+                "cryptoPath": "/etc/firefly/organizations/" + org.name,
             }
 
             for peer in org.peers:
+                self.paths.set_peer_paths(org, peer)
+
                 ccp["channels"][self.domain.networkname]["peers"][
                     peer.name + "." + self.domain.name
                 ] = {
@@ -157,21 +193,26 @@ class Firefly:
                 )
 
                 ccp["peers"][peer.name + "." + self.domain.name] = {
-                    "tlsCACerts": {
-                        "path": "/etc/firefly/organizations/"
-                        + peer.name
-                        + "/tls/tlscacerts/tls-cert.pem"
-                    },
                     "url": "grpcs://"
                     + peer.name
                     + "."
                     + self.domain.name
                     + ":"
                     + str(peer.peerlistenport),
+                    "grpcOptions": {
+                        "ssl-target-name-override": peer.name + "." + self.domain.name,
+                    },
+                    "tlsCACerts": {
+                        "path": "/etc/firefly/organizations/"
+                        + org.name
+                        + "/"
+                        + peer.name
+                        + "/tls/tlscacerts/tls-cert.pem"
+                    },
                 }
 
             with open(
-                self.paths.FIREFLYPATH + org.name + "_ccp.yaml", "w", encoding="utf-8"
+                self.paths.FIREFLYFABCONNECTPATH + "ccp.yaml", "w", encoding="utf-8"
             ) as yaml_file:
                 yaml.dump(ccp, yaml_file)
 
@@ -187,42 +228,84 @@ class Firefly:
 
     def create_stack(self):
         console.print("[bold white]# Creating Firefly stack[/]")
+        self.build_fabconnect()
+        self.build_sharedstorage()
+        self.build_dataexchange()
+        self.build_database()
+        self.build_firefly_core()
 
-        ccpstring = ""
-        nffmembers = len(self.domain.organizations)
-        for org in self.domain.organizations:
-            ccpstring = (
-                ccpstring
-                + " --ccp "
-                + self.paths.FIREFLYPATH
-                + org.name
-                + "_ccp.yaml"
-                + " --msp "
-                + self.paths.DOMAINPATH
-                + "peerOrganizations/"
-                + org.name
-                + "/msp"
-            )
+    def start_stack(self):
+        console.print("[bold white]# Starting Firefly stack[/]")
 
-        os.environ["FIREFLY_HOME"] = self.paths.FIREFLYPATH
+        fabconnect = self.paths.COMPOSEPATH + "compose-fabconnect.yaml"
+        dataexchange = self.paths.COMPOSEPATH + "compose-dataexchange.yaml"
+        sharedstorage = self.paths.COMPOSEPATH + "compose-sharedstorage.yaml"
+        database = self.paths.COMPOSEPATH + "compose-database.yaml"
+        fireflycore = self.paths.COMPOSEPATH + "compose-fireflycore.yaml"
+
+        whales = DockerClient(
+            compose_files=[fabconnect, dataexchange, sharedstorage, database]
+        )
+        whales.compose.up(detach=True)
+
+        console.print("")
+        console.print("# Waiting Firefly start...")
+        console.print("")
+        time.sleep(5)
 
         command = (
-            self.paths.APPPATH
-            + "bin/ff init fabric "
-            + self.domain.networkname
-            + " "
-            + str(nffmembers)
-            + ccpstring
-            + " --channel "
-            + self.domain.networkname
-            + " --chaincode firefly_0"
-            + " --sandbox-enabled=false"
-            + " -v"
+            "for file in /migrations/*;do psql -U firefly -d firefly -f $file;done"
         )
+        clidocker = client.containers.get("database." + self.domain.name)
+        clidocker.exec_run(command)
 
-        res = subprocess.call(command, shell=True, universal_newlines=True)
+        whales = DockerClient(compose_files=[fireflycore])
+        whales.compose.up(detach=True)
 
-        override = {
+        webbrowser.open("http://127.0.0.1:5000/ui", 1)
+        webbrowser.open("http://127.0.0.1:5000/api", 1)
+
+    def build_fabconnect(self):
+        console.print("[bold]## Bulding Fabconnect[/]")
+
+        orgmsp = Path(self.paths.FIREFLYFABCONNECTPATH + "msp/")
+        orgmsp.mkdir(parents=True, exist_ok=True)
+
+        # copy org msps to msp
+        for org in self.domain.organizations:
+            self.paths.set_org_paths(org)
+
+            shutil.copytree(
+                self.paths.MSPORGPATH,
+                self.paths.FIREFLYFABCONNECTPATH + "msp/" + org.name,
+            )
+        # save fabconnect.yaml
+        fabconnectcfg = {
+            "maxInFlight": 10,
+            "maxTXWaitTime": 60,
+            "sendConcurrency": 25,
+            "receipts": {
+                "maxDocs": 1000,
+                "queryLimit": 100,
+                "retryInitialDelay": 5,
+                "retryTimeout": 30,
+                "leveldb": {"path": "/fabconnect/receipts"},
+            },
+            "events": {
+                "webhooksAllowPrivateIPs": True,
+                "leveldb": {"path": "/fabconnect/events"},
+            },
+            "http": {"port": 3000},
+            "rpc": {"useGatewayClient": True, "configPath": "/fabconnect/ccp.yaml"},
+        }
+
+        with open(
+            self.paths.FIREFLYFABCONNECTPATH + "fabconnect.yaml", "w", encoding="utf-8"
+        ) as yaml_file:
+            yaml.dump(fabconnectcfg, yaml_file)
+
+        # save compose-fabconnect.yaml
+        fabconnectservice = {
             "version": "3.7",
             "networks": {
                 self.domain.networkname: {
@@ -230,119 +313,349 @@ class Firefly:
                     "external": True,
                 }
             },
+            "services": {
+                "fabconnect."
+                + self.domain.name: {
+                    "container_name": "fabconnect." + self.domain.name,
+                    "image": "ghcr.io/hyperledger/firefly-fabconnect",
+                    # "user": str(os.geteuid()) + ":" + str(os.getgid()),
+                    "command": "-f /fabconnect/fabconnect.yaml",
+                    "volumes": [
+                        "fabconnect_receipts:/fabconnect/receipts",
+                        "fabconnect_events:/fabconnect/events",
+                        self.paths.FIREFLYFABCONNECTPATH
+                        + "fabconnect.yaml:/fabconnect/fabconnect.yaml",
+                        self.paths.FIREFLYFABCONNECTPATH
+                        + "msp/"
+                        + ":/etc/firefly/organizations",
+                        self.paths.FIREFLYFABCONNECTPATH
+                        + "ccp.yaml:/fabconnect/ccp.yaml",
+                    ],
+                    "ports": ["5102:3000"],
+                    "healthcheck": {
+                        "test": [
+                            "CMD",
+                            "wget",
+                            "-O",
+                            "-",
+                            "http://localhost:3000/status",
+                        ]
+                    },
+                    "logging": {
+                        "driver": "json-file",
+                        "options": {"max-file": "1", "max-size": "10m"},
+                    },
+                    "networks": [self.domain.networkname],
+                }
+            },
+            "volumes": {"fabconnect_events": {}, "fabconnect_receipts": {}},
         }
 
-        overridepath = (
-            self.paths.FIREFLYPATH
-            + "stacks/"
-            + self.domain.networkname
-            + "/docker-compose.override.yml"
+        with open(
+            self.paths.COMPOSEPATH + "compose-fabconnect.yaml", "w", encoding="utf-8"
+        ) as yaml_file:
+            yaml.dump(fabconnectservice, yaml_file)
+
+    def build_sharedstorage(self):
+        console.print("[bold]## Bulding Sharedstorage[/]")
+
+        sharedstorage = {
+            "version": "3.7",
+            "networks": {
+                self.domain.networkname: {
+                    "name": self.domain.networkname,
+                    "external": True,
+                }
+            },
+            "services": {
+                "sharedstorage."
+                + self.domain.name: {
+                    "container_name": "sharedstorage." + self.domain.name,
+                    "image": "ipfs/go-ipfs:v0.10.0",
+                    "environment": {
+                        "IPFS_SWARM_KEY": "/key/swarm/psk/1.0.0/\n/base16/\n5a378bd04ac0bece92ed9b7f02abbfaa78f7b2c1cfcc86ff8a25f72626ee7aba",
+                        "LIBP2P_FORCE_PNET": "1",
+                    },
+                    "volumes": ["ipfs_staging:/export", "ipfs_data:/data/ipfs"],
+                    "ports": ["10206:5001", "10207:8080"],
+                    "healthcheck": {
+                        "test": [
+                            "CMD-SHELL",
+                            "wget --post-data= http://127.0.0.1:5001/api/v0/id -O - -q",
+                        ],
+                        "interval": "5s",
+                        "timeout": "3s",
+                        "retries": 12,
+                    },
+                    "logging": {
+                        "driver": "json-file",
+                        "options": {"max-file": "1", "max-size": "10m"},
+                    },
+                    "networks": [self.domain.networkname],
+                },
+            },
+            "volumes": {
+                "ipfs_data": {},
+                "ipfs_staging": {},
+            },
+        }
+
+        with open(
+            self.paths.COMPOSEPATH + "compose-sharedstorage.yaml", "w", encoding="utf-8"
+        ) as yaml_file:
+            yaml.dump(sharedstorage, yaml_file)
+
+    def build_dataexchange(self):
+        console.print("[bold]## Bulding Dataexchange[/]")
+
+        dataexch = Path(self.paths.FIREFLYDATAEXCHPATH + "peer-certs")
+        dataexch.mkdir(parents=True, exist_ok=True)
+
+        decfg = {
+            "api": {"hostname": "0.0.0.0", "port": 3000},
+            "p2p": {
+                "hostname": "0.0.0.0",
+                "endpoint": "https://dataexchange." + self.domain.name + ":3001",
+                "port": 3001,
+            },
+            "peers": [{"id": "org", "endpoint": "https://localhost:4001"}],
+        }
+
+        json_object = json.dumps(decfg, indent=4)
+        with open(
+            self.paths.FIREFLYDATAEXCHPATH + "config.json", "w", encoding="utf-8"
+        ) as outfile:
+            outfile.write(json_object)
+
+        dataexchange = {
+            "version": "3.7",
+            "networks": {
+                self.domain.networkname: {
+                    "name": self.domain.networkname,
+                    "external": True,
+                }
+            },
+            "services": {
+                "dataexchange."
+                + self.domain.name: {
+                    "container_name": "dataexchange." + self.domain.name,
+                    "image": "ghcr.io/hyperledger/firefly-dataexchange-https",
+                    "volumes": [self.paths.FIREFLYDATAEXCHPATH + ":/data"],
+                    "ports": ["10205:3000"],
+                    "logging": {
+                        "driver": "json-file",
+                        "options": {"max-file": "1", "max-size": "10m"},
+                    },
+                    "networks": [self.domain.networkname],
+                },
+            },
+            "volumes": {
+                "dataexchange": {},
+            },
+        }
+
+        with open(
+            self.paths.COMPOSEPATH + "compose-dataexchange.yaml", "w", encoding="utf-8"
+        ) as yaml_file:
+            yaml.dump(dataexchange, yaml_file)
+
+        old_dir = os.getcwd()
+        os.chdir(self.paths.FIREFLYDATAEXCHPATH)
+        os.system(
+            "openssl req -new -x509 -nodes -days 365 -subj '/CN=localhost/O=org' -keyout key.pem -out cert.pem"
         )
-        with open(overridepath, "w", encoding="utf-8") as yaml_file:
-            yaml.dump(override, yaml_file)
+        shutil.copy("cert.pem", "peer-certs/org.pem")
+        os.chdir(old_dir)
 
-        ffcomposefile = (
-            self.paths.FIREFLYPATH
-            + "stacks/"
-            + self.domain.networkname
-            + "/docker-compose.yml"
+    def build_database(self):
+        console.print("[bold]## Bulding Database[/]")
+
+        shutil.copytree(
+            self.paths.FIREFLYDBMIGRATION,
+            self.paths.FIREFLYDATABASEPATH,
         )
 
-        with open(ffcomposefile, encoding="utf-8") as cftx:
-            datacfg = yaml.load(cftx)
+        database = {
+            "version": "3.7",
+            "networks": {
+                self.domain.networkname: {
+                    "name": self.domain.networkname,
+                    "external": True,
+                }
+            },
+            "services": {
+                "database."
+                + self.domain.name: {
+                    "container_name": "database." + self.domain.name,
+                    "image": "postgres",
+                    "volumes": [
+                        "database:/var/lib/postgresql/data",
+                        self.paths.FIREFLYDATABASEPATH + ":/migrations",
+                    ],
+                    "ports": ["5432:5432"],
+                    "logging": {
+                        "driver": "json-file",
+                        "options": {"max-file": "1", "max-size": "10m"},
+                    },
+                    "environment": [
+                        "POSTGRES_PASSWORD=firefly_password",
+                        "POSTGRES_USER=firefly",
+                        "POSTGRES_DB=firefly",
+                    ],
+                    "networks": [self.domain.networkname],
+                },
+            },
+            "volumes": {
+                "database": {},
+            },
+        }
 
-            datacfg["version"] = "3.7"
-            for service in datacfg["services"]:
-                datacfg["services"][service]["networks"] = ["teste"]
-                newvolumes = []
-                for volume in datacfg["services"][service]["volumes"]:
-                    volume = volume.replace("runtime", "init")
-                    newvolumes.append(volume)
-                datacfg["services"][service]["volumes"] = newvolumes
+        with open(
+            self.paths.COMPOSEPATH + "compose-database.yaml", "w", encoding="utf-8"
+        ) as yaml_file:
+            yaml.dump(database, yaml_file)
 
-        with open(ffcomposefile, "w", encoding="utf-8") as yaml_file:
-            yaml.dump(datacfg, yaml_file)
+    def build_firefly_core(self):
+        console.print("[bold]## Bulding FireFly Core[/]")
 
-        ffconfigcore = (
-            self.paths.FIREFLYPATH
-            + "stacks/"
-            + self.domain.networkname
-            + "/init/config/firefly_core_0.yml"
-        )
+        corefld = Path(self.paths.FIREFLYCOREPATH)
+        corefld.mkdir(parents=True, exist_ok=True)
 
-        # orgname = self.domain.organizations[0]
-        # nodename = orgname.peers[0]
-
-        with open(ffconfigcore, encoding="utf-8") as cftx:
-            datacfg = yaml.load(cftx)
-
-            pluginsnames = []
-            orgname = ""
-            nodename = ""
-            for plugin in datacfg["plugins"]:
-                for i, pname in enumerate(datacfg["plugins"][plugin]):
-                    pluginsnames.append(pname["name"])
-                    if pname["name"] == "blockchain0":
-                        #    datacfg["plugins"][plugin][i]["fabric"]["fabconnect"]["signer"] = nodename.name + "." + self.domain.name
-                        orgname = datacfg["plugins"][plugin][i]["fabric"]["fabconnect"][
-                            "signer"
-                        ]
-                        nodename = orgname.replace("org", "node")
-
-            datacfg["namespaces"] = {
-                "default": "default",
-                "predefined": [
+        corecfg = {
+            "log": {"level": "debug"},
+            "debug": {"port": 6060},
+            "http": {
+                "port": 5000,
+                "address": "0.0.0.0",
+                "publicURL": "http://127.0.0.1:5000",
+            },
+            "admin": {
+                "port": 5101,
+                "address": "0.0.0.0",
+                "publicURL": "http://127.0.0.1:5101",
+                "enabled": True,
+            },
+            "spi": {
+                "port": 5101,
+                "address": "0.0.0.0",
+                "publicURL": "http://127.0.0.1:5101",
+                "enabled": True,
+            },
+            "metrics": {},
+            "ui": {"path": "./frontend"},
+            "event": {"dbevents": {"bufferSize": 10000}},
+            "plugins": {
+                "database": [
                     {
-                        "name": "default",
-                        "description": "Default predefined namespace",
-                        "defaultKey": orgname,  # org
-                        "plugins": pluginsnames,
-                        "multiparty": {
-                            "networkNamespace": self.domain.networkname,
-                            "enabled": True,
-                            "org": {
-                                "name": orgname,
-                                "key": orgname,
-                            },
-                            "node": {"name": nodename},
-                            "contract": [
-                                {
-                                    "location": {
-                                        "chaincode": "firefly_0",
-                                        "channel": self.domain.networkname,
-                                    },
-                                    "firstEvent": "",
-                                }
-                            ],
+                        "name": "database0",
+                        "type": "sqlite3",
+                        "sqlite3": {
+                            "url": "/etc/firefly/db/sqlite.db?_busy_timeout=5000",
+                            "migrations": {"auto": False},
                         },
                     }
                 ],
-            }
+                "blockchain": [
+                    {
+                        "name": "blockchain0",
+                        "type": "fabric",
+                        "fabric": {
+                            "fabconnect": {
+                                "url": "http://fabconnect_0:3000",
+                                "channel": "firefly",
+                                "chaincode": "firefly",
+                                "topic": "0",
+                                "signer": "admin",
+                            }
+                        },
+                    }
+                ],
+                "sharedstorage": [
+                    {
+                        "name": "sharedstorage0",
+                        "type": "ipfs",
+                        "ipfs": {
+                            "api": {"url": "http://ipfs_0:5001"},
+                            "gateway": {"url": "http://ipfs_0:8080"},
+                        },
+                    }
+                ],
+                "dataexchange": [
+                    {
+                        "name": "dataexchange0",
+                        "type": "ffdx",
+                        "ffdx": {"url": "http://dataexchange_0:3000"},
+                    }
+                ],
+            },
+            "namespaces": {
+                "default": "default",
+                "predefined": [
+                    {
+                        "defaultKey": "org",
+                        "description": "Default predefined namespace",
+                        "multiparty": {
+                            "contract": [
+                                {
+                                    "firstEvent": "",
+                                    "location": {
+                                        "chaincode": "firefly",
+                                        "channel": "firefly",
+                                    },
+                                }
+                            ],
+                            "enabled": True,
+                            "node": {"name": "node"},
+                            "org": {"key": "org", "name": "org"},
+                        },
+                        "name": "default",
+                        "plugins": [
+                            "database0",
+                            "blockchain0",
+                            "dataexchange0",
+                            "sharedstorage0",
+                        ],
+                    }
+                ],
+            },
+        }
 
-        with open(ffconfigcore, "w", encoding="utf-8") as yaml_file:
-            yaml.dump(datacfg, yaml_file)
+        with open(
+            self.paths.FIREFLYCOREPATH + "firefly.core.yaml",
+            "w",
+            encoding="utf-8",
+        ) as yaml_file:
+            yaml.dump(corecfg, yaml_file)
 
-    def start_stack(self):
-        console.print("[bold white]# Starting Firefly stack[/]")
-        # pathfirefly = self.paths.FIREFLYSTACK + "docker-compose.yml"
-        # pathffoverride = self.paths.FIREFLYSTACK + "docker-compose.override.yml"
+        fireflycore = {
+            "version": "3.7",
+            "networks": {
+                self.domain.networkname: {
+                    "name": self.domain.networkname,
+                    "external": True,
+                }
+            },
+            "services": {
+                "firefly."
+                + self.domain.name: {
+                    "container_name": "firefly." + self.domain.name,
+                    "image": "ghcr.io/hyperledger/firefly",
+                    "command": "-f /fabconnect/fabconnect.yaml",
+                    "volumes": [
+                        self.paths.FIREFLYCOREPATH
+                        + "firefly.core.yaml:/etc/firefly/firefly.core.yml",
+                    ],
+                    "ports": ["5000:5000", "5101:5101"],
+                    "logging": {
+                        "driver": "json-file",
+                        "options": {"max-file": "1", "max-size": "10m"},
+                    },
+                    "networks": [self.domain.networkname],
+                }
+            },
+        }
 
-        # docker = DockerClient(compose_files=[pathffoverride, pathfirefly])
-        # docker.compose.up(detach=True)
-
-        # console.print("")
-        # console.print("# Waiting Firefly start...")
-        # console.print("")
-        # time.sleep(1)
-
-        command = (
-            self.paths.APPPATH
-            + "bin/ff start "
-            + self.domain.networkname
-            + " --no-rollback -v"
-        )
-        console.print("# Waiting Firefly start...")
-        subprocess.call(command, shell=True, universal_newlines=True)
-
-        webbrowser.open("http://127.0.0.1:5000/ui")
-        webbrowser.open("http://127.0.0.1:5000/api")
+        with open(
+            self.paths.COMPOSEPATH + "compose-fireflycore.yaml", "w", encoding="utf-8"
+        ) as yaml_file:
+            yaml.dump(fireflycore, yaml_file)

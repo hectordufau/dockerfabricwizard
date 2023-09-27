@@ -520,7 +520,7 @@ class ChaincodeDeploy:
                 self.chaincode.invoke,
                 self.domain.orderer,
                 self.paths.ORDERERNAME,
-                self.paths.ORDTLSCAPATH + "tls-cert.pem",  # TODO CHECK
+                self.paths.ORDTLSCAPATH + "tls-cert.pem",
                 self.domain.networkname,
                 self.chaincodename,
                 peer,
