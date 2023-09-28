@@ -995,9 +995,6 @@ class ConsoleOutput:
         option = console.input(
             "[bold]Select an option (N,O,P,A,F,Y,G,S,C,D,R,M or Q):[/] "
         )
-        # option = console.input(
-        #    "[bold]Select an option (N,O,P,A,G,S,C,D,R,M or Q):[/] "
-        # )
         console.print("")
 
         configfile = "".join(
@@ -1086,6 +1083,9 @@ class ConsoleOutput:
                     if len(clist) > 0:
                         docker.container.stop(clist)
                     # docker.system.prune(True, True)
+                    vlist = docker.volume.list()
+                    if len(vlist) > 0:
+                        docker.volume.remove(vlist)
                     os.system("rm -fR " + netpath)
                     if ffdir:
                         ffimg = docker.image.list(filters={"reference": "*firefly_0*"})
@@ -1102,9 +1102,6 @@ class ConsoleOutput:
                     selectoption = False
                     exit(0)
                 case _:
-                    # option = console.input(
-                    #    "[bold]Select an option (N,O,P,A,G,S,C,D,R,M or Q):[/] "
-                    # )
                     option = console.input(
                         "[bold]Select an option (N,O,P,A,F,Y,G,S,C,D,R,M or Q):[/] "
                     )

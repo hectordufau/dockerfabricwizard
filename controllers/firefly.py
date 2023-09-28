@@ -236,6 +236,7 @@ class Firefly:
 
     def start_stack(self):
         console.print("[bold white]# Starting Firefly stack[/]")
+        console.print("")
 
         fabconnect = self.paths.COMPOSEPATH + "compose-fabconnect.yaml"
         dataexchange = self.paths.COMPOSEPATH + "compose-dataexchange.yaml"
@@ -247,20 +248,31 @@ class Firefly:
             compose_files=[fabconnect, dataexchange, sharedstorage, database]
         )
         whales.compose.up(detach=True)
-
-        console.print("")
-        console.print("# Waiting Firefly start...")
-        console.print("")
         time.sleep(5)
 
+        console.print("# Waiting Database load data....")
+        console.print("")
         command = (
-            "for file in /migrations/*;do psql -U firefly -d firefly -f $file;done"
+            "sh -c 'for file in /migrations/*;do psql -U firefly -d firefly -f $file;done;'"
         )
         clidocker = client.containers.get("database." + self.domain.name)
         clidocker.exec_run(command)
+        time.sleep(5)
 
+        console.print("# Enabling Database SSL....")
+        command = "chmod 600 /var/lib/postgresql/server.key"
+        clidocker.exec_run(command)
+        command = "chown postgres:postgres /var/lib/postgresql/server.key"
+        clidocker.exec_run(command)
+        command = "psql -U firefly -d firefly -f /var/lib/postgresql/sslenable.sql"
+        clidocker.exec_run(command)
+        time.sleep(1)
+
+        console.print("# Waiting Firefly start...")
+        console.print("")
         whales = DockerClient(compose_files=[fireflycore])
         whales.compose.up(detach=True)
+        time.sleep(5)
 
         webbrowser.open("http://127.0.0.1:5000/ui", 1)
         webbrowser.open("http://127.0.0.1:5000/api", 1)
@@ -472,8 +484,26 @@ class Firefly:
 
         shutil.copytree(
             self.paths.FIREFLYDBMIGRATION,
-            self.paths.FIREFLYDATABASEPATH,
+            self.paths.FIREFLYDATABASEPATH + "migrations",
         )
+
+        old_dir = os.getcwd()
+        os.chdir(self.paths.FIREFLYDATABASEPATH)
+        os.system(
+            "openssl req -new -x509 -nodes -days 365 -subj '/CN=database/O=teste.com' -keyout key.pem -out cert.pem"
+        )
+        os.chdir(old_dir)
+
+        with open(self.paths.FIREFLYDATABASEPATH + "sslenable.sql", "w") as file1:
+            # Writing data to a file
+            file1.write(
+                "ALTER SYSTEM SET ssl_cert_file TO '/var/lib/postgresql/server.crt';\n"
+            )
+            file1.write(
+                "ALTER SYSTEM SET ssl_key_file TO '/var/lib/postgresql/server.key';\n"
+            )
+            file1.write("ALTER SYSTEM SET ssl TO 'ON';\n")
+            file1.write("select pg_reload_conf();")
 
         database = {
             "version": "3.7",
@@ -490,7 +520,13 @@ class Firefly:
                     "image": "postgres",
                     "volumes": [
                         "database:/var/lib/postgresql/data",
-                        self.paths.FIREFLYDATABASEPATH + ":/migrations",
+                        self.paths.FIREFLYDATABASEPATH + "migrations:/migrations",
+                        self.paths.FIREFLYDATABASEPATH
+                        + "cert.pem:/var/lib/postgresql/server.crt",
+                        self.paths.FIREFLYDATABASEPATH
+                        + "key.pem:/var/lib/postgresql/server.key",
+                        self.paths.FIREFLYDATABASEPATH
+                        + "sslenable.sql:/var/lib/postgresql/sslenable.sql",
                     ],
                     "ports": ["5432:5432"],
                     "logging": {
@@ -546,11 +582,21 @@ class Firefly:
             "event": {"dbevents": {"bufferSize": 10000}},
             "plugins": {
                 "database": [
+                    # {
+                    #    "name": "database0",
+                    #    "type": "sqlite3",
+                    #    "sqlite3": {
+                    #        "url": "/etc/firefly/db/sqlite.db?_busy_timeout=5000",
+                    #        "migrations": {"auto": True},
+                    #    },
+                    # }
                     {
                         "name": "database0",
-                        "type": "sqlite3",
-                        "sqlite3": {
-                            "url": "/etc/firefly/db/sqlite.db?_busy_timeout=5000",
+                        "type": "postgres",
+                        "postgres": {
+                            "url": "postgresql://firefly:firefly_password@database."
+                            + self.domain.name
+                            + ":5432/firefly",
                             "migrations": {"auto": False},
                         },
                     }
@@ -561,9 +607,11 @@ class Firefly:
                         "type": "fabric",
                         "fabric": {
                             "fabconnect": {
-                                "url": "http://fabconnect_0:3000",
-                                "channel": "firefly",
-                                "chaincode": "firefly",
+                                "url": "http://fabconnect."
+                                + self.domain.name
+                                + ":3000",
+                                "channel": self.domain.networkname,
+                                "chaincode": "firefly_0",
                                 "topic": "0",
                                 "signer": "admin",
                             }
@@ -575,8 +623,16 @@ class Firefly:
                         "name": "sharedstorage0",
                         "type": "ipfs",
                         "ipfs": {
-                            "api": {"url": "http://ipfs_0:5001"},
-                            "gateway": {"url": "http://ipfs_0:8080"},
+                            "api": {
+                                "url": "http://sharedstorage."
+                                + self.domain.name
+                                + ":5001"
+                            },
+                            "gateway": {
+                                "url": "http://sharedstorage."
+                                + self.domain.name
+                                + ":8080"
+                            },
                         },
                     }
                 ],
@@ -584,7 +640,9 @@ class Firefly:
                     {
                         "name": "dataexchange0",
                         "type": "ffdx",
-                        "ffdx": {"url": "http://dataexchange_0:3000"},
+                        "ffdx": {
+                            "url": "http://dataexchange." + self.domain.name + ":3000"
+                        },
                     }
                 ],
             },
@@ -599,8 +657,8 @@ class Firefly:
                                 {
                                     "firstEvent": "",
                                     "location": {
-                                        "chaincode": "firefly",
-                                        "channel": "firefly",
+                                        "channel": self.domain.networkname,
+                                        "chaincode": "firefly_0",
                                     },
                                 }
                             ],
@@ -640,10 +698,10 @@ class Firefly:
                 + self.domain.name: {
                     "container_name": "firefly." + self.domain.name,
                     "image": "ghcr.io/hyperledger/firefly",
-                    "command": "-f /fabconnect/fabconnect.yaml",
                     "volumes": [
                         self.paths.FIREFLYCOREPATH
-                        + "firefly.core.yaml:/etc/firefly/firefly.core.yml",
+                        + "firefly.core.yaml:/etc/firefly/firefly.core",
+                        "firefly_core_db:/etc/firefly/db",
                     ],
                     "ports": ["5000:5000", "5101:5101"],
                     "logging": {
@@ -651,7 +709,11 @@ class Firefly:
                         "options": {"max-file": "1", "max-size": "10m"},
                     },
                     "networks": [self.domain.networkname],
+                    # "entrypoint": ["/bin/sh", "-c", "exit", "0"],
                 }
+            },
+            "volumes": {
+                "firefly_core_db": {},
             },
         }
 
