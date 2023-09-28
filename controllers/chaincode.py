@@ -314,6 +314,9 @@ class ChaincodeDeploy:
         else:
             self.domain.chaincodes[ccindex] = self.chaincode
 
+        build = Build(self.domain)
+        build.build_config()
+
         console.print("# Waiting Peer...")
         time.sleep(1)
         return self.chaincode

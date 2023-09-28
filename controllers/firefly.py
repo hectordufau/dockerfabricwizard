@@ -252,9 +252,7 @@ class Firefly:
 
         console.print("# Waiting Database load data....")
         console.print("")
-        command = (
-            "sh -c 'for file in /migrations/*;do psql -U firefly -d firefly -f $file;done;'"
-        )
+        command = "sh -c 'for file in /migrations/*;do psql -U firefly -d firefly -f $file;done;'"
         clidocker = client.containers.get("database." + self.domain.name)
         clidocker.exec_run(command)
         time.sleep(5)
@@ -557,6 +555,9 @@ class Firefly:
         corefld = Path(self.paths.FIREFLYCOREPATH)
         corefld.mkdir(parents=True, exist_ok=True)
 
+        orgclient = self.domain.organizations[0]
+        peerclient = orgclient.peers[0]
+
         corecfg = {
             "log": {"level": "debug"},
             "debug": {"port": 6060},
@@ -582,14 +583,6 @@ class Firefly:
             "event": {"dbevents": {"bufferSize": 10000}},
             "plugins": {
                 "database": [
-                    # {
-                    #    "name": "database0",
-                    #    "type": "sqlite3",
-                    #    "sqlite3": {
-                    #        "url": "/etc/firefly/db/sqlite.db?_busy_timeout=5000",
-                    #        "migrations": {"auto": True},
-                    #    },
-                    # }
                     {
                         "name": "database0",
                         "type": "postgres",
@@ -611,7 +604,7 @@ class Firefly:
                                 + self.domain.name
                                 + ":3000",
                                 "channel": self.domain.networkname,
-                                "chaincode": "firefly_0",
+                                "chaincode": self.ffchaincode.packageid,
                                 "topic": "0",
                                 "signer": "admin",
                             }
@@ -650,7 +643,7 @@ class Firefly:
                 "default": "default",
                 "predefined": [
                     {
-                        "defaultKey": "org",
+                        "defaultKey": orgclient.name + "." + self.domain.name,
                         "description": "Default predefined namespace",
                         "multiparty": {
                             "contract": [
@@ -658,13 +651,16 @@ class Firefly:
                                     "firstEvent": "",
                                     "location": {
                                         "channel": self.domain.networkname,
-                                        "chaincode": "firefly_0",
+                                        "chaincode": self.ffchaincode.packageid,
                                     },
                                 }
                             ],
                             "enabled": True,
-                            "node": {"name": "node"},
-                            "org": {"key": "org", "name": "org"},
+                            "node": {"name": peerclient.name + "." + self.domain.name},
+                            "org": {
+                                "key": orgclient.name + "." + self.domain.name,
+                                "name": orgclient.name + "." + self.domain.name,
+                            },
                         },
                         "name": "default",
                         "plugins": [
