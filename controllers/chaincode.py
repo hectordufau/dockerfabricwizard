@@ -279,6 +279,7 @@ class ChaincodeDeploy:
         os.chdir(self.paths.FIREFLYCCPATH)
         os.system("go mod vendor")
         os.chdir(self.paths.CHAINCODEPKG)
+
         console.print(
             "[bold]# Generating and registering chaincode package on "
             + org.name
