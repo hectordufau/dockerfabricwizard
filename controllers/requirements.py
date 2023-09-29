@@ -114,22 +114,6 @@ class Requirements:
                 fireflyccgo,
                 fireflychaincode,
             )
-        """ else:
-            repo = Repo(path=fireflysource)
-            pull = repo.remotes.origin.pull("main")
-            if pull[0].flags != 0:
-                console.print(
-                    "[bold yellow]> Please wait for FireFly chaincode source updating.[/]"
-                )
-                shutil.copytree(
-                    fireflysource + "smart_contracts/fabric/firefly-go",
-                    fireflyccgo,
-                )
-                shutil.rmtree(str(Path().absolute()) + "/chaincodes/firefly")
-                os.rename(
-                    fireflyccgo,
-                    fireflychaincode,
-                ) """
 
     def check_firefly_cli(self):
         console.print("[bold white]# Checking FireFly CLI source[/]")
