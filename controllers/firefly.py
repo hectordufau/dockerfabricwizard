@@ -267,7 +267,10 @@ class Firefly:
         }
 
         response = requests.post(
-            "http://localhost:5102/identities", headers=headers, json=json_data
+            "http://localhost:5102/identities",
+            headers=headers,
+            json=json_data,
+            timeout=None,
         )
 
         registerdata = response.json()
@@ -278,10 +281,11 @@ class Firefly:
             "attributes": {},
         }
 
-        response = requests.post(
+        requests.post(
             "http://localhost:5102/identities/" + orgclient.name + "/enroll",
             headers=headers,
             json=json_data,
+            timeout=None,
         )
 
         console.print("# Waiting Database load data....")
@@ -305,6 +309,34 @@ class Firefly:
         whales = DockerClient(compose_files=[fireflycore])
         whales.compose.up(detach=True)
         time.sleep(5)
+
+        params = {
+            "confirm": "true",
+        }
+
+        json_data = {
+            "additionalProp1": "string",
+            "additionalProp2": "string",
+            "additionalProp3": "string",
+        }
+
+        # registering org
+        requests.post(
+            "http://127.0.0.1:5000/api/v1/namespaces/default/network/organizations/self",
+            params=params,
+            headers=headers,
+            json=json_data,
+            timeout=None,
+        )
+
+        # registering node
+        requests.post(
+            "http://127.0.0.1:5000/api/v1/namespaces/default/network/nodes/self",
+            params=params,
+            headers=headers,
+            json=json_data,
+            timeout=None,
+        )
 
         webbrowser.open("http://127.0.0.1:5000/ui", 1)
         webbrowser.open("http://127.0.0.1:5000/api", 1)
@@ -689,7 +721,9 @@ class Firefly:
                                 }
                             ],
                             "enabled": True,
-                            "node": {"name": "firefly"},
+                            "node": {
+                                "name": "firefly." + self.domain.name,
+                            },
                             "org": {
                                 "key": orgclient.name,
                                 "name": orgclient.name,

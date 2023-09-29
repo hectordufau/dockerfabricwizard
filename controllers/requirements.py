@@ -105,7 +105,7 @@ class Requirements:
                 "[bold yellow]> Please wait for FireFly chaincode source downloading and installing.[/]"
             )
 
-            Repo.clone_from("https://github.com/hyperledger/firefly", fireflysource)
+            Repo.clone_from("https://github.com/hyperledger/firefly", fireflysource, multi_options=["-b v1.2.2"])
             shutil.copytree(
                 fireflysource + "smart_contracts/fabric/firefly-go",
                 fireflyccgo,
@@ -114,7 +114,7 @@ class Requirements:
                 fireflyccgo,
                 fireflychaincode,
             )
-        else:
+        """ else:
             repo = Repo(path=fireflysource)
             pull = repo.remotes.origin.pull("main")
             if pull[0].flags != 0:
@@ -129,7 +129,7 @@ class Requirements:
                 os.rename(
                     fireflyccgo,
                     fireflychaincode,
-                )
+                ) """
 
     def check_firefly_cli(self):
         console.print("[bold white]# Checking FireFly CLI source[/]")
