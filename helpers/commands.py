@@ -578,6 +578,7 @@ class Commands:
         apppath: str,
         invoke: bool,
         orderer: Orderer,
+        orderername: str,
         cafile: str,
         channel: str,
         chaincodename: str,
@@ -588,7 +589,9 @@ class Commands:
             initrequired = " --init-required"
         command = (
             apppath
-            + "bin/peer lifecycle chaincode checkcommitreadiness -o localhost:"
+            + "bin/peer lifecycle chaincode checkcommitreadiness -o "
+            + orderername
+            + ":"
             + str(orderer.generallistenport)
             + " --tls --cafile "
             + cafile
@@ -659,10 +662,19 @@ class Commands:
         peer: Peer,
         peercafile: str,
     ):
-        initrequired = ""
+        fcncall = '{"function":"","Args":[]}'
+        initrequired = " -c " + "'" + fcncall + "'"
+
         if invoke:
             fcncall = '{"function":"InitLedger","Args":[]}'
             initrequired = " --isInit -c " + "'" + fcncall + "'"
+
+        # if chaincodename == "firefly":
+        #    fcncall = '{"function":"Start","Args":[]}'
+        #    initrequired = " -c " + "'" + fcncall + "'"
+        # else:
+        #    fcncall = '{"Args":[]}'
+        #    initrequired = " -c " + "'" + fcncall + "'"
 
         command = (
             apppath

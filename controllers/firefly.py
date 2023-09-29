@@ -7,6 +7,7 @@ import webbrowser
 from pathlib import Path
 
 import docker
+import requests
 import ruamel.yaml
 from python_on_whales import DockerClient
 from rich.console import Console
@@ -249,6 +250,39 @@ class Firefly:
         )
         whales.compose.up(detach=True)
         time.sleep(5)
+
+        orgclient = self.domain.organizations[0]
+
+        headers = {
+            "accept": "application/json",
+            "Content-Type": "application/json",
+        }
+
+        # registering Org
+        json_data = {
+            "name": orgclient.name,
+            "type": "client",
+            "maxEnrollments": -1,
+            "attributes": {},
+        }
+
+        response = requests.post(
+            "http://localhost:5102/identities", headers=headers, json=json_data
+        )
+
+        registerdata = response.json()
+
+        # enrolling Org
+        json_data = {
+            "secret": registerdata["secret"],
+            "attributes": {},
+        }
+
+        response = requests.post(
+            "http://localhost:5102/identities/" + orgclient.name + "/enroll",
+            headers=headers,
+            json=json_data,
+        )
 
         console.print("# Waiting Database load data....")
         console.print("")
@@ -556,7 +590,6 @@ class Firefly:
         corefld.mkdir(parents=True, exist_ok=True)
 
         orgclient = self.domain.organizations[0]
-        peerclient = orgclient.peers[0]
 
         corecfg = {
             "log": {"level": "debug"},
@@ -604,7 +637,7 @@ class Firefly:
                                 + self.domain.name
                                 + ":3000",
                                 "channel": self.domain.networkname,
-                                "chaincode": self.ffchaincode.packageid,
+                                "chaincode": self.ffchaincode.name,
                                 "topic": "0",
                                 "signer": "admin",
                             }
@@ -643,7 +676,7 @@ class Firefly:
                 "default": "default",
                 "predefined": [
                     {
-                        "defaultKey": orgclient.name + "." + self.domain.name,
+                        "defaultKey": orgclient.name,
                         "description": "Default predefined namespace",
                         "multiparty": {
                             "contract": [
@@ -651,15 +684,15 @@ class Firefly:
                                     "firstEvent": "",
                                     "location": {
                                         "channel": self.domain.networkname,
-                                        "chaincode": self.ffchaincode.packageid,
+                                        "chaincode": self.ffchaincode.name,
                                     },
                                 }
                             ],
                             "enabled": True,
-                            "node": {"name": peerclient.name + "." + self.domain.name},
+                            "node": {"name": "firefly"},
                             "org": {
-                                "key": orgclient.name + "." + self.domain.name,
-                                "name": orgclient.name + "." + self.domain.name,
+                                "key": orgclient.name,
+                                "name": orgclient.name,
                             },
                         },
                         "name": "default",

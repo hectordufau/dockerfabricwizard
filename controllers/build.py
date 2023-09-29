@@ -791,9 +791,9 @@ class Build:
             "services": {},
         }
 
-        clidataORDERER_CA = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/ca-root"
-        clidataORDERER_ADMIN_TLS_SIGN_CERT = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/server.crt"
-        clidataORDERER_ADMIN_TLS_PRIVATE_KEY = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/server.key"
+        clidataORDERER_CA = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/tlscacerts/tls-cert.pem"
+        clidataORDERER_ADMIN_TLS_SIGN_CERT = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/signcerts/cert.crt"
+        clidataORDERER_ADMIN_TLS_PRIVATE_KEY = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/orderer/tls/keystore/key.pem"
         clidataORDERER_GENERAL_LOCALMSPDIR = "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/ordererOrganizations/admin/msp"
         clidataCORE_PEER_LOCALMSPID = self.domain.organizations[0].name + "MSP"
         clidataCORE_PEER_TLS_ROOTCERT_FILE = (
@@ -801,14 +801,12 @@ class Build:
             + cliorg.name
             + "/"
             + clipeer.name
-            + "/tls/ca-root.crt"
+            + "/tls/tlscacerts/tls-cert.pem"
         )
         clidataCORE_PEER_MSPCONFIGPATH = (
             "/opt/gopath/src/github.com/hyperledger/fabric/peer/organizations/peerOrganizations/"
             + cliorg.name
-            + "/"
-            + clipeer.name
-            + "/msp"
+            + "/admin/msp"
         )
         clidataCORE_PEER_ADDRESS = (
             clipeer.name + "." + self.domain.name + ":" + str(clipeer.peerlistenport)

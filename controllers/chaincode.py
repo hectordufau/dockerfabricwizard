@@ -387,7 +387,8 @@ class ChaincodeDeploy:
             self.paths.APPPATH,
             self.chaincode.invoke,
             self.domain.orderer,
-            self.paths.ORDTLSCAPATH + "tls-cert.pem",  # TODO CHECK
+            self.paths.ORDERERNAME,
+            self.paths.ORDTLSCAPATH + "tls-cert.pem",
             self.domain.networkname,
             self.chaincodename,
             self.chaincodeversion,
@@ -509,9 +510,9 @@ class ChaincodeDeploy:
         # time.sleep(1)
 
     def chaincode_invoke_init(self, org: Organization, peer: Peer):
-        if self.chaincode.invoke and peer.name.split(".")[0] == "peer1":
+        if peer.name.split(".")[0] == "peer1":
             console.print(
-                "[bold]# Commiting chaincode definition for "
+                "[bold]# Invoking chaincode for "
                 + self.domain.networkname
                 + " by "
                 + peer.name
