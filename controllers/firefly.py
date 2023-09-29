@@ -760,7 +760,7 @@ class Firefly:
                 "firefly."
                 + self.domain.name: {
                     "container_name": "firefly." + self.domain.name,
-                    "image": "ghcr.io/hyperledger/firefly:v1.2.2-20230926-688",
+                    "image": "ghcr.io/hyperledger/firefly:v1.2.2",
                     "volumes": [
                         self.paths.FIREFLYCOREPATH
                         + "firefly.core.yaml:/etc/firefly/firefly.core",
