@@ -190,13 +190,7 @@ Would you like to contribute with a donation?
 
 ### In Progress
 
-- [ ] FireFly
-   - [x] Connection Profile
-   - [x] Fabconnect API
-   - [x] Shared Storage
-   - [x] Data Exchange
-   - [x] Database
-   - [ ] Core
+- [ ] Improving FireFly (reviews & adjustments)
 
 ### Done ✓
 
@@ -233,6 +227,13 @@ Would you like to contribute with a donation?
 - [x] Set external chaincode port use
 - [x] Reinstall chaincode
 - [x] Code Improving and Refactoring
+- [x] FireFly
+   - [x] Connection Profile
+   - [x] Fabconnect API
+   - [x] Shared Storage
+   - [x] Data Exchange
+   - [x] Database
+   - [x] Core
 
 ## License
 
