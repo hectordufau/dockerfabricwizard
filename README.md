@@ -163,11 +163,22 @@ New peer added<br/>
 <tr>
 <td>
 Select a chaincode<br/>
-<img src="./screenshots/screen7.png" alt="New peer">
+<img src="./screenshots/screen7.png" alt="chaincode">
 </td>
 <td>
 Chaincode deployed<br/>
-<img src="./screenshots/screen8.png" alt="New peer">
+<img src="./screenshots/screen8.png" alt="deployed">
+</td>
+</tr>
+
+<tr>
+<td>
+FireFly Dashboard<br/>
+<img src="./screenshots/fireflydashboard.jpeg" alt="FireFly Dashboard">
+</td>
+<td>
+FireFly API<br/>
+<img src="./screenshots/fireflyapi.png" alt="FireFly API">
 </td>
 </tr>
 </table>
