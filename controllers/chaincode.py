@@ -85,16 +85,23 @@ class ChaincodeDeploy:
         shutil.rmtree(self.paths.CHAINCODEBUILDPATH)
 
     def build_firefly(self):
+        orgpkg = self.domain.organizations[0]
+        peerpkg = orgpkg.peers[0]
+        self.chaincode = self.package_chaincode_firefly(orgpkg, peerpkg)
+        console.print("")
+
         for org in self.domain.organizations:
             for peer in org.peers:
-                self.chaincode = self.package_chaincode_firefly(org, peer)
-                console.print("")
                 self.install_chaincode_firefly(org, peer)
                 console.print("")
+
+        for org in self.domain.organizations:
+            for peer in org.peers:
                 self.approve_org(org, peer)
                 console.print("")
-                self.commit_chaincode_definition(org, peer)
-                console.print("")
+
+        self.commit_chaincode_definition()
+        console.print("")
         shutil.rmtree(self.paths.CHAINCODEBUILDPATH)
         return self.chaincode
 

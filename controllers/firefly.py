@@ -1,7 +1,6 @@
 import json
 import os
 import shutil
-import subprocess
 import time
 import webbrowser
 from pathlib import Path
@@ -65,7 +64,6 @@ class Firefly:
         pathfabconnect.mkdir(parents=True, exist_ok=True)
 
         orgclient = self.domain.organizations[0]
-        # peerclient = orgclient.peers[0]
 
         ccp = {
             "version": "1.1.0%",
@@ -394,7 +392,6 @@ class Firefly:
                 + self.domain.name: {
                     "container_name": "fabconnect." + self.domain.name,
                     "image": "ghcr.io/hyperledger/firefly-fabconnect",
-                    # "user": str(os.geteuid()) + ":" + str(os.getgid()),
                     "command": "-f /fabconnect/fabconnect.yaml",
                     "volumes": [
                         "fabconnect_receipts:/fabconnect/receipts",
@@ -764,7 +761,6 @@ class Firefly:
                     "volumes": [
                         self.paths.FIREFLYCOREPATH
                         + "firefly.core.yaml:/etc/firefly/firefly.core",
-                        #"firefly_core_db:/etc/firefly/db",
                     ],
                     "ports": ["5000:5000", "5101:5101"],
                     "logging": {
@@ -772,7 +768,6 @@ class Firefly:
                         "options": {"max-file": "1", "max-size": "10m"},
                     },
                     "networks": [self.domain.networkname],
-                    # "entrypoint": ["/bin/sh", "-c", "exit", "0"],
                 }
             },
             "volumes": {

@@ -19,23 +19,18 @@ class Commands:
         user: str,
         passwd: str,
         port: int,
-        # caname: str,
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client enroll "
-            # + "-d "
             + "-u https://"
             + user
             + ":"
             + passwd
             + "@localhost:"
             + str(port)
-            # + " --caname "
-            # + caname
             + " --csr.hosts localhost"
             + " --tls.certfiles "
             + certfile
@@ -50,24 +45,19 @@ class Commands:
         user: str,
         passwd: str,
         port: int,
-        # caname: str,
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
         os.environ["FABRIC_CA_CLIENT_MSPDIR"] = "msp"
-        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client enroll "
-            # + "-d "
             + "-u https://"
             + user
             + ":"
             + passwd
             + "@localhost:"
             + str(port)
-            # + " --caname "
-            # + caname
             + " --csr.hosts localhost"
             + " --tls.certfiles "
             + certfile
@@ -82,26 +72,21 @@ class Commands:
         user: str,
         passwd: str,
         port: int,
-        # caname: str,
         csrhosts: [],
         myhost: str,
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
         os.environ["FABRIC_CA_CLIENT_MSPDIR"] = "tls"
-        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client enroll "
-            # + "-d "
             + "-u https://"
             + user
             + ":"
             + passwd
             + "@localhost:"
             + str(port)
-            # + " --caname "
-            # + caname
             + " --enrollment.profile tls --csr.hosts "
             + ",".join(csrhosts)
             + " --myhost "
@@ -119,19 +104,14 @@ class Commands:
         user: str,
         passwd: str,
         port: int,
-        # caname: str,
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client register "
-            # + "-d "
             + "-u https://localhost:"
             + str(port)
-            # + " --caname "
-            # + caname
             + " --id.name "
             + user
             + " --id.secret "
@@ -150,19 +130,14 @@ class Commands:
         user: str,
         passwd: str,
         port: int,
-        # caname: str,
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client register "
-            # + "-d "
             + "-u https://localhost:"
             + str(port)
-            # + " --caname "
-            # + caname
             + " --id.name "
             + user
             + " --id.secret "
@@ -186,15 +161,11 @@ class Commands:
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client register "
-            # + "-d "
             + "-u https://localhost:"
             + str(port)
-            # + " --caname "
-            # + caname
             + " --id.name "
             + user
             + " --id.secret "
@@ -213,19 +184,14 @@ class Commands:
         user: str,
         passwd: str,
         port: int,
-        # caname: str,
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client register "
-            # + "-d "
             + "-u https://localhost:"
             + str(port)
-            # + " --caname "
-            # + caname
             + " --id.name "
             + user
             + " --id.secret "
@@ -244,19 +210,14 @@ class Commands:
         user: str,
         passwd: str,
         port: int,
-        # caname: str,
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client register "
-            # + "-d "
             + "-u https://localhost:"
             + str(port)
-            # + " --caname "
-            # + caname
             + " --id.name "
             + user
             + " --id.secret "
@@ -275,19 +236,14 @@ class Commands:
         user: str,
         passwd: str,
         port: int,
-        # caname: str,
         certfile: str,
     ):
         os.environ["FABRIC_CA_CLIENT_HOME"] = home
-        # print("FABRIC_CA_CLIENT_HOME=" + home)
         command = (
             apppath
             + "bin/fabric-ca-client register "
-            # + "-d "
             + "-u https://localhost:"
             + str(port)
-            # + " --caname "
-            # + caname
             + " --id.name "
             + user
             + " --id.secret "
@@ -691,13 +647,6 @@ class Commands:
         if invoke:
             fcncall = '{"function":"InitLedger","Args":[]}'
             initrequired = " --isInit -c " + "'" + fcncall + "'"
-
-        # if chaincodename == "firefly":
-        #    fcncall = '{"function":"Start","Args":[]}'
-        #    initrequired = " -c " + "'" + fcncall + "'"
-        # else:
-        #    fcncall = '{"Args":[]}'
-        #    initrequired = " -c " + "'" + fcncall + "'"
 
         command = (
             apppath
