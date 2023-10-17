@@ -1,6 +1,8 @@
 import os
 
+from helpers.paths import Paths
 from models.chaincode import Chaincode
+from models.domain import Domain
 from models.orderer import Orderer
 from models.organization import Organization
 from models.peer import Peer
@@ -618,10 +620,22 @@ class Commands:
         cafile: str,
         channel: str,
         chaincodename: str,
-        peer: Peer,
-        peercafile: str,
+        domain: Domain,
         chaincodeversion: int,
     ):
+        paths = Paths(domain)
+        peeraddress = ""
+        for org in domain.organizations:
+            paths.set_org_paths(org)
+            for peer in org.peers:
+                paths.set_peer_paths(org, peer)
+                peeraddress += (
+                    " --peerAddresses localhost:"
+                    + str(peer.peerlistenport)
+                    + " --tlsRootCertFiles "
+                    + paths.PEERCAROOT
+                )
+
         initrequired = ""
         if invoke:
             initrequired = " --init-required"
@@ -637,10 +651,7 @@ class Commands:
             + channel
             + " --name "
             + chaincodename
-            + " --peerAddresses localhost:"
-            + str(peer.peerlistenport)
-            + " --tlsRootCertFiles "
-            + peercafile
+            + peeraddress
             + " --version "
             + str(chaincodeversion)
             + " --sequence "
@@ -659,9 +670,21 @@ class Commands:
         cafile: str,
         channel: str,
         chaincodename: str,
-        peer: Peer,
-        peercafile: str,
+        domain: Domain,
     ):
+        paths = Paths(domain)
+        peeraddress = ""
+        for org in domain.organizations:
+            paths.set_org_paths(org)
+            for peer in org.peers:
+                paths.set_peer_paths(org, peer)
+                peeraddress += (
+                    " --peerAddresses localhost:"
+                    + str(peer.peerlistenport)
+                    + " --tlsRootCertFiles "
+                    + paths.PEERCAROOT
+                )
+
         fcncall = '{"function":"","Args":[]}'
         initrequired = " -c " + "'" + fcncall + "'"
 
@@ -688,10 +711,7 @@ class Commands:
             + channel
             + " --name "
             + chaincodename
-            + " --peerAddresses localhost:"
-            + str(peer.peerlistenport)
-            + " --tlsRootCertFiles "
-            + peercafile
+            + peeraddress
             + initrequired
         )
         # print(command)

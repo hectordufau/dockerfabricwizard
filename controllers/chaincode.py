@@ -49,24 +49,40 @@ class ChaincodeDeploy:
         console.print("[bold orange1]CHAINCODE DEPLOY[/]")
         console.print("")
 
+        orgpkg = self.domain.organizations[0]
+        peerpkg = orgpkg.peers[0]
+
+        self.package_chaincode(orgpkg, peerpkg)
+        console.print("")
+
         if self.build_docker_image():
             for org in self.domain.organizations:
                 for peer in org.peers:
                     self.chaincode_crypto(org, peer, self.chaincode)
                     console.print("")
-                    self.package_chaincode(org, peer)
-                    console.print("")
+
+            for org in self.domain.organizations:
+                for peer in org.peers:
                     self.install_chaincode(org, peer)
                     console.print("")
+
+            for org in self.domain.organizations:
+                for peer in org.peers:
                     self.approve_org(org, peer)
                     console.print("")
-                    self.commit_chaincode_definition(org, peer)
-                    console.print("")
+
+            self.commit_chaincode_definition()
+            console.print("")
+
+            for org in self.domain.organizations:
+                for peer in org.peers:
                     self.start_docker_container(org, peer)
                     console.print("")
-                    self.chaincode_invoke_init(org, peer)
-                    console.print("")
-            # self.remove_chaincode_build()
+
+            self.chaincode_invoke_init()
+            console.print("")
+
+        shutil.rmtree(self.paths.CHAINCODEBUILDPATH)
 
     def build_firefly(self):
         for org in self.domain.organizations:
@@ -264,8 +280,6 @@ class ChaincodeDeploy:
         console.print("# Waiting Peer...")
         time.sleep(1)
 
-        shutil.rmtree(self.paths.CHAINCODEBUILDPATH)
-
     def package_chaincode_firefly(self, org: Organization, peer: Peer) -> Chaincode:
         console.print("[bold white]# Packaging chaincode[/]")
 
@@ -395,32 +409,27 @@ class ChaincodeDeploy:
         )
         time.sleep(1)
 
-    def commit_chaincode_definition(self, org: Organization, peer: Peer):
-        if peer.name.split(".")[0] == "peer1":
-            console.print(
-                "[bold]# Commiting chaincode definition for "
-                + self.domain.networkname
-                + " by "
-                + peer.name
-                + "[/]"
-            )
-            self.peer_env_variables(org, peer, True)
+    def commit_chaincode_definition(self):
+        org = self.domain.organizations[0]
+        peer = org.peers[0]
 
-            commands.peer_lifecycle_chaincode_commit(
-                self.paths.APPPATH,
-                self.chaincode.invoke,
-                self.domain.orderer,
-                self.paths.ORDERERNAME,
-                self.paths.ORDTLSCAPATH + "tls-cert.pem",
-                self.domain.networkname,
-                self.chaincodename,
-                peer,
-                self.paths.PEERCAROOT,
-                self.chaincodeversion,
-            )
+        console.print("[bold]# Commiting chaincode definition[/]")
+        self.peer_env_variables(org, peer, True)
 
-            console.print("# Waiting Peer...")
-            time.sleep(1)
+        commands.peer_lifecycle_chaincode_commit(
+            self.paths.APPPATH,
+            self.chaincode.invoke,
+            self.domain.orderer,
+            self.paths.ORDERERNAME,
+            self.paths.ORDTLSCAPATH + "tls-cert.pem",
+            self.domain.networkname,
+            self.chaincodename,
+            self.domain,
+            self.chaincodeversion,
+        )
+
+        console.print("# Waiting Peer...")
+        time.sleep(1)
 
     def start_docker_container(self, org: Organization, peer: Peer):
         console.print("[bold]# Starting the CCAAS container[/]")
@@ -489,8 +498,8 @@ class ChaincodeDeploy:
             + self.domain.name,
             networks=[network],
             envs=envs,
-            #expose=[self.chaincode.ccport],
-            #publish=[(self.chaincode.ccport, self.chaincode.ccport)],
+            # expose=[self.chaincode.ccport],
+            # publish=[(self.chaincode.ccport, self.chaincode.ccport)],
             remove=True,
             detach=True,
             init=True,
@@ -509,31 +518,26 @@ class ChaincodeDeploy:
         # whales.container.restart(peercontainer)
         # time.sleep(1)
 
-    def chaincode_invoke_init(self, org: Organization, peer: Peer):
-        if peer.name.split(".")[0] == "peer1":
-            console.print(
-                "[bold]# Invoking chaincode for "
-                + self.domain.networkname
-                + " by "
-                + peer.name
-                + "[/]"
-            )
-            self.peer_env_variables(org, peer, True)
+    def chaincode_invoke_init(self):
+        org = self.domain.organizations[0]
+        peer = org.peers[0]
 
-            commands.peer_chaincode_invoke(
-                self.paths.APPPATH,
-                self.chaincode.invoke,
-                self.domain.orderer,
-                self.paths.ORDERERNAME,
-                self.paths.ORDTLSCAPATH + "tls-cert.pem",
-                self.domain.networkname,
-                self.chaincodename,
-                peer,
-                self.paths.PEERCAROOT,
-            )
+        console.print("[bold]# Invoking chaincode[/]")
+        self.peer_env_variables(org, peer, True)
 
-            console.print("# Waiting Peer...")
-            time.sleep(1)
+        commands.peer_chaincode_invoke(
+            self.paths.APPPATH,
+            self.chaincode.invoke,
+            self.domain.orderer,
+            self.paths.ORDERERNAME,
+            self.paths.ORDTLSCAPATH + "tls-cert.pem",
+            self.domain.networkname,
+            self.chaincodename,
+            self.domain,
+        )
+
+        console.print("# Waiting Peer...")
+        time.sleep(1)
 
     def chaincode_crypto(self, org: Organization, peer: Peer, chaincode: Chaincode):
         console.print("[bold]## Registering chaincode " + chaincode.name + " crypto[/]")
