@@ -8,6 +8,8 @@ from git import Repo
 from python_on_whales import DockerClient
 from rich.console import Console
 
+from config.versions import FABRIC_VERSION, FIREFLY_VERSION
+
 whales = DockerClient()
 
 console = Console()
@@ -92,7 +94,7 @@ class Requirements:
             os.system(
                 "curl -sSLO https://raw.githubusercontent.com/hyperledger/fabric/main/scripts/install-fabric.sh && chmod +x install-fabric.sh"
             )
-            os.system("./install-fabric.sh binary")
+            os.system("./install-fabric.sh binary -v " + FABRIC_VERSION)
 
     def check_firefly(self):
         console.print("[bold white]# Checking FireFly chaincode source[/]")
@@ -105,7 +107,7 @@ class Requirements:
                 "[bold yellow]> Please wait for FireFly chaincode source downloading and installing.[/]"
             )
 
-            Repo.clone_from("https://github.com/hyperledger/firefly", fireflysource, multi_options=["-b v1.2.2"])
+            Repo.clone_from("https://github.com/hyperledger/firefly", fireflysource, multi_options=["-b " + FIREFLY_VERSION])
             shutil.copytree(
                 fireflysource + "smart_contracts/fabric/firefly-go",
                 fireflyccgo,

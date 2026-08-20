@@ -305,12 +305,15 @@ class Paths:
         """_summary_"""
         console.print("[bold white]# Preparing folders[/]")
 
-        os.system("rm -fR " + Paths.FABRICCAPATH)
-        os.system("rm -fR " + Paths.PEERORGPATH)
-        os.system("rm -fR " + Paths.ORDERERORGPATH)
-        os.system("rm -fR " + Paths.CCCRYPTOPATH)
-        os.system("rm -fR " + Paths.CHANNELARTIFACTSPATH)
-        os.system("rm -fR " + Paths.CACLIENTDOMAINPATH)
+        for p in (
+            Paths.FABRICCAPATH,
+            Paths.PEERORGPATH,
+            Paths.ORDERERORGPATH,
+            Paths.CCCRYPTOPATH,
+            Paths.CHANNELARTIFACTSPATH,
+            Paths.CACLIENTDOMAINPATH,
+        ):
+            shutil.rmtree(p, ignore_errors=True)
 
         pathcompose = Path(Paths.COMPOSEPATH)
         pathcompose.mkdir(parents=True, exist_ok=True)

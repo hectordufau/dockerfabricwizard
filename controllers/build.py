@@ -11,6 +11,7 @@ from controllers.header import Header
 from controllers.run import Run
 from helpers.commands import Commands
 from helpers.paths import Paths
+from config.versions import FABRIC_VERSION, FABRIC_CA_VERSION
 from models.ca import Ca
 from models.domain import Domain
 from models.organization import Organization
@@ -136,7 +137,7 @@ class Build:
     def ca_org_yaml(self, ca: Ca) -> dict:
         """_summary_"""
         caorg = {
-            "image": "hyperledger/fabric-ca:latest",
+            "image": "hyperledger/fabric-ca:" + FABRIC_CA_VERSION,
             "user": str(os.geteuid()) + ":" + str(os.getgid()),
             "labels": {"service": "hyperledger-fabric"},
             "environment": [
@@ -214,7 +215,7 @@ class Build:
         peerdata = {
             "hostname": peer.name + "." + self.domain.name,
             "container_name": peer.name + "." + self.domain.name,
-            "image": "hyperledger/fabric-peer:latest",
+            "image": "hyperledger/fabric-peer:" + FABRIC_VERSION,
             "labels": {"service": "hyperledger-fabric"},
             # "user": str(os.geteuid()) + ":" + str(os.getgid()),
             "environment": [
@@ -709,7 +710,7 @@ class Build:
         }
 
         orderer = {
-            "image": "hyperledger/fabric-orderer:latest",
+            "image": "hyperledger/fabric-orderer:" + FABRIC_VERSION,
             "labels": {"service": "hyperledger-fabric"},
             "environment": [
                 "FABRIC_LOGGING_SPEC=" + self.domain.orderer.FABRIC_LOGGING_SPEC,
@@ -815,7 +816,7 @@ class Build:
 
         clidata = {
             "container_name": "cli." + self.domain.name,
-            "image": "hyperledger/fabric-tools:latest",
+            "image": "hyperledger/fabric-tools:" + FABRIC_VERSION,
             "labels": {"service": "hyperledger-fabric"},
             "tty": True,
             "stdin_open": True,
